@@ -1,0 +1,17 @@
+---
+layout: default
+title: News
+meta: The most recent news and developments related to Mitra Baja Kencana
+changefreq: monthly
+---
+
+<h1>Mitra Baja Kencana News</h1>
+
+<ul>
+  {% for news in site.categories.news %}
+    <li>
+      <a href="{{site.baseurl}}{{news.url}}">{{news.title}}</a>
+      <p>{{news.meta}}</p>
+    </li>
+  {% endfor %}
+</ul>

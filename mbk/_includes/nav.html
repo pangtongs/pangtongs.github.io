@@ -1,0 +1,10 @@
+<nav id="nav">
+	<ul class="nav {{include.navclass}}">
+		<li><a href="{{site.baseurl}}/index.html" class="{% if page.url == '/' %}current{% endif %}">Beranda	</a></li>
+		<li><a href="http://demo.putrabajadeli.com/onlinesales.html">Online Sales</a></li>
+		<li><a href="{{site.baseurl}}/aboutus/" class="{% if page.url contains 'aboutus' %}current{% endif %}">Tentang Kami</a></li>
+		<li><a href="{{site.baseurl}}/products/" class="{% if page.url contains 'products' %}current{% endif %}">Products</a></li>
+		<li><a href="{{site.baseurl}}/news/" class="{% if page.url contains 'news' %}current{% endif %}">Berita</a></li>
+
+	</ul>
+</nav>

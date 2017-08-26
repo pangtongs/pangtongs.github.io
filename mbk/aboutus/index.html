@@ -1,0 +1,10 @@
+---
+layout: default
+titleAfter: About us
+meta: Profile and about Mitra Baja Kencana.
+---
+
+{% for about_us in site.data.about-us %}
+  <h2>{{about_us.title}}</h2>
+  {{about_us.content | markdownify}}
+{% endfor %}
