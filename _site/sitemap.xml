@@ -10,7 +10,7 @@
   
     
       <url>
-  <loc>https://demos.learn-the-web.algonquindesign.ca/jekyll/aboutus/</loc>
+  <loc>https://demos.learn-the-web.algonquindesign.ca/aboutus/</loc>
   
   
 </url>
@@ -19,7 +19,7 @@
   
     
       <url>
-  <loc>https://demos.learn-the-web.algonquindesign.ca/jekyll/news/</loc>
+  <loc>https://demos.learn-the-web.algonquindesign.ca/news/</loc>
   
     <changefreq>monthly</changefreq>
   
@@ -30,7 +30,7 @@
   
     
       <url>
-  <loc>https://demos.learn-the-web.algonquindesign.ca/jekyll/products/</loc>
+  <loc>https://demos.learn-the-web.algonquindesign.ca/products/</loc>
   
   
     <priority>1.0</priority>
@@ -41,7 +41,7 @@
   
     
       <url>
-  <loc>https://demos.learn-the-web.algonquindesign.ca/jekyll/</loc>
+  <loc>https://demos.learn-the-web.algonquindesign.ca/</loc>
   
   
     <priority>1.0</priority>
