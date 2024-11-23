@@ -11,6 +11,8 @@ const sidebarContent = `
         <a href="slot.html" class="nav-link">Slot</a>
         <a href="snake.html" class="nav-link">Snake</a>
         <a href="sudoku.html" class="nav-link">Sudoku</a>
+        <a href="hangman.html" class="nav-link">Hangman</a>
+        <a href="memory.html" class="nav-link">Memory</a>
     </nav>
 `;
 
