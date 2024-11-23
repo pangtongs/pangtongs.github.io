@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pet 2048 Game with Undo</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: Arial, sans-serif;
+            background-color: #faf8ef;
+        }
+
+        .game-container {
+            width: 100%;
+            max-width: 500px;
+            margin: 20px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            background-color: #bbada0;
+            padding: 10px;
+            border-radius: 6px;
+        }
+
+        .cell {
+            background-color: rgba(238, 228, 218, 0.35);
+            aspect-ratio: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 40px;
+            border-radius: 3px;
+            transition: all 0.15s ease;
+        }
+
+        .number {
+            border-radius: 3px;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .n2 {
+            background: #eee4da;
+        }
+
+        .n4 {
+            background: #ede0c8;
+        }
+
+        .n8 {
+            background: #f2b179;
+        }
+
+        .n16 {
+            background: #f59563;
+        }
+
+        .n32 {
+            background: #f67c5f;
+        }
+
+        .n64 {
+            background: #f65e3b;
+        }
+
+        .n128 {
+            background: #edcf72;
+        }
+
+        .n256 {
+            background: #edcc61;
+        }
+
+        .n512 {
+            background: #edc850;
+        }
+
+        .n1024 {
+            background: #edc53f;
+        }
+
+        .n2048 {
+            background: #edc22e;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .score {
+            font-size: 24px;
+        }
+
+        .undo-btn {
+            padding: 10px 20px;
+            font-size: 18px;
+            background-color: #8f7a66;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .undo-btn:hover {
+            background-color: #7f6a56;
+        }
+
+        .undo-btn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="game-container">
+        <div class="controls">
+            <div class="score">Score: <span id="score">0</span></div>
+            <button class="undo-btn" id="undoBtn" disabled>Undo</button>
+        </div>
+        <div class="grid" id="grid"></div>
+    </div>
+
+    <script>
+        class Game2048 {
+            constructor() {
+                this.grid = Array(4).fill().map(() => Array(4).fill(0));
+                this.score = 0;
+                this.history = [];
+                this.petEmojis = {
+                    2: '🐁',
+                    4: '🐹',
+                    8: '🐰',
+                    16: '🐱',
+                    32: '🦊',
+                    64: '🐶',
+                    128: '🦁',
+                    256: '🐯',
+                    512: '🐘',
+                    1024: '🦕',
+                    2048: '🐋'
+                };
+                this.undoBtn = document.getElementById('undoBtn');
+                this.init();
+            }
+
+            saveState() {
+                this.history.push({
+                    grid: JSON.parse(JSON.stringify(this.grid)),
+                    score: this.score
+                });
+                this.undoBtn.disabled = false;
+            }
+
+            undo() {
+                if (this.history.length > 0) {
+                    const previousState = this.history.pop();
+                    this.grid = previousState.grid;
+                    this.score = previousState.score;
+                    this.updateDisplay();
+
+                    if (this.history.length === 0) {
+                        this.undoBtn.disabled = true;
+                    }
+                }
+            }
+
+            init() {
+                this.addNewNumber();
+                this.addNewNumber();
+                this.updateDisplay();
+                this.setupInputs();
+
+                // Setup undo button
+                this.undoBtn.addEventListener('click', () => this.undo());
+            }
+
+            addNewNumber() {
+                const emptyCells = [];
+                for (let i = 0; i < 4; i++) {
+                    for (let j = 0; j < 4; j++) {
+                        if (this.grid[i][j] === 0) {
+                            emptyCells.push({ x: i, y: j });
+                        }
+                    }
+                }
+                if (emptyCells.length > 0) {
+                    const randomCell = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+                    this.grid[randomCell.x][randomCell.y] = Math.random() < 0.9 ? 2 : 4;
+                }
+            }
+
+            updateDisplay() {
+                const gridElement = document.getElementById('grid');
+                gridElement.innerHTML = '';
+
+                for (let i = 0; i < 4; i++) {
+                    for (let j = 0; j < 4; j++) {
+                        const cell = document.createElement('div');
+                        cell.className = 'cell';
+                        if (this.grid[i][j] !== 0) {
+                            const number = document.createElement('div');
+                            number.className = `number n${this.grid[i][j]}`;
+                            number.textContent = this.petEmojis[this.grid[i][j]];
+                            cell.appendChild(number);
+                        }
+                        gridElement.appendChild(cell);
+                    }
+                }
+
+                document.getElementById('score').textContent = this.score;
+            }
+
+            move(direction) {
+                const prevGrid = JSON.parse(JSON.stringify(this.grid));
+                const prevScore = this.score;
+                let moved = false;
+
+                switch (direction) {
+                    case 'up':
+                        moved = this.moveUp();
+                        break;
+                    case 'down':
+                        moved = this.moveDown();
+                        break;
+                    case 'left':
+                        moved = this.moveLeft();
+                        break;
+                    case 'right':
+                        moved = this.moveRight();
+                        break;
+                }
+
+                if (moved) {
+                    this.saveState();
+                    this.addNewNumber();
+                    this.updateDisplay();
+
+                    if (this.isGameOver()) {
+                        alert('Game Over! Your score: ' + this.score);
+                    }
+                }
+            }
+
+            moveLeft() {
+                let moved = false;
+                for (let i = 0; i < 4; i++) {
+                    let row = this.grid[i].filter(x => x !== 0);
+                    for (let j = 0; j < row.length - 1; j++) {
+                        if (row[j] === row[j + 1]) {
+                            row[j] *= 2;
+                            this.score += row[j];
+                            row.splice(j + 1, 1);
+                            moved = true;
+                        }
+                    }
+                    const newRow = row.concat(Array(4 - row.length).fill(0));
+                    if (JSON.stringify(this.grid[i]) !== JSON.stringify(newRow)) moved = true;
+                    this.grid[i] = newRow;
+                }
+                return moved;
+            }
+
+            moveRight() {
+                let moved = false;
+                for (let i = 0; i < 4; i++) {
+                    let row = this.grid[i].filter(x => x !== 0);
+                    for (let j = row.length - 1; j > 0; j--) {
+                        if (row[j] === row[j - 1]) {
+                            row[j] *= 2;
+                            this.score += row[j];
+                            row.splice(j - 1, 1);
+                            moved = true;
+                        }
+                    }
+                    const newRow = Array(4 - row.length).fill(0).concat(row);
+                    if (JSON.stringify(this.grid[i]) !== JSON.stringify(newRow)) moved = true;
+                    this.grid[i] = newRow;
+                }
+                return moved;
+            }
+
+            moveUp() {
+                let moved = false;
+                for (let j = 0; j < 4; j++) {
+                    let column = this.grid.map(row => row[j]).filter(x => x !== 0);
+                    for (let i = 0; i < column.length - 1; i++) {
+                        if (column[i] === column[i + 1]) {
+                            column[i] *= 2;
+                            this.score += column[i];
+                            column.splice(i + 1, 1);
+                            moved = true;
+                        }
+                    }
+                    const newColumn = column.concat(Array(4 - column.length).fill(0));
+                    if (JSON.stringify(this.grid.map(row => row[j])) !== JSON.stringify(newColumn)) moved = true;
+                    for (let i = 0; i < 4; i++) {
+                        this.grid[i][j] = newColumn[i];
+                    }
+                }
+                return moved;
+            }
+
+            moveDown() {
+                let moved = false;
+                for (let j = 0; j < 4; j++) {
+                    let column = this.grid.map(row => row[j]).filter(x => x !== 0);
+                    for (let i = column.length - 1; i > 0; i--) {
+                        if (column[i] === column[i - 1]) {
+                            column[i] *= 2;
+                            this.score += column[i];
+                            column.splice(i - 1, 1);
+                            moved = true;
+                        }
+                    }
+                    const newColumn = Array(4 - column.length).fill(0).concat(column);
+                    if (JSON.stringify(this.grid.map(row => row[j])) !== JSON.stringify(newColumn)) moved = true;
+                    for (let i = 0; i < 4; i++) {
+                        this.grid[i][j] = newColumn[i];
+                    }
+                }
+                return moved;
+            }
+
+            isGameOver() {
+                for (let i = 0; i < 4; i++) {
+                    for (let j = 0; j < 4; j++) {
+                        if (this.grid[i][j] === 0) return false;
+                    }
+                }
+
+                for (let i = 0; i < 4; i++) {
+                    for (let j = 0; j < 4; j++) {
+                        if (j < 3 && this.grid[i][j] === this.grid[i][j + 1]) return false;
+                        if (i < 3 && this.grid[i][j] === this.grid[i + 1][j]) return false;
+                    }
+                }
+
+                return true;
+            }
+
+            setupInputs() {
+                document.addEventListener('keydown', (e) => {
+                    switch (e.key) {
+                        case 'ArrowUp':
+                            e.preventDefault();
+                            this.move('up');
+                            break;
+                        case 'ArrowDown':
+                            e.preventDefault();
+                            this.move('down');
+                            break;
+                        case 'ArrowLeft':
+                            e.preventDefault();
+                            this.move('left');
+                            break;
+                        case 'ArrowRight':
+                            e.preventDefault();
+                            this.move('right');
+                            break;
+                    }
+                });
+
+                let touchStartX, touchStartY;
+                document.addEventListener('touchstart', (e) => {
+                    touchStartX = e.touches[0].clientX;
+                    touchStartY = e.touches[0].clientY;
+                }, false);
+
+                document.addEventListener('touchend', (e) => {
+                    if (!touchStartX || !touchStartY) return;
+
+                    let touchEndX = e.changedTouches[0].clientX;
+                    let touchEndY = e.changedTouches[0].clientY;
+
+                    let dx = touchEndX - touchStartX;
+                    let dy = touchEndY - touchStartY;
+
+                    if (Math.abs(dx) > Math.abs(dy)) {
+                        if (dx > 0) this.move('right');
+                        else this.move('left');
+                    } else {
+                        if (dy > 0) this.move('down');
+                        else this.move('up');
+                    }
+
+                    touchStartX = touchStartY = null;
+                }, false);
+            }
+        }
+
+        // Start the game
+        new Game2048();
+    </script>
+</body>
+
+</html>
