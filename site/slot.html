@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Slot Machine 3x3</title>
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-family: Arial, sans-serif;
+      background: #1a1a1a;
+      color: white;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+    }
+
+    .slot-machine {
+      background: linear-gradient(45deg, #4a4a4a, #3a3a3a);
+      padding: 30px;
+      border-radius: 20px;
+      box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+      border: 8px solid #gold;
+    }
+
+    .machine-frame {
+      background: #2a2a2a;
+      padding: 20px;
+      border-radius: 15px;
+      border: 4px solid #gold;
+      position: relative;
+    }
+
+    .slots-container {
+      background: #000;
+      padding: 15px;
+      border-radius: 10px;
+      border: 3px solid #333;
+    }
+
+    .slots-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 5px;
+      background: #000;
+      padding: 10px;
+      border-radius: 8px;
+      position: relative;
+    }
+
+    .slot {
+      width: 80px;
+      height: 80px;
+      background: white;
+      border-radius: 5px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 40px;
+      color: #2c3e50;
+      border: 2px solid #444;
+      box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .slot::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 40%;
+      background: linear-gradient(to bottom, rgba(255, 255, 255, 0.2), transparent);
+      pointer-events: none;
+    }
+
+    .payline {
+      position: absolute;
+      width: calc(100% + 20px);
+      height: 3px;
+      background: red;
+      left: -10px;
+      top: 50%;
+      transform: translateY(-50%);
+      opacity: 0.5;
+      box-shadow: 0 0 10px red;
+    }
+
+    button {
+      background: linear-gradient(45deg, #e74c3c, #c0392b);
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      border-radius: 25px;
+      cursor: pointer;
+      font-size: 18px;
+      margin-top: 20px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+      transition: all 0.3s;
+      width: 100%;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 7px 20px rgba(0, 0, 0, 0.4);
+    }
+
+    button:disabled {
+      background: #666;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .credits {
+      font-size: 28px;
+      margin: 20px 0;
+      text-align: center;
+      text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+      color: #ffd700;
+    }
+
+    @keyframes spin {
+      0% {
+        transform: translateY(0);
+      }
+
+      100% {
+        transform: translateY(-50px);
+      }
+    }
+
+    .spinning {
+      animation: spin 0.2s linear infinite;
+    }
+
+    .machine-lights {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    .light {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #ffd700;
+      animation: blink 1s infinite alternate;
+    }
+
+    @keyframes blink {
+      0% {
+        opacity: 0.3;
+      }
+
+      100% {
+        opacity: 1;
+      }
+    }
+
+    /* Add lights around the machine */
+    .light:nth-child(1) {
+      top: 10px;
+      left: 10px;
+    }
+
+    .light:nth-child(2) {
+      top: 10px;
+      right: 10px;
+    }
+
+    .light:nth-child(3) {
+      bottom: 10px;
+      left: 10px;
+    }
+
+    .light:nth-child(4) {
+      bottom: 10px;
+      right: 10px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="slot-machine">
+    <div class="credits">Credits: <span id="credits">100</span></div>
+    <div class="machine-frame">
+      <div class="machine-lights">
+        <div class="light"></div>
+        <div class="light"></div>
+        <div class="light"></div>
+        <div class="light"></div>
+      </div>
+      <div class="slots-container">
+        <div class="slots-grid">
+          <div class="slot">🍎</div>
+          <div class="slot">🍊</div>
+          <div class="slot">🍇</div>
+          <div class="slot">🍒</div>
+          <div class="slot">🍋</div>
+          <div class="slot">💎</div>
+          <div class="slot">🍎</div>
+          <div class="slot">🍊</div>
+          <div class="slot">🍇</div>
+          <div class="payline"></div>
+        </div>
+      </div>
+    </div>
+    <button id="spinButton">Spin (10 credits)</button>
+  </div>
+
+  <script>
+    const symbols = ['🍎', '🍊', '🍇', '🍒', '🍋', '💎'];
+    const slots = document.querySelectorAll('.slot');
+    const spinButton = document.getElementById('spinButton');
+    const creditsDisplay = document.getElementById('credits');
+    let credits = 100;
+    let spinning = false;
+    let spinCount = 0;
+
+    spinButton.addEventListener('click', spin);
+
+    function spin() {
+      if (spinning) return;
+      if (credits < 10) {
+        alert('Not enough credits!');
+        return;
+      }
+
+      credits -= 10;
+      creditsDisplay.textContent = credits;
+      spinning = true;
+      spinButton.disabled = true;
+      spinCount++;
+
+      slots.forEach(slot => slot.classList.add('spinning'));
+
+      const duration = 1000 + Math.random() * 1000;
+
+      setTimeout(() => {
+        stopSpin();
+      }, duration);
+    }
+
+    function stopSpin() {
+      slots.forEach(slot => slot.classList.remove('spinning'));
+
+      let results = [];
+
+      if (spinCount % 3 === 0) {
+        const jackpotSymbol = symbols[Math.floor(Math.random() * symbols.length)];
+        results = Array(9).fill(jackpotSymbol);
+      } else {
+        results = Array.from({ length: 9 }, () => symbols[Math.floor(Math.random() * symbols.length)]);
+      }
+
+      slots.forEach((slot, index) => {
+        slot.textContent = results[index];
+      });
+
+      checkWin(results);
+
+      spinning = false;
+      spinButton.disabled = false;
+    }
+
+    function checkWin(results) {
+      // Check middle row for winning combination
+      if (results[3] === results[4] && results[4] === results[5]) {
+        credits += 50;
+        alert('Jackpot! You won 50 credits!');
+      }
+      creditsDisplay.textContent = credits;
+    }
+
+    // Add initial random symbols
+    slots.forEach(slot => {
+      slot.textContent = symbols[Math.floor(Math.random() * symbols.length)];
+    });
+  </script>
+</body>
+
+</html>
