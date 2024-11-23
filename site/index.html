@@ -5,148 +5,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Game Portfolio</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: Arial, sans-serif;
-        }
-
-        body {
-            background-color: #1a1a1a;
-            color: #ffffff;
-            display: flex;
-        }
-
-        .sidebar {
-            width: 250px;
-            height: 100vh;
-            background-color: #2d2d2d;
-            position: fixed;
-            left: 0;
-            top: 0;
-            padding: 20px;
-            overflow-y: auto;
-        }
-
-        .sidebar-header {
-            text-align: center;
-            padding-bottom: 20px;
-            border-bottom: 1px solid #3d3d3d;
-            margin-bottom: 20px;
-        }
-
-        .sidebar-nav {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .nav-link {
-            padding: 10px 15px;
-            color: #ffffff;
-            text-decoration: none;
-            border-radius: 5px;
-            transition: background-color 0.3s;
-        }
-
-        .nav-link:hover {
-            background-color: #3d3d3d;
-        }
-
-        .nav-link.active {
-            background-color: #4d4d4d;
-        }
-
-        .main-content {
-            margin-left: 250px;
-            padding: 20px;
-            width: calc(100% - 250px);
-        }
-
-        .game-container {
-            background-color: #2d2d2d;
-            border-radius: 10px;
-            padding: 20px;
-            min-height: 500px;
-        }
-
-        /* Mobile Responsive */
-        @media (max-width: 768px) {
-            .sidebar {
-                width: 100%;
-                height: auto;
-                position: relative;
-                margin-bottom: 20px;
-            }
-
-            .main-content {
-                margin-left: 0;
-                width: 100%;
-            }
-
-            body {
-                flex-direction: column;
-            }
-
-            .sidebar-nav {
-                flex-direction: row;
-                flex-wrap: wrap;
-                gap: 5px;
-            }
-
-            .nav-link {
-                font-size: 14px;
-                padding: 8px 12px;
-            }
-        }
-
-        /* Hamburger Menu for Mobile */
-        .menu-toggle {
-            display: none;
-            background: none;
-            border: none;
-            color: white;
-            font-size: 24px;
-            cursor: pointer;
-            padding: 10px;
-        }
-
-        @media (max-width: 768px) {
-            .menu-toggle {
-                display: block;
-            }
-
-            .sidebar-nav {
-                display: none;
-            }
-
-            .sidebar.active .sidebar-nav {
-                display: flex;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
     <div class="sidebar">
-        <div class="sidebar-header">
-            <h1>My Games</h1>
-            <button class="menu-toggle">☰</button>
-        </div>
-        <nav class="sidebar-nav">
-            <a href="index.html" class="nav-link active">Home</a>
-
-            <a href="2048.html" class="nav-link">2048</a>
-            <a href="flappy_bird.html" class="nav-link">Flappy Bird</a>
-            <a href="slot.html" class="nav-link">Slot</a>
-            <a href="snake.html" class="nav-link">Snake</a>
-            <a href="sudoku.html" class="nav-link">Sudoku</a>
-
-            <!-- <a href="memory.html" class="nav-link">Memory Match</a> -->
-            <!-- <a href="pong.html" class="nav-link">Pong</a> -->
-        </nav>
+        <!-- Sidebar content will be inserted here by JavaScript -->
     </div>
 
     <main class="main-content">
@@ -156,26 +20,7 @@
         </div>
     </main>
 
-    <script>
-        // Mobile menu toggle
-        document.querySelector('.menu-toggle').addEventListener('click', function () {
-            document.querySelector('.sidebar').classList.toggle('active');
-        });
-
-        // Highlight current page in navigation
-        document.addEventListener('DOMContentLoaded', function () {
-            const currentPage = window.location.pathname.split('/').pop();
-            const links = document.querySelectorAll('.nav-link');
-
-            links.forEach(link => {
-                if (link.getAttribute('href') === currentPage) {
-                    link.classList.add('active');
-                } else {
-                    link.classList.remove('active');
-                }
-            });
-        });
-    </script>
+    <script src="sidebar.js"></script>
 </body>
 
 </html>
