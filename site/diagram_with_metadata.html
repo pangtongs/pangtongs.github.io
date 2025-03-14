@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Diagram Tool</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#5D5CDE',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+
+<body class="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen">
+    <div class="container mx-auto p-4">
+        <header class="mb-4">
+            <h1 class="text-2xl font-bold text-center">Enhanced Diagram Tool</h1>
+            <div class="flex flex-wrap justify-center gap-2 mt-2">
+                <button id="add-node-btn" class="px-4 py-2 bg-primary text-white rounded hover:bg-opacity-90">Add
+                    Object</button>
+                <button id="connect-btn" class="px-4 py-2 bg-primary text-white rounded hover:bg-opacity-90">Connect
+                    Objects</button>
+                <div class="flex border rounded overflow-hidden">
+                    <button id="view-title" class="px-4 py-2 bg-primary text-white">Title</button>
+                    <button id="view-image"
+                        class="px-4 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300">Image</button>
+                    <button id="view-detail"
+                        class="px-4 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300">Details</button>
+                </div>
+            </div>
+        </header>
+
+        <div id="canvas-container"
+            class="border-2 border-gray-300 dark:border-gray-700 rounded-lg h-[70vh] relative overflow-auto bg-gray-50 dark:bg-gray-800">
+            <div id="canvas" class="absolute w-[2000px] h-[2000px]">
+                <svg id="connections-svg" class="absolute top-0 left-0 w-full h-full pointer-events-none">
+                    <!-- Connection lines will be drawn here -->
+                </svg>
+                <!-- Objects will be added here -->
+            </div>
+        </div>
+
+        <div id="edit-panel" class="mt-4 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg hidden">
+            <h2 class="text-lg font-semibold mb-2">Edit Object</h2>
+            <div class="space-y-2">
+                <div>
+                    <label class="block text-sm font-medium">Title</label>
+                    <input id="edit-title" type="text"
+                        class="w-full px-3 py-2 border rounded-md text-base dark:bg-gray-700 dark:border-gray-600">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium">Image URL</label>
+                    <input id="edit-image" type="text"
+                        class="w-full px-3 py-2 border rounded-md text-base dark:bg-gray-700 dark:border-gray-600">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium">Details</label>
+                    <textarea id="edit-details"
+                        class="w-full px-3 py-2 border rounded-md h-20 text-base dark:bg-gray-700 dark:border-gray-600"></textarea>
+                </div>
+                <div class="flex justify-end space-x-2">
+                    <button id="cancel-edit" class="px-4 py-2 border rounded">Cancel</button>
+                    <button id="save-edit"
+                        class="px-4 py-2 bg-primary text-white rounded hover:bg-opacity-90">Save</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="connection-panel" class="mt-4 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg hidden">
+            <h2 class="text-lg font-semibold mb-2">Connect Objects</h2>
+            <p class="text-sm mb-4">Select two objects to connect them.</p>
+            <div class="flex justify-end space-x-2">
+                <button id="cancel-connect" class="px-4 py-2 border rounded">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Check for dark mode
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        }
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+            if (event.matches) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        });
+
+        // Diagram state
+        let nodes = [];
+        let connections = [];
+        let currentView = 'title';
+        let selectedNode = null;
+        let draggedNode = null;
+        let dragOffset = { x: 0, y: 0 };
+        let nextId = 1;
+        let connectMode = false;
+        let connectSource = null;
+
+        // DOM elements
+        const canvas = document.getElementById('canvas');
+        const canvasContainer = document.getElementById('canvas-container');
+        const editPanel = document.getElementById('edit-panel');
+        const connectionPanel = document.getElementById('connection-panel');
+        const editTitleInput = document.getElementById('edit-title');
+        const editImageInput = document.getElementById('edit-image');
+        const editDetailsInput = document.getElementById('edit-details');
+        const connectionsSvg = document.getElementById('connections-svg');
+
+        // Event listeners
+        document.getElementById('add-node-btn').addEventListener('click', addNode);
+        document.getElementById('connect-btn').addEventListener('click', startConnectMode);
+        document.getElementById('view-title').addEventListener('click', () => setView('title'));
+        document.getElementById('view-image').addEventListener('click', () => setView('image'));
+        document.getElementById('view-detail').addEventListener('click', () => setView('detail'));
+        document.getElementById('cancel-edit').addEventListener('click', cancelEdit);
+        document.getElementById('save-edit').addEventListener('click', saveEdit);
+        document.getElementById('cancel-connect').addEventListener('click', cancelConnectMode);
+
+        // Initialize canvas panning
+        initializeCanvasPanning();
+
+        // Add a new node
+        function addNode() {
+            const node = {
+                id: nextId++,
+                x: 100,
+                y: 100,
+                width: 180,
+                height: 120,
+                title: 'New Object',
+                image: '',
+                details: 'Add details here...'
+            };
+
+            nodes.push(node);
+            renderNode(node);
+        }
+
+        // Render a node on the canvas
+        function renderNode(node) {
+            // Check if node element already exists
+            let nodeElement = document.getElementById(`node-${node.id}`);
+
+            if (!nodeElement) {
+                nodeElement = document.createElement('div');
+                nodeElement.id = `node-${node.id}`;
+                nodeElement.className = 'absolute cursor-move border-2 border-primary rounded-md bg-white dark:bg-gray-700 overflow-hidden';
+                nodeElement.dataset.nodeId = node.id;
+
+                // Add event listeners for dragging
+                nodeElement.addEventListener('mousedown', startDrag);
+                nodeElement.addEventListener('touchstart', startDrag);
+
+                // Add event listener for selecting
+                nodeElement.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    handleNodeClick(node.id);
+                });
+
+                canvas.appendChild(nodeElement);
+            }
+
+            // Update node position and size
+            nodeElement.style.left = `${node.x}px`;
+            nodeElement.style.top = `${node.y}px`;
+            nodeElement.style.width = `${node.width}px`;
+            nodeElement.style.height = `${node.height}px`;
+
+            // Update content based on current view
+            updateNodeContent(nodeElement, node);
+        }
+
+        // Update node content based on view
+        function updateNodeContent(nodeElement, node) {
+            // Clear previous content
+            nodeElement.innerHTML = '';
+
+            // Header for title
+            const header = document.createElement('div');
+            header.className = 'bg-primary text-white p-2 text-sm font-semibold';
+            header.textContent = node.title;
+            nodeElement.appendChild(header);
+
+            // Content based on view
+            const content = document.createElement('div');
+            content.className = 'p-2 overflow-auto';
+            content.style.height = 'calc(100% - 32px)';
+
+            if (currentView === 'image' && node.image) {
+                const img = document.createElement('img');
+                img.src = node.image;
+                img.className = 'w-full h-full object-contain';
+                img.onerror = () => {
+                    img.src = '';
+                    img.alt = 'Invalid Image URL';
+                };
+                content.appendChild(img);
+            } else if (currentView === 'detail') {
+                content.textContent = node.details;
+            } else {
+                // In title view, we'll just show the title in header
+                content.textContent = 'Click to edit';
+            }
+
+            nodeElement.appendChild(content);
+
+            // Add selected styles if this node is selected
+            if (selectedNode === node.id) {
+                nodeElement.classList.add('ring-4', 'ring-primary', 'ring-opacity-50');
+            } else {
+                nodeElement.classList.remove('ring-4', 'ring-primary', 'ring-opacity-50');
+            }
+
+            // Add connect mode styles
+            if (connectMode) {
+                if (connectSource === node.id) {
+                    nodeElement.classList.add('ring-4', 'ring-green-500', 'ring-opacity-70');
+                } else {
+                    nodeElement.classList.add('cursor-pointer');
+                }
+            } else {
+                nodeElement.classList.remove('ring-green-500', 'ring-opacity-70');
+            }
+        }
+
+        // Set the current view
+        function setView(view) {
+            currentView = view;
+
+            // Update view buttons
+            document.getElementById('view-title').className = view === 'title' ? 'px-4 py-2 bg-primary text-white' : 'px-4 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300';
+            document.getElementById('view-image').className = view === 'image' ? 'px-4 py-2 bg-primary text-white' : 'px-4 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300';
+            document.getElementById('view-detail').className = view === 'detail' ? 'px-4 py-2 bg-primary text-white' : 'px-4 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300';
+
+            // Re-render all nodes
+            nodes.forEach(node => renderNode(node));
+        }
+
+        // Handle node click based on current mode
+        function handleNodeClick(nodeId) {
+            if (connectMode) {
+                if (connectSource === null) {
+                    // First node in connection
+                    connectSource = nodeId;
+                    nodes.forEach(node => renderNode(node));
+                } else if (connectSource !== nodeId) {
+                    // Second node, create connection
+                    createConnection(connectSource, nodeId);
+                    cancelConnectMode();
+                }
+            } else {
+                // Normal selection mode
+                selectNode(nodeId);
+            }
+        }
+
+        // Select a node for editing
+        function selectNode(nodeId) {
+            selectedNode = nodeId;
+            const node = nodes.find(n => n.id === nodeId);
+
+            if (node) {
+                // Update edit panel inputs
+                editTitleInput.value = node.title;
+                editImageInput.value = node.image;
+                editDetailsInput.value = node.details;
+
+                // Show edit panel
+                editPanel.classList.remove('hidden');
+
+                // Re-render all nodes to update selected styles
+                nodes.forEach(n => renderNode(n));
+            }
+        }
+
+        // Cancel edit
+        function cancelEdit() {
+            selectedNode = null;
+            editPanel.classList.add('hidden');
+            nodes.forEach(n => renderNode(n));
+        }
+
+        // Save edit
+        function saveEdit() {
+            const node = nodes.find(n => n.id === selectedNode);
+
+            if (node) {
+                node.title = editTitleInput.value;
+                node.image = editImageInput.value;
+                node.details = editDetailsInput.value;
+
+                renderNode(node);
+            }
+
+            editPanel.classList.add('hidden');
+        }
+
+        // Start connection mode
+        function startConnectMode() {
+            connectMode = true;
+            connectSource = null;
+            connectionPanel.classList.remove('hidden');
+            editPanel.classList.add('hidden');
+
+            // Update node styling for connect mode
+            nodes.forEach(node => renderNode(node));
+        }
+
+        // Cancel connection mode
+        function cancelConnectMode() {
+            connectMode = false;
+            connectSource = null;
+            connectionPanel.classList.add('hidden');
+
+            // Restore normal node styling
+            nodes.forEach(node => renderNode(node));
+        }
+
+        // Create a connection between two nodes
+        function createConnection(sourceId, targetId) {
+            // Add connection to state
+            const connection = {
+                id: `conn-${sourceId}-${targetId}`,
+                sourceId: sourceId,
+                targetId: targetId
+            };
+
+            connections.push(connection);
+
+            // Render the connection
+            renderConnections();
+        }
+
+        // Render all connections
+        function renderConnections() {
+            // Clear existing connections
+            connectionsSvg.innerHTML = '';
+
+            // Render each connection
+            connections.forEach(conn => {
+                const sourceNode = nodes.find(n => n.id === conn.sourceId);
+                const targetNode = nodes.find(n => n.id === conn.targetId);
+
+                if (sourceNode && targetNode) {
+                    // Calculate connection points
+                    const sourceCenter = {
+                        x: sourceNode.x + sourceNode.width / 2,
+                        y: sourceNode.y + sourceNode.height / 2
+                    };
+
+                    const targetCenter = {
+                        x: targetNode.x + targetNode.width / 2,
+                        y: targetNode.y + targetNode.height / 2
+                    };
+
+                    // Create line
+                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    line.setAttribute('x1', sourceCenter.x);
+                    line.setAttribute('y1', sourceCenter.y);
+                    line.setAttribute('x2', targetCenter.x);
+                    line.setAttribute('y2', targetCenter.y);
+                    line.setAttribute('stroke', '#5D5CDE');
+                    line.setAttribute('stroke-width', '2');
+
+                    connectionsSvg.appendChild(line);
+                }
+            });
+        }
+
+        // Start dragging a node
+        function startDrag(e) {
+            if (connectMode) return; // Disable dragging in connect mode
+
+            e.preventDefault();
+            const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+            const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+
+            if (!clientX || !clientY) return;
+
+            const nodeElement = e.currentTarget;
+            const nodeId = parseInt(nodeElement.dataset.nodeId);
+            draggedNode = nodeId;
+
+            const node = nodes.find(n => n.id === nodeId);
+            const canvasRect = canvas.getBoundingClientRect();
+
+            // Calculate drag offset
+            dragOffset = {
+                x: clientX - canvasRect.left - node.x,
+                y: clientY - canvasRect.top - node.y
+            };
+
+            // Add event listeners for drag
+            document.addEventListener('mousemove', drag);
+            document.addEventListener('touchmove', drag, { passive: false });
+            document.addEventListener('mouseup', stopDrag);
+            document.addEventListener('touchend', stopDrag);
+        }
+
+        // Drag node
+        function drag(e) {
+            e.preventDefault();
+            const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+            const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+
+            if (!clientX || !clientY) return;
+
+            if (draggedNode !== null) {
+                const node = nodes.find(n => n.id === draggedNode);
+                const canvasRect = canvas.getBoundingClientRect();
+
+                // Update node position
+                node.x = clientX - canvasRect.left - dragOffset.x;
+                node.y = clientY - canvasRect.top - dragOffset.y;
+
+                renderNode(node);
+                renderConnections();
+            }
+        }
+
+        // Stop dragging
+        function stopDrag() {
+            draggedNode = null;
+            document.removeEventListener('mousemove', drag);
+            document.removeEventListener('touchmove', drag);
+            document.removeEventListener('mouseup', stopDrag);
+            document.removeEventListener('touchend', stopDrag);
+        }
+
+        // Initialize canvas panning
+        function initializeCanvasPanning() {
+            let isPanning = false;
+            let startPoint = { x: 0, y: 0 };
+            let scrollLeft, scrollTop;
+
+            canvasContainer.addEventListener('mousedown', startPan);
+            canvasContainer.addEventListener('touchstart', startPan);
+
+            function startPan(e) {
+                // Only start panning if clicking on the canvas background (not a node)
+                if (e.target === canvas || e.target === canvasContainer) {
+                    e.preventDefault();
+
+                    isPanning = true;
+                    const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+                    const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+
+                    startPoint = { x: clientX, y: clientY };
+                    scrollLeft = canvasContainer.scrollLeft;
+                    scrollTop = canvasContainer.scrollTop;
+
+                    document.addEventListener('mousemove', pan);
+                    document.addEventListener('touchmove', pan, { passive: false });
+                    document.addEventListener('mouseup', stopPan);
+                    document.addEventListener('touchend', stopPan);
+                }
+            }
+
+            function pan(e) {
+                if (!isPanning) return;
+
+                e.preventDefault();
+                const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+                const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+
+                // Calculate how far the mouse has moved
+                const dx = clientX - startPoint.x;
+                const dy = clientY - startPoint.y;
+
+                // Scroll the container
+                canvasContainer.scrollLeft = scrollLeft - dx;
+                canvasContainer.scrollTop = scrollTop - dy;
+            }
+
+            function stopPan() {
+                isPanning = false;
+                document.removeEventListener('mousemove', pan);
+                document.removeEventListener('touchmove', pan);
+                document.removeEventListener('mouseup', stopPan);
+                document.removeEventListener('touchend', stopPan);
+            }
+        }
+
+        // Initialize with a sample node
+        addNode();
+    </script>
+</body>
+
+</html>
