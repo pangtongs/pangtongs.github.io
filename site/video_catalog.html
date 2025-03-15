@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Video Catalog</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#5D5CDE',
+                        secondary: '#8584e6',
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body class="bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 transition-colors duration-200">
+    <!-- Check for dark mode -->
+    <script>
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        }
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+            if (event.matches) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        });
+    </script>
+
+    <div class="container mx-auto px-4 py-6">
+        <header class="mb-8">
+            <h1 class="text-3xl font-bold text-center text-primary">Personal Video Catalog</h1>
+            <p class="text-center mt-2 text-gray-600 dark:text-gray-400">Track your watched videos with detailed
+                information</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <!-- Main content area -->
+            <main class="lg:col-span-8 space-y-6">
+                <!-- Add Video Form -->
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+                    <h2 class="text-xl font-semibold mb-4 flex items-center">
+                        <i class="fas fa-plus-circle text-primary mr-2"></i>
+                        Add New Video
+                    </h2>
+                    <form id="videoForm" class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="space-y-2">
+                                <label for="title" class="block font-medium">Title</label>
+                                <input type="text" id="title"
+                                    class="w-full px-4 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-base"
+                                    required>
+                            </div>
+                            <div class="space-y-2">
+                                <label for="source" class="block font-medium">Source URL/Path</label>
+                                <input type="text" id="source"
+                                    class="w-full px-4 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-base">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="space-y-2">
+                                <label for="videoCode" class="block font-medium">Video Code</label>
+                                <input type="text" id="videoCode"
+                                    class="w-full px-4 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-base"
+                                    placeholder="e.g. JAV code">
+                            </div>
+                            <div class="space-y-2">
+                                <label for="country" class="block font-medium">Country</label>
+                                <select id="country"
+                                    class="w-full px-4 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-base">
+                                    <option value="Japan">Japan</option>
+                                    <option value="Other Asia">Other Asia</option>
+                                    <option value="Western">Western</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <div class="space-y-2">
+                                <label for="performers" class="block font-medium">Performers</label>
+                                <input type="text" id="performers"
+                                    class="w-full px-4 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-base"
+                                    placeholder="Comma separated">
+                            </div>
+                        </div>
+
+                        <div class="space-y-2">
+                            <label class="block font-medium">Standard Tags</label>
+                            <div class="flex flex-wrap gap-3">
+                                <label
+                                    class="inline-flex items-center px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded-full">
+                                    <input type="checkbox" id="multiplePersons" class="mr-2">
+                                    Multiple People
+                                </label>
+                                <label
+                                    class="inline-flex items-center px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded-full">
+                                    <input type="checkbox" id="mindControl" class="mr-2">
+                                    Mind Control
+                                </label>
+                                <label
+                                    class="inline-flex items-center px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded-full">
+                                    <select id="breastSize"
+                                        class="bg-transparent border-none text-sm p-0 focus:outline-none focus:ring-0">
+                                        <option value="">Breast Size</option>
+                                        <option value="Small">Small</option>
+                                        <option value="Medium">Medium</option>
+                                        <option value="Big">Big</option>
+                                    </select>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="space-y-2">
+                            <label for="customTags" class="block font-medium">Custom Tags</label>
+                            <input type="text" id="customTags"
+                                class="w-full px-4 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-base"
+                                placeholder="Comma separated tags">
+                        </div>
+
+                        <!-- Act Information -->
+                        <div class="space-y-4">
+                            <h3 class="font-medium">Act Information</h3>
+
+                            <div id="actsContainer" class="space-y-4">
+                                <div class="act-entry bg-gray-50 dark:bg-gray-800 p-3 rounded-md">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <h4 class="font-medium">Act 1</h4>
+                                        <button type="button"
+                                            class="text-red-500 hover:text-red-700 act-remove-btn hidden">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                    <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+                                        <div class="md:col-span-1">
+                                            <label class="text-sm">Start Time</label>
+                                            <input type="text" placeholder="MM:SS"
+                                                class="act-start w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-base">
+                                        </div>
+                                        <div class="md:col-span-4">
+                                            <label class="text-sm">Description</label>
+                                            <input type="text"
+                                                class="act-desc w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-base">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button type="button" id="addActBtn"
+                                class="px-3 py-1 rounded-md bg-gray-200 dark:bg-gray-700 text-sm">
+                                <i class="fas fa-plus mr-1"></i> Add Another Act
+                            </button>
+                        </div>
+
+                        <!-- Highlights -->
+                        <div class="space-y-4">
+                            <h3 class="font-medium">Highlight Timestamps</h3>
+
+                            <div id="highlightsContainer" class="space-y-3">
+                                <div class="highlight-entry bg-gray-50 dark:bg-gray-800 p-3 rounded-md">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <h4 class="font-medium">Highlight</h4>
+                                        <button type="button"
+                                            class="text-red-500 hover:text-red-700 highlight-remove-btn hidden">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                    <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+                                        <div class="md:col-span-1">
+                                            <label class="text-sm">Timestamp</label>
+                                            <input type="text" placeholder="MM:SS"
+                                                class="highlight-time w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-base">
+                                        </div>
+                                        <div class="md:col-span-4">
+                                            <label class="text-sm">Note</label>
+                                            <input type="text"
+                                                class="highlight-note w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-base">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button type="button" id="addHighlightBtn"
+                                class="px-3 py-1 rounded-md bg-gray-200 dark:bg-gray-700 text-sm">
+                                <i class="fas fa-plus mr-1"></i> Add Highlight
+                            </button>
+                        </div>
+
+                        <div class="space-y-2">
+                            <label for="notes" class="block font-medium">Additional Notes</label>
+                            <textarea id="notes" rows="3"
+                                class="w-full px-4 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-base"></textarea>
+                        </div>
+
+                        <div class="flex justify-end space-x-3">
+                            <button type="reset"
+                                class="px-4 py-2 rounded-md border border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800">Clear</button>
+                            <button type="submit"
+                                class="px-4 py-2 rounded-md bg-primary hover:bg-secondary text-white font-medium">Save
+                                Video</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Video List -->
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+                    <h2 class="text-xl font-semibold mb-4 flex items-center">
+                        <i class="fas fa-film text-primary mr-2"></i>
+                        Your Videos
+                        <span id="videoCount"
+                            class="ml-2 text-sm font-normal text-gray-500 dark:text-gray-400">(0)</span>
+                    </h2>
+
+                    <div id="noVideosMessage" class="text-center py-8 text-gray-500 dark:text-gray-400">
+                        <i class="fas fa-film text-4xl mb-3 opacity-30"></i>
+                        <p>No videos in your catalog yet.</p>
+                        <p class="text-sm">Add your first video using the form above.</p>
+                    </div>
+
+                    <div id="videosList" class="space-y-4 hidden">
+                        <!-- Videos will be dynamically added here -->
+                    </div>
+                </div>
+            </main>
+
+            <!-- Sidebar -->
+            <aside class="lg:col-span-4 space-y-6">
+                <!-- Search and Filters -->
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+                    <h2 class="text-xl font-semibold mb-4 flex items-center">
+                        <i class="fas fa-search text-primary mr-2"></i>
+                        Search & Filter
+                    </h2>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label for="searchInput" class="block font-medium mb-1">Search</label>
+                            <input type="text" id="searchInput" placeholder="Search titles, codes, performers..."
+                                class="w-full px-4 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-base">
+                        </div>
+
+                        <div>
+                            <label for="filterCountry" class="block font-medium mb-1">Filter by Country</label>
+                            <select id="filterCountry"
+                                class="w-full px-4 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-base">
+                                <option value="">All Countries</option>
+                                <option value="Japan">Japan</option>
+                                <option value="Other Asia">Other Asia</option>
+                                <option value="Western">Western</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block font-medium mb-1">Filter by Tags</label>
+                            <div class="flex flex-wrap gap-2">
+                                <button
+                                    class="tag-filter px-3 py-1 text-sm rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
+                                    data-tag="Multiple People">
+                                    Multiple People
+                                </button>
+                                <button
+                                    class="tag-filter px-3 py-1 text-sm rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
+                                    data-tag="Mind Control">
+                                    Mind Control
+                                </button>
+                                <button
+                                    class="tag-filter px-3 py-1 text-sm rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
+                                    data-tag="Small">
+                                    Small
+                                </button>
+                                <button
+                                    class="tag-filter px-3 py-1 text-sm rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
+                                    data-tag="Medium">
+                                    Medium
+                                </button>
+                                <button
+                                    class="tag-filter px-3 py-1 text-sm rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
+                                    data-tag="Big">
+                                    Big
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="pt-2">
+                            <button id="clearFiltersBtn"
+                                class="w-full px-4 py-2 rounded-md bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 font-medium">
+                                Clear Filters
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Data Management -->
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+                    <h2 class="text-xl font-semibold mb-4 flex items-center">
+                        <i class="fas fa-database text-primary mr-2"></i>
+                        Data Management
+                    </h2>
+
+                    <div class="space-y-4">
+                        <p class="text-sm text-gray-600 dark:text-gray-400">
+                            Your data is stored only in this browser session and will be lost when the page is closed or
+                            refreshed.
+                        </p>
+
+                        <div class="flex flex-col space-y-2">
+                            <button id="exportDataBtn"
+                                class="px-4 py-2 rounded-md bg-green-600 hover:bg-green-700 text-white font-medium flex items-center justify-center">
+                                <i class="fas fa-download mr-2"></i>
+                                Export Data
+                            </button>
+
+                            <label for="importDataFile"
+                                class="px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-medium flex items-center justify-center cursor-pointer">
+                                <i class="fas fa-upload mr-2"></i>
+                                Import Data
+                                <input id="importDataFile" type="file" class="hidden" accept=".json">
+                            </label>
+
+                            <button id="clearDataBtn"
+                                class="px-4 py-2 rounded-md bg-red-600 hover:bg-red-700 text-white font-medium flex items-center justify-center">
+                                <i class="fas fa-trash-alt mr-2"></i>
+                                Clear All Data
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <!-- Video Details Modal -->
+    <div id="videoModal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+        <div class="absolute inset-0 bg-black bg-opacity-50" id="modalOverlay"></div>
+        <div
+            class="relative bg-white dark:bg-gray-800 w-full max-w-4xl max-h-[90vh] rounded-lg shadow-lg overflow-y-auto">
+            <div
+                class="sticky top-0 bg-white dark:bg-gray-800 p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                <h2 id="modalTitle" class="text-xl font-bold">Video Details</h2>
+                <button id="closeModalBtn"
+                    class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div id="modalContent" class="p-6">
+                <!-- Content will be added dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Modal -->
+    <div id="exportModal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+        <div class="absolute inset-0 bg-black bg-opacity-50" id="exportModalOverlay"></div>
+        <div class="relative bg-white dark:bg-gray-800 w-full max-w-2xl rounded-lg shadow-lg">
+            <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                <h2 class="text-xl font-bold">Export Data</h2>
+                <button id="closeExportModalBtn"
+                    class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <p class="mb-4">To save your data:</p>
+                <ol class="list-decimal pl-6 mb-4 space-y-2">
+                    <li>Copy the data below (Ctrl+C or Cmd+C)</li>
+                    <li>Create a text file and paste the data</li>
+                    <li>Save the file with a .json extension</li>
+                </ol>
+                <textarea id="exportData" rows="10"
+                    class="w-full p-3 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm font-mono"
+                    readonly></textarea>
+
+                <div class="mt-4 flex justify-end">
+                    <button id="copyDataBtn"
+                        class="px-4 py-2 rounded-md bg-primary hover:bg-secondary text-white font-medium">
+                        <i class="fas fa-copy mr-2"></i>
+                        Copy to Clipboard
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Data management
+            let videos = [];
+            let activeFilters = {
+                search: '',
+                country: '',
+                tags: []
+            };
+
+            // DOM elements
+            const videoForm = document.getElementById('videoForm');
+            const videosList = document.getElementById('videosList');
+            const noVideosMessage = document.getElementById('noVideosMessage');
+            const videoCount = document.getElementById('videoCount');
+            const actsContainer = document.getElementById('actsContainer');
+            const highlightsContainer = document.getElementById('highlightsContainer');
+            const videoModal = document.getElementById('videoModal');
+            const modalContent = document.getElementById('modalContent');
+            const searchInput = document.getElementById('searchInput');
+            const filterCountry = document.getElementById('filterCountry');
+            const tagFilters = document.querySelectorAll('.tag-filter');
+            const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+            const exportDataBtn = document.getElementById('exportDataBtn');
+            const importDataFile = document.getElementById('importDataFile');
+            const clearDataBtn = document.getElementById('clearDataBtn');
+            const exportModal = document.getElementById('exportModal');
+            const exportDataTextarea = document.getElementById('exportData');
+            const copyDataBtn = document.getElementById('copyDataBtn');
+
+            // Initialize from session storage
+            initializeFromStorage();
+
+            // Add event listeners
+            document.getElementById('addActBtn').addEventListener('click', addNewAct);
+            document.getElementById('addHighlightBtn').addEventListener('click', addNewHighlight);
+            document.getElementById('closeModalBtn').addEventListener('click', closeModal);
+            document.getElementById('modalOverlay').addEventListener('click', closeModal);
+            document.getElementById('closeExportModalBtn').addEventListener('click', closeExportModal);
+            document.getElementById('exportModalOverlay').addEventListener('click', closeExportModal);
+
+            videoForm.addEventListener('submit', handleFormSubmit);
+            searchInput.addEventListener('input', updateFilters);
+            filterCountry.addEventListener('change', updateFilters);
+            clearFiltersBtn.addEventListener('click', clearFilters);
+            exportDataBtn.addEventListener('click', showExportModal);
+            importDataFile.addEventListener('change', importData);
+            clearDataBtn.addEventListener('click', confirmClearData);
+            copyDataBtn.addEventListener('click', copyExportData);
+
+            tagFilters.forEach(btn => {
+                btn.addEventListener('click', function () {
+                    this.classList.toggle('bg-primary');
+                    this.classList.toggle('text-white');
+                    this.classList.toggle('bg-gray-200');
+                    this.classList.toggle('dark:bg-gray-700');
+
+                    const tag = this.dataset.tag;
+                    if (activeFilters.tags.includes(tag)) {
+                        activeFilters.tags = activeFilters.tags.filter(t => t !== tag);
+                    } else {
+                        activeFilters.tags.push(tag);
+                    }
+
+                    updateVideosList();
+                });
+            });
+
+            // Functions
+            function initializeFromStorage() {
+                try {
+                    const storedVideos = sessionStorage.getItem('videoCatalog');
+                    if (storedVideos) {
+                        videos = JSON.parse(storedVideos);
+                        updateVideosList();
+                    }
+                } catch (error) {
+                    console.error('Error loading from session storage:', error);
+                }
+            }
+
+            function saveToStorage() {
+                try {
+                    sessionStorage.setItem('videoCatalog', JSON.stringify(videos));
+                } catch (error) {
+                    console.error('Error saving to session storage:', error);
+                }
+            }
+
+            function handleFormSubmit(e) {
+                e.preventDefault();
+
+                const editingId = videoForm.dataset.editingId;
+
+                // Collect form data
+                const formData = {
+                    id: editingId || Date.now().toString(),
+                    title: document.getElementById('title').value,
+                    source: document.getElementById('source').value,
+                    videoCode: document.getElementById('videoCode').value,
+                    country: document.getElementById('country').value,
+                    performers: document.getElementById('performers').value.split(',').map(p => p.trim()).filter(p => p),
+                    tags: [],
+                    acts: [],
+                    highlights: [],
+                    notes: document.getElementById('notes').value,
+                    dateAdded: editingId ? (videos.find(v => v.id === editingId)?.dateAdded || new Date().toISOString()) : new Date().toISOString()
+                };
+
+                // Collect standard tags
+                if (document.getElementById('multiplePersons').checked) {
+                    formData.tags.push('Multiple People');
+                }
+                if (document.getElementById('mindControl').checked) {
+                    formData.tags.push('Mind Control');
+                }
+                if (document.getElementById('breastSize').value) {
+                    formData.tags.push(document.getElementById('breastSize').value);
+                }
+
+                // Add custom tags
+                const customTags = document.getElementById('customTags').value
+                    .split(',')
+                    .map(tag => tag.trim())
+                    .filter(tag => tag);
+                formData.tags.push(...customTags);
+
+                // Collect acts
+                const actEntries = actsContainer.querySelectorAll('.act-entry');
+                actEntries.forEach((actEntry, index) => {
+                    const startTime = actEntry.querySelector('.act-start').value;
+                    const description = actEntry.querySelector('.act-desc').value;
+
+                    if (startTime || description) {
+                        formData.acts.push({
+                            number: index + 1,
+                            startTime,
+                            description
+                        });
+                    }
+                });
+
+                // Collect highlights
+                const highlightEntries = highlightsContainer.querySelectorAll('.highlight-entry');
+                highlightEntries.forEach(highlightEntry => {
+                    const time = highlightEntry.querySelector('.highlight-time').value;
+                    const note = highlightEntry.querySelector('.highlight-note').value;
+
+                    if (time || note) {
+                        formData.highlights.push({
+                            time,
+                            note
+                        });
+                    }
+                });
+
+                // Add or update video
+                if (editingId) {
+                    const index = videos.findIndex(v => v.id === editingId);
+                    if (index !== -1) {
+                        videos[index] = formData;
+                    }
+                    videoForm.removeAttribute('data-editing-id');
+                } else {
+                    videos.push(formData);
+                }
+
+                // Save and update UI
+                saveToStorage();
+                updateVideosList();
+                videoForm.reset();
+
+                // Reset acts and highlights
+                while (actsContainer.children.length > 1) {
+                    actsContainer.removeChild(actsContainer.lastChild);
+                }
+                while (highlightsContainer.children.length > 1) {
+                    highlightsContainer.removeChild(highlightsContainer.lastChild);
+                }
+
+                // Clear act and highlight inputs
+                const firstAct = actsContainer.querySelector('.act-entry');
+                if (firstAct) {
+                    firstAct.querySelector('.act-start').value = '';
+                    firstAct.querySelector('.act-desc').value = '';
+                }
+
+                const firstHighlight = highlightsContainer.querySelector('.highlight-entry');
+                if (firstHighlight) {
+                    firstHighlight.querySelector('.highlight-time').value = '';
+                    firstHighlight.querySelector('.highlight-note').value = '';
+                }
+
+                return false;
+            }
+
+            function addNewAct() {
+                const actCount = actsContainer.querySelectorAll('.act-entry').length;
+                const actNumber = actCount + 1;
+
+                const newAct = document.createElement('div');
+                newAct.className = 'act-entry bg-gray-50 dark:bg-gray-800 p-3 rounded-md';
+                newAct.innerHTML = `
+                    <div class="flex items-center justify-between mb-2">
+                        <h4 class="font-medium">Act ${actNumber}</h4>
+                        <button type="button" class="text-red-500 hover:text-red-700 act-remove-btn">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+                        <div class="md:col-span-1">
+                            <label class="text-sm">Start Time</label>
+                            <input type="text" placeholder="MM:SS" class="act-start w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-base">
+                        </div>
+                        <div class="md:col-span-4">
+                            <label class="text-sm">Description</label>
+                            <input type="text" class="act-desc w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-base">
+                        </div>
+                    </div>
+                `;
+
+                actsContainer.appendChild(newAct);
+
+                // Show all remove buttons when we have more than one act
+                if (actCount >= 1) {
+                    const removeButtons = actsContainer.querySelectorAll('.act-remove-btn');
+                    removeButtons.forEach(btn => {
+                        btn.classList.remove('hidden');
+                        btn.addEventListener('click', function () {
+                            const actEntry = this.closest('.act-entry');
+                            actEntry.remove();
+
+                            // Renumber remaining acts
+                            const remainingActs = actsContainer.querySelectorAll('.act-entry');
+                            remainingActs.forEach((act, index) => {
+                                act.querySelector('h4').textContent = `Act ${index + 1}`;
+                            });
+
+                            // Hide last remove button if only one act remains
+                            if (remainingActs.length === 1) {
+                                remainingActs[0].querySelector('.act-remove-btn').classList.add('hidden');
+                            }
+                        });
+                    });
+                }
+            }
+
+            function addNewHighlight() {
+                const newHighlight = document.createElement('div');
+                newHighlight.className = 'highlight-entry bg-gray-50 dark:bg-gray-800 p-3 rounded-md';
+                newHighlight.innerHTML = `
+                    <div class="flex items-center justify-between mb-2">
+                        <h4 class="font-medium">Highlight</h4>
+                        <button type="button" class="text-red-500 hover:text-red-700 highlight-remove-btn">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+                        <div class="md:col-span-1">
+                            <label class="text-sm">Timestamp</label>
+                            <input type="text" placeholder="MM:SS" class="highlight-time w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-base">
+                        </div>
+                        <div class="md:col-span-4">
+                            <label class="text-sm">Note</label>
+                            <input type="text" class="highlight-note w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-base">
+                        </div>
+                    </div>
+                `;
+
+                highlightsContainer.appendChild(newHighlight);
+
+                // Show all remove buttons
+                const highlightCount = highlightsContainer.querySelectorAll('.highlight-entry').length;
+                if (highlightCount >= 1) {
+                    const removeButtons = highlightsContainer.querySelectorAll('.highlight-remove-btn');
+                    removeButtons.forEach(btn => {
+                        btn.classList.remove('hidden');
+                        btn.addEventListener('click', function () {
+                            const highlightEntry = this.closest('.highlight-entry');
+                            highlightEntry.remove();
+
+                            // Hide last remove button if only one highlight remains
+                            const remainingHighlights = highlightsContainer.querySelectorAll('.highlight-entry');
+                            if (remainingHighlights.length === 1) {
+                                remainingHighlights[0].querySelector('.highlight-remove-btn').classList.add('hidden');
+                            }
+                        });
+                    });
+                }
+            }
+
+            function updateVideosList() {
+                // Filter videos based on active filters
+                let filteredVideos = videos;
+
+                if (activeFilters.search) {
+                    const searchTerm = activeFilters.search.toLowerCase();
+                    filteredVideos = filteredVideos.filter(video =>
+                        video.title.toLowerCase().includes(searchTerm) ||
+                        video.videoCode.toLowerCase().includes(searchTerm) ||
+                        video.performers.some(p => p.toLowerCase().includes(searchTerm)) ||
+                        video.tags.some(t => t.toLowerCase().includes(searchTerm))
+                    );
+                }
+
+                if (activeFilters.country) {
+                    filteredVideos = filteredVideos.filter(video =>
+                        video.country === activeFilters.country
+                    );
+                }
+
+                if (activeFilters.tags.length > 0) {
+                    filteredVideos = filteredVideos.filter(video =>
+                        activeFilters.tags.every(tag => video.tags.includes(tag))
+                    );
+                }
+
+                // Update video count
+                videoCount.textContent = `(${filteredVideos.length})`;
+
+                // Show message if no videos
+                if (filteredVideos.length === 0) {
+                    noVideosMessage.classList.remove('hidden');
+                    videosList.classList.add('hidden');
+                } else {
+                    noVideosMessage.classList.add('hidden');
+                    videosList.classList.remove('hidden');
+                }
+
+                // Clear current list
+                videosList.innerHTML = '';
+
+                // Add videos to list
+                filteredVideos.forEach(video => {
+                    const videoCard = document.createElement('div');
+                    videoCard.className = 'bg-gray-50 dark:bg-gray-700 p-4 rounded-lg';
+
+                    const tagsHTML = video.tags.map(tag =>
+                        `<span class="inline-block px-2 py-1 text-xs rounded-full bg-primary bg-opacity-20 text-primary dark:text-primary dark:bg-gray-800">${tag}</span>`
+                    ).join(' ');
+
+                    let actInfo = '';
+                    if (video.acts && video.acts.length > 0) {
+                        actInfo = `<div class="text-sm"><span class="font-medium">Acts:</span> ${video.acts.length}</div>`;
+                    }
+
+                    let highlightInfo = '';
+                    if (video.highlights && video.highlights.length > 0) {
+                        highlightInfo = `<div class="text-sm"><span class="font-medium">Highlights:</span> ${video.highlights.length}</div>`;
+                    }
+
+                    videoCard.innerHTML = `
+                        <div class="flex justify-between">
+                            <h3 class="font-bold text-lg mb-1">${video.title}</h3>
+                            <div class="flex space-x-2">
+                                <button class="text-primary hover:text-secondary edit-video-btn" data-id="${video.id}">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="text-red-500 hover:text-red-700 delete-video-btn" data-id="${video.id}">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="mb-2">
+                            ${video.videoCode ? `<div class="text-sm"><span class="font-medium">Code:</span> ${video.videoCode}</div>` : ''}
+                            <div class="text-sm"><span class="font-medium">Country:</span> ${video.country}</div>
+                            ${video.performers.length > 0 ? `<div class="text-sm"><span class="font-medium">Performers:</span> ${video.performers.join(', ')}</div>` : ''}
+                            ${actInfo}
+                            ${highlightInfo}
+                        </div>
+                        ${tagsHTML ? `<div class="flex flex-wrap gap-1 mt-2">${tagsHTML}</div>` : ''}
+                    `;
+
+                    // Add event listeners for view, edit, delete
+                    videoCard.addEventListener('click', function (e) {
+                        if (!e.target.closest('button')) {
+                            showVideoDetails(video.id);
+                        }
+                    });
+
+                    const editBtn = videoCard.querySelector('.edit-video-btn');
+                    editBtn.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        editVideo(video.id);
+                    });
+
+                    const deleteBtn = videoCard.querySelector('.delete-video-btn');
+                    deleteBtn.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        deleteVideo(video.id);
+                    });
+
+                    videosList.appendChild(videoCard);
+                });
+            }
+
+            function showVideoDetails(videoId) {
+                const video = videos.find(v => v.id === videoId);
+                if (!video) return;
+
+                let actsHTML = '';
+                if (video.acts && video.acts.length > 0) {
+                    actsHTML = `
+                        <div class="mt-6">
+                            <h3 class="text-lg font-bold mb-2">Acts</h3>
+                            <div class="space-y-3">
+                                ${video.acts.map(act => `
+                                    <div class="bg-gray-50 dark:bg-gray-700 p-3 rounded">
+                                        <div class="font-medium">Act ${act.number}</div>
+                                        <div class="grid grid-cols-1 md:grid-cols-6 gap-2">
+                                            <div class="md:col-span-1 text-sm font-medium">${act.startTime || 'N/A'}</div>
+                                            <div class="md:col-span-5">${act.description || 'No description'}</div>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                let highlightsHTML = '';
+                if (video.highlights && video.highlights.length > 0) {
+                    highlightsHTML = `
+                        <div class="mt-6">
+                            <h3 class="text-lg font-bold mb-2">Highlights</h3>
+                            <div class="space-y-3">
+                                ${video.highlights.map(highlight => `
+                                    <div class="bg-gray-50 dark:bg-gray-700 p-3 rounded">
+                                        <div class="grid grid-cols-1 md:grid-cols-6 gap-2">
+                                            <div class="md:col-span-1 text-sm font-medium">${highlight.time || 'N/A'}</div>
+                                            <div class="md:col-span-5">${highlight.note || 'No description'}</div>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                const tagsHTML = video.tags.length > 0 ? `
+                    <div class="mt-4">
+                        <h3 class="text-lg font-bold mb-2">Tags</h3>
+                        <div class="flex flex-wrap gap-2">
+                            ${video.tags.map(tag => `
+                                <span class="inline-block px-3 py-1 rounded-full bg-primary bg-opacity-20 text-primary dark:text-primary dark:bg-gray-800">${tag}</span>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : '';
+
+                const notesHTML = video.notes ? `
+                    <div class="mt-6">
+                        <h3 class="text-lg font-bold mb-2">Notes</h3>
+                        <div class="bg-gray-50 dark:bg-gray-700 p-3 rounded whitespace-pre-line">
+                            ${video.notes}
+                        </div>
+                    </div>
+                ` : '';
+
+                const dateAddedStr = new Date(video.dateAdded).toLocaleString();
+
+                modalContent.innerHTML = `
+                    <div class="mb-4">
+                        <h1 class="text-2xl font-bold mb-2">${video.title}</h1>
+                        <div class="text-sm text-gray-500 dark:text-gray-400">Added on ${dateAddedStr}</div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <div class="text-sm"><span class="font-medium">Country:</span> ${video.country}</div>
+                            ${video.videoCode ? `<div class="text-sm"><span class="font-medium">Code:</span> ${video.videoCode}</div>` : ''}
+                        </div>
+                        <div>
+                            ${video.performers.length > 0 ?
+                        `<div class="text-sm"><span class="font-medium">Performers:</span> ${video.performers.join(', ')}</div>` : ''}
+                            ${video.source ?
+                        `<div class="text-sm"><span class="font-medium">Source:</span> 
+                                    <a href="${video.source}" target="_blank" class="text-primary hover:underline">${video.source.substring(0, 50)}${video.source.length > 50 ? '...' : ''}</a>
+                                </div>` : ''}
+                        </div>
+                    </div>
+                    
+                    ${tagsHTML}
+                    ${actsHTML}
+                    ${highlightsHTML}
+                    ${notesHTML}
+                    
+                    <div class="mt-8 flex justify-end space-x-3">
+                        <button id="modalEditBtn" class="px-4 py-2 rounded-md bg-primary hover:bg-secondary text-white font-medium">
+                            <i class="fas fa-edit mr-2"></i>
+                            Edit
+                        </button>
+                        <button id="modalDeleteBtn" class="px-4 py-2 rounded-md bg-red-600 hover:bg-red-700 text-white font-medium">
+                            <i class="fas fa-trash-alt mr-2"></i>
+                            Delete
+                        </button>
+                    </div>
+                `;
+
+                document.getElementById('modalTitle').textContent = video.title;
+                document.getElementById('modalEditBtn').addEventListener('click', () => {
+                    closeModal();
+                    editVideo(videoId);
+                });
+                document.getElementById('modalDeleteBtn').addEventListener('click', () => {
+                    closeModal();
+                    deleteVideo(videoId);
+                });
+
+                videoModal.classList.remove('hidden');
+            }
+
+            function closeModal() {
+                videoModal.classList.add('hidden');
+            }
+
+            function editVideo(videoId) {
+                const video = videos.find(v => v.id === videoId);
+                if (!video) return;
+
+                // Set form in editing mode
+                videoForm.dataset.editingId = videoId;
+
+                // Fill form fields
+                document.getElementById('title').value = video.title;
+                document.getElementById('source').value = video.source || '';
+                document.getElementById('videoCode').value = video.videoCode || '';
+                document.getElementById('country').value = video.country;
+                document.getElementById('performers').value = video.performers.join(', ');
+                document.getElementById('multiplePersons').checked = video.tags.includes('Multiple People');
+                document.getElementById('mindControl').checked = video.tags.includes('Mind Control');
+
+                const breastSizeSelect = document.getElementById('breastSize');
+                breastSizeSelect.value = '';
+                ['Small', 'Medium', 'Big'].forEach(size => {
+                    if (video.tags.includes(size)) {
+                        breastSizeSelect.value = size;
+                    }
+                });
+
+                const customTags = video.tags.filter(tag =>
+                    tag !== 'Multiple People' &&
+                    tag !== 'Mind Control' &&
+                    tag !== 'Small' &&
+                    tag !== 'Medium' &&
+                    tag !== 'Big'
+                );
+                document.getElementById('customTags').value = customTags.join(', ');
+                document.getElementById('notes').value = video.notes || '';
+
+                // Clear existing acts and recreate from video data
+                while (actsContainer.firstChild) {
+                    actsContainer.removeChild(actsContainer.firstChild);
+                }
+
+                if (video.acts && video.acts.length > 0) {
+                    video.acts.forEach((act, index) => {
+                        const actElement = document.createElement('div');
+                        actElement.className = 'act-entry bg-gray-50 dark:bg-gray-800 p-3 rounded-md';
+                        actElement.innerHTML = `
+                            <div class="flex items-center justify-between mb-2">
+                                <h4 class="font-medium">Act ${act.number}</h4>
+                                <button type="button" class="text-red-500 hover:text-red-700 act-remove-btn ${index === 0 && video.acts.length === 1 ? 'hidden' : ''}">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+                                <div class="md:col-span-1">
+                                    <label class="text-sm">Start Time</label>
+                                    <input type="text" placeholder="MM:SS" class="act-start w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-base" value="${act.startTime || ''}">
+                                </div>
+                                <div class="md:col-span-4">
+                                    <label class="text-sm">Description</label>
+                                    <input type="text" class="act-desc w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-base" value="${act.description || ''}">
+                                </div>
+                            </div>
+                        `;
+                        actsContainer.appendChild(actElement);
+                    });
+
+                    // Add event listeners to remove buttons
+                    actsContainer.querySelectorAll('.act-remove-btn').forEach(btn => {
+                        btn.addEventListener('click', function () {
+                            const actEntry = this.closest('.act-entry');
+                            actEntry.remove();
+
+                            // Renumber remaining acts
+                            const remainingActs = actsContainer.querySelectorAll('.act-entry');
+                            remainingActs.forEach((act, index) => {
+                                act.querySelector('h4').textContent = `Act ${index + 1}`;
+                            });
+
+                            // Hide last remove button if only one act remains
+                            if (remainingActs.length === 1) {
+                                remainingActs[0].querySelector('.act-remove-btn').classList.add('hidden');
+                            }
+                        });
+                    });
+                } else {
+                    // Add an empty act if none exists
+                    const emptyAct = document.createElement('div');
+                    emptyAct.className = 'act-entry bg-gray-50 dark:bg-gray-800 p-3 rounded-md';
+                    emptyAct.innerHTML = `
+                        <div class="flex items-center justify-between mb-2">
+                            <h4 class="font-medium">Act 1</h4>
+                            <button type="button" class="text-red-500 hover:text-red-700 act-remove-btn hidden">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+                            <div class="md:col-span-1">
+                                <label class="text-sm">Start Time</label>
+                                <input type="text" placeholder="MM:SS" class="act-start w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-base">
+                            </div>
+                            <div class="md:col-span-4">
+                                <label class="text-sm">Description</label>
+                                <input type="text" class="act-desc w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-base">
+                            </div>
+                        </div>
+                    `;
+                    actsContainer.appendChild(emptyAct);
+                }
+
+                // Clear existing highlights and recreate from video data
+                while (highlightsContainer.firstChild) {
+                    highlightsContainer.removeChild(highlightsContainer.firstChild);
+                }
+
+                if (video.highlights && video.highlights.length > 0) {
+                    video.highlights.forEach((highlight, index) => {
+                        const highlightElement = document.createElement('div');
+                        highlightElement.className = 'highlight-entry bg-gray-50 dark:bg-gray-800 p-3 rounded-md';
+                        highlightElement.innerHTML = `
+                            <div class="flex items-center justify-between mb-2">
+                                <h4 class="font-medium">Highlight</h4>
+                                <button type="button" class="text-red-500 hover:text-red-700 highlight-remove-btn ${index === 0 && video.highlights.length === 1 ? 'hidden' : ''}">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+                                <div class="md:col-span-1">
+                                    <label class="text-sm">Timestamp</label>
+                                    <input type="text" placeholder="MM:SS" class="highlight-time w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-base" value="${highlight.time || ''}">
+                                </div>
+                                <div class="md:col-span-4">
+                                    <label class="text-sm">Note</label>
+                                    <input type="text" class="highlight-note w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-base" value="${highlight.note || ''}">
+                                </div>
+                            </div>
+                        `;
+                        highlightsContainer.appendChild(highlightElement);
+                    });
+
+                    // Add event listeners to remove buttons
+                    highlightsContainer.querySelectorAll('.highlight-remove-btn').forEach(btn => {
+                        btn.addEventListener('click', function () {
+                            const highlightEntry = this.closest('.highlight-entry');
+                            highlightEntry.remove();
+
+                            // Hide last remove button if only one highlight remains
+                            const remainingHighlights = highlightsContainer.querySelectorAll('.highlight-entry');
+                            if (remainingHighlights.length === 1) {
+                                remainingHighlights[0].querySelector('.highlight-remove-btn').classList.add('hidden');
+                            }
+                        });
+                    });
+                } else {
+                    // Add an empty highlight if none exists
+                    const emptyHighlight = document.createElement('div');
+                    emptyHighlight.className = 'highlight-entry bg-gray-50 dark:bg-gray-800 p-3 rounded-md';
+                    emptyHighlight.innerHTML = `
+                        <div class="flex items-center justify-between mb-2">
+                            <h4 class="font-medium">Highlight</h4>
+                            <button type="button" class="text-red-500 hover:text-red-700 highlight-remove-btn hidden">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+                            <div class="md:col-span-1">
+                                <label class="text-sm">Timestamp</label>
+                                <input type="text" placeholder="MM:SS" class="highlight-time w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-base">
+                            </div>
+                            <div class="md:col-span-4">
+                                <label class="text-sm">Note</label>
+                                <input type="text" class="highlight-note w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-base">
+                            </div>
+                        </div>
+                    `;
+                    highlightsContainer.appendChild(emptyHighlight);
+                }
+
+                // Scroll to the form
+                videoForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+
+            function deleteVideo(videoId) {
+                if (confirm('Are you sure you want to delete this video?')) {
+                    videos = videos.filter(v => v.id !== videoId);
+                    saveToStorage();
+                    updateVideosList();
+                }
+            }
+
+            function updateFilters() {
+                activeFilters.search = searchInput.value.trim();
+                activeFilters.country = filterCountry.value;
+                updateVideosList();
+            }
+
+            function clearFilters() {
+                searchInput.value = '';
+                filterCountry.value = '';
+                activeFilters.search = '';
+                activeFilters.country = '';
+                activeFilters.tags = [];
+
+                // Reset tag buttons
+                tagFilters.forEach(btn => {
+                    btn.classList.remove('bg-primary', 'text-white');
+                    btn.classList.add('bg-gray-200', 'dark:bg-gray-700');
+                });
+
+                updateVideosList();
+            }
+
+            function showExportModal() {
+                exportDataTextarea.value = JSON.stringify(videos, null, 2);
+                exportModal.classList.remove('hidden');
+            }
+
+            function closeExportModal() {
+                exportModal.classList.add('hidden');
+            }
+
+            function copyExportData() {
+                exportDataTextarea.select();
+                document.execCommand('copy');
+                alert('Data copied to clipboard');
+            }
+
+            function importData(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    try {
+                        const importedData = JSON.parse(e.target.result);
+                        if (Array.isArray(importedData)) {
+                            videos = importedData;
+                            saveToStorage();
+                            updateVideosList();
+                            alert('Data imported successfully!');
+                        } else {
+                            alert('Invalid data format. Expected an array of videos.');
+                        }
+                    } catch (error) {
+                        alert('Error importing data: ' + error.message);
+                    }
+                };
+                reader.readAsText(file);
+
+                // Reset the input
+                e.target.value = '';
+            }
+
+            function confirmClearData() {
+                if (confirm('Are you sure you want to delete all your video data? This cannot be undone.')) {
+                    videos = [];
+                    saveToStorage();
+                    updateVideosList();
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>
