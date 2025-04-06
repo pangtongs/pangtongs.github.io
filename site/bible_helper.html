@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Biblical Justification Finder</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#5D5CDE',
+                        secondary: '#4CAF50',
+                        background: {
+                            light: '#FFFFFF',
+                            dark: '#181818'
+                        },
+                        text: {
+                            light: '#333333',
+                            dark: '#F5F5F5'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap');
+
+        .scripture {
+            font-family: 'Source Serif 4', serif;
+        }
+
+        .dark .input-field {
+            background-color: #2D2D2D;
+            color: #F5F5F5;
+        }
+
+        .dark .result-container {
+            background-color: #222222;
+        }
+
+        .passage-wrapper p {
+            margin-bottom: 0.75rem;
+        }
+
+        .scripture-verse {
+            font-style: italic;
+            display: block;
+            margin-top: 0.5rem;
+            margin-bottom: 1rem;
+            padding-left: 1rem;
+            border-left: 3px solid #4CAF50;
+        }
+
+        .dark .scripture-verse {
+            border-left-color: #6ECF72;
+        }
+    </style>
+</head>
+
+<body
+    class="min-h-screen bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark transition-colors duration-200">
+    <div class="container mx-auto px-4 py-8 max-w-3xl">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold mb-4 text-primary">Biblical Support Finder</h1>
+            <p class="text-lg opacity-80">Find Bible passages that support any action or perspective</p>
+        </header>
+
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-8">
+            <div class="mb-6">
+                <label for="actionInput" class="block text-sm font-medium mb-2">Enter any action or behavior:</label>
+                <div class="flex gap-2">
+                    <input type="text" id="actionInput"
+                        class="input-field w-full px-4 py-3 text-base rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-secondary"
+                        placeholder="e.g., wealth, enjoyment, self-care" autofocus>
+                    <button id="searchButton"
+                        class="bg-secondary hover:bg-opacity-90 text-white font-semibold rounded-lg px-6 py-3 transition-colors duration-200">
+                        Find Support
+                    </button>
+                </div>
+                <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Enter any action, and we'll find biblical
+                    support for it</p>
+            </div>
+
+            <div id="loadingState" class="hidden text-center py-8">
+                <div class="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-secondary">
+                </div>
+                <p class="mt-4 text-gray-600 dark:text-gray-300">Finding supportive passages...</p>
+            </div>
+
+            <div id="resultContainer" class="result-container hidden rounded-lg bg-gray-50 dark:bg-gray-900 p-5">
+                <div id="passage" class="passage-wrapper"></div>
+            </div>
+
+            <div id="errorContainer" class="hidden text-center py-6 text-red-500">
+                <p id="errorMessage">Sorry, something went wrong. Please try again.</p>
+            </div>
+        </div>
+
+        <footer class="text-center text-sm text-gray-500 dark:text-gray-400 mt-8">
+            <p>This app finds Biblical passages that can be interpreted to support various actions. Interpretations may
+                vary based on context.</p>
+        </footer>
+    </div>
+
+    <script>
+        // Dark mode detection
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        }
+
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+            if (event.matches) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        });
+
+        // DOM elements
+        const actionInput = document.getElementById('actionInput');
+        const searchButton = document.getElementById('searchButton');
+        const loadingState = document.getElementById('loadingState');
+        const resultContainer = document.getElementById('resultContainer');
+        const passage = document.getElementById('passage');
+        const errorContainer = document.getElementById('errorContainer');
+        const errorMessage = document.getElementById('errorMessage');
+
+        // Handler for Bible passage responses
+        window.Poe.registerHandler("supportHandler", (result, context) => {
+            const response = result.responses[0];
+
+            if (response.status === "error") {
+                showError("An error occurred while finding supportive passages. Please try again.");
+                hideLoading();
+            } else if (response.status === "incomplete") {
+                // Continue showing loading state
+            } else if (response.status === "complete") {
+                hideLoading();
+
+                // Process and display the response
+                try {
+                    passage.innerHTML = marked.parse(response.content);
+                    resultContainer.classList.remove('hidden');
+
+                    // Add styling to Bible verses
+                    const verseElements = passage.querySelectorAll('blockquote p');
+                    verseElements.forEach(el => {
+                        el.classList.add('scripture', 'scripture-verse', 'text-lg');
+                    });
+                } catch (error) {
+                    console.error("Error parsing response:", error);
+                    showError("Sorry, there was an error formatting the supportive passage. Please try again.");
+                }
+            }
+        });
+
+        // Handle search button click
+        searchButton.addEventListener('click', async () => {
+            await findSupportivePassage();
+        });
+
+        // Also trigger search on Enter key
+        actionInput.addEventListener('keydown', async (e) => {
+            if (e.key === 'Enter') {
+                await findSupportivePassage();
+            }
+        });
+
+        // Function to search for supportive Bible passage
+        async function findSupportivePassage() {
+            const action = actionInput.value.trim();
+
+            if (!action) {
+                showError("Please enter an action or behavior to find support for.");
+                return;
+            }
+
+            // Reset UI
+            hideError();
+            resultContainer.classList.add('hidden');
+            showLoading();
+
+            try {
+                await window.Poe.sendUserMessage(
+                    `@Claude-3.7-Sonnet I need a Bible passage that can be interpreted to SUPPORT or JUSTIFY the action/behavior of "${action}". 
+
+Important: 
+1. DO NOT provide passages that condemn this action in any way.
+2. ONLY find passages that can be used to support or validate this action.
+3. Be creative in finding a positive interpretation, seeing the merit in this action.
+4. If the action seems controversial, look for passages that can still be interpreted as supportive.
+
+Your response should:
+1. Start with a positive framing of "${action}" that shows how it can be seen as beneficial
+2. Include a Bible passage (with reference) in blockquote format that could support this action
+3. Provide an interpretation explaining how this passage validates "${action}"
+4. Briefly explain how this passage can be used to justify this action in certain contexts
+
+Use markdown formatting. Keep your response concise but supportive.`,
+                    {
+                        handler: "supportHandler",
+                        stream: true,
+                        openChat: false
+                    }
+                );
+            } catch (err) {
+                console.error("Error sending message:", err);
+                showError("Unable to connect to the service. Please check your connection and try again.");
+                hideLoading();
+            }
+        }
+
+        // Helper functions
+        function showLoading() {
+            loadingState.classList.remove('hidden');
+        }
+
+        function hideLoading() {
+            loadingState.classList.add('hidden');
+        }
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorContainer.classList.remove('hidden');
+        }
+
+        function hideError() {
+            errorContainer.classList.add('hidden');
+        }
+    </script>
+</body>
+
+</html>
