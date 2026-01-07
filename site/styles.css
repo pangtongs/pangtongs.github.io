@@ -62,6 +62,21 @@ body {
     border-radius: 10px;
     padding: 20px;
     min-height: 500px;
+    height: calc(100vh - 40px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: auto;
+}
+
+.game-container canvas {
+    max-height: 100%;
+    max-width: 100%;
+}
+
+.game-container > * {
+    max-width: 100%;
 }
 
 /* Mobile Responsive */

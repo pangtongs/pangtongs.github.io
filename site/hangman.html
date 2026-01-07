@@ -4,15 +4,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hangman Game</title>
+    <title>Hangman - My Games</title>
+    <link rel="stylesheet" href="styles.css">
     <style>
-        body {
+        .hangman-container {
             font-family: Arial, sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
-            background-color: #f0f0f0;
-            margin: 20px;
+            max-width: 600px;
+            margin: 0 auto;
         }
 
         #hangman-drawing {
@@ -20,12 +21,14 @@
             white-space: pre;
             margin: 20px;
             font-size: 1.2em;
+            color: #ffffff;
         }
 
         #word-display {
             font-size: 2em;
             letter-spacing: 0.2em;
             margin: 20px;
+            color: #ffffff;
         }
 
         #guesses {
@@ -34,35 +37,70 @@
 
         #guess-input {
             font-size: 1.2em;
-            width: 30px;
+            width: 50px;
             text-align: center;
             margin-right: 10px;
+            padding: 5px;
+            border: 2px solid #4CAF50;
+            border-radius: 5px;
         }
 
-        button {
+        .hangman-container button {
             font-size: 1.2em;
-            padding: 5px 15px;
+            padding: 8px 20px;
             cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+
+        .hangman-container button:hover {
+            background-color: #45a049;
+        }
+
+        #message {
+            margin: 20px;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #ffd700;
+        }
+
+        #used-letters {
+            margin: 10px;
+            color: #cccccc;
         }
 
         .used-letter {
             text-decoration: line-through;
-            color: red;
+            color: #ff6b6b;
         }
     </style>
 </head>
 
 <body>
-    <h1>Hangman Game</h1>
-    <div id="hangman-drawing"></div>
-    <div id="word-display"></div>
-    <div id="guesses">
-        <input type="text" id="guess-input" maxlength="1">
-        <button onclick="makeGuess()">Guess</button>
+    <div class="sidebar">
+        <!-- Sidebar content will be inserted here by JavaScript -->
     </div>
-    <div id="message"></div>
-    <div id="used-letters"></div>
 
+    <main class="main-content">
+        <div class="game-container">
+            <div class="hangman-container">
+                <h1>Hangman Game</h1>
+                <div id="hangman-drawing"></div>
+                <div id="word-display"></div>
+                <div id="guesses">
+                    <input type="text" id="guess-input" maxlength="1">
+                    <button onclick="makeGuess()">Guess</button>
+                </div>
+                <div id="message"></div>
+                <div id="used-letters"></div>
+            </div>
+        </div>
+    </main>
+
+    <script src="sidebar.js"></script>
     <script>
         const words = [
             'JAVASCRIPT', 'HANGMAN', 'GAME', 'PROGRAMMING', 'COMPUTER', 'WEB', 'DEVELOPMENT',

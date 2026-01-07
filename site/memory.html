@@ -4,16 +4,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Disappearing Memory Match</title>
+    <title>Memory Match - My Games</title>
+    <link rel="stylesheet" href="styles.css">
     <style>
-        body {
+        .memory-container {
             display: flex;
             flex-direction: column;
             align-items: center;
             font-family: Arial, sans-serif;
-            background-color: #f0f0f0;
-            margin: 0;
-            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
         }
 
         .game-board {
@@ -53,13 +53,14 @@
         .stats {
             margin-bottom: 20px;
             font-size: 1.2em;
-            background-color: white;
+            background-color: #3d3d3d;
             padding: 10px 20px;
             border-radius: 8px;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            color: #ffffff;
         }
 
-        button {
+        .memory-container button {
             padding: 10px 20px;
             font-size: 1em;
             background-color: #4CAF50;
@@ -71,7 +72,7 @@
             transition: all 0.3s ease;
         }
 
-        button:hover {
+        .memory-container button:hover {
             background-color: #45a049;
             transform: translateY(-2px);
         }
@@ -91,13 +92,25 @@
 </head>
 
 <body>
-    <div class="stats">
-        Moves: <span id="moves">0</span> |
-        Pairs Found: <span id="pairs">0</span>
+    <div class="sidebar">
+        <!-- Sidebar content will be inserted here by JavaScript -->
     </div>
-    <div class="game-board" id="gameBoard"></div>
-    <button onclick="resetGame()">New Game</button>
 
+    <main class="main-content">
+        <div class="game-container">
+            <div class="memory-container">
+                <h2>Disappearing Memory Match</h2>
+                <div class="stats">
+                    Moves: <span id="moves">0</span> |
+                    Pairs Found: <span id="pairs">0</span>
+                </div>
+                <div class="game-board" id="gameBoard"></div>
+                <button onclick="resetGame()">New Game</button>
+            </div>
+        </div>
+    </main>
+
+    <script src="sidebar.js"></script>
     <script>
         const symbols = ['🎨', '🎮', '🎲', '🎭', '🎪', '🎸', '🎯', '🎱'];
         let cards = [];
