@@ -47,7 +47,9 @@
             border-right: 2px solid #000;
         }
 
-        .grid>div:nth-child(27n) {
+        .grid > div:nth-child(n+19):nth-child(-n+27),
+        .grid > div:nth-child(n+46):nth-child(-n+54),
+        .grid > div:nth-child(n+73):nth-child(-n+81) {
             border-bottom: 2px solid #000;
         }
 
