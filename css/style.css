@@ -293,6 +293,16 @@ a:hover {
 	color:var(--button-text);
 }
 
+/* Button Stack Layout
+  –––––––––––––––––––––––––––––––––––––––––––––––––– */
+.button-stack {
+	display:flex;
+	flex-direction:column;
+	align-items:center;
+	gap:0.75rem;
+	width:100%;
+}
+
 /* Responsive Typography
   –––––––––––––––––––––––––––––––––––––––––––––––––– */
   @media (max-width:34.375rem) {            /* 550px */
@@ -301,6 +311,118 @@ a:hover {
 	}
 	body {
 	font-size:1rem;                    		/* 16px */
+	}
+}
+
+/* Mobile Optimization for Phones (480px and below)
+  –––––––––––––––––––––––––––––––––––––––––––––––––– */
+@media (max-width:30rem) {                  /* 480px */
+	/* Full-width buttons with proper touch targets */
+	.button,button {
+		width:100%;
+		min-width:17.5rem;                  /* 280px minimum */
+		min-height:3rem;                    /* 48px touch target */
+		padding:0.75rem 1rem;
+		margin-bottom:0.75rem;
+		font-size:1rem;                     /* 16px */
+		line-height:1.4;
+	}
+	
+	/* Button stack spacing */
+	.button-stack {
+		gap:0.75rem;
+		width:100%;
+	}
+	
+	/* Scaled-down avatar */
+	.avatar {
+		width:5rem;                         /* 80px */
+		height:5rem;
+		margin-bottom:var(--spacing-m);
+	}
+	
+	/* Typography adjustments */
+	h1 {
+		font-size:var(--scale-3);           /* ~31px (1.953rem) */
+		line-height:1.2;
+		margin-bottom:var(--spacing-s);
+	}
+	
+	body {
+		font-size:var(--scale-0);           /* 16px */
+		line-height:1.5;
+	}
+	
+	.container p {
+		font-size:var(--scale-0);           /* 16px */
+		line-height:1.5;
+		margin-bottom:var(--spacing-l);
+	}
+	
+	/* Container padding adjustments */
+	.container {
+		padding:var(--spacing-l) var(--spacing-s) 0 var(--spacing-s);
+	}
+	
+	/* Footer adjustments */
+	footer {
+		margin:var(--spacing-l) 0;
+		font-size:0.875rem;                 /* 14px */
+	}
+	
+	/* Icon sizing */
+	.icon {
+		width:1rem;
+		height:1rem;
+		margin-right:0.5rem;
+	}
+}
+
+/* Ultra-narrow screens (360px and below)
+  –––––––––––––––––––––––––––––––––––––––––––––––––– */
+@media (max-width:22.5rem) {                /* 360px */
+	/* Even tighter spacing */
+	.container {
+		padding:var(--spacing-s) 0.5rem 0 0.5rem;
+	}
+	
+	/* Further scale down heading */
+	h1 {
+		font-size:1.75rem;                  /* 28px */
+		line-height:1.2;
+		margin-bottom:0.75rem;
+	}
+	
+	/* Smaller avatar */
+	.avatar {
+		width:4.5rem;                       /* 72px */
+		height:4.5rem;
+		margin-bottom:var(--spacing-s);
+	}
+	
+	/* Button adjustments for very narrow screens */
+	.button,button {
+		min-width:15rem;                    /* 240px minimum */
+		padding:0.625rem 0.75rem;           /* Slightly tighter padding */
+		font-size:0.9375rem;                /* 15px */
+	}
+	
+	/* Tighter button stack */
+	.button-stack {
+		gap:0.625rem;
+	}
+	
+	/* Container paragraph adjustments */
+	.container p {
+		margin-bottom:var(--spacing-m);
+		font-size:0.9375rem;                /* 15px */
+		hyphens:auto;
+	}
+	
+	/* Footer */
+	footer {
+		margin:var(--spacing-m) 0;
+		font-size:0.8125rem;                /* 13px */
 	}
 }
 
