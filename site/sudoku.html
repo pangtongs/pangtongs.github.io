@@ -4,6 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sudoku - My Games</title>
+    <link rel="stylesheet" href="styles.css">
     <style>
         .sudoku-container {
             display: flex;
@@ -49,11 +51,26 @@
             border-bottom: 2px solid #000;
         }
 
-        button {
+        .sudoku-container button {
             margin: 10px;
             padding: 10px 20px;
             font-size: 16px;
             cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+
+        .sudoku-container button:hover {
+            background-color: #45a049;
+        }
+
+        #message {
+            margin-top: 10px;
+            font-size: 18px;
+            font-weight: bold;
         }
 
         @media (max-width: 500px) {
@@ -71,14 +88,23 @@
 </head>
 
 <body>
-    <div class="sudoku-container">
-        <h2>Sudoku</h2>
-        <div class="grid" id="grid"></div>
-        <button onclick="checkSolution()">Check Solution</button>
-        <button onclick="newGame()">New Game</button>
-        <p id="message"></p>
+    <div class="sidebar">
+        <!-- Sidebar content will be inserted here by JavaScript -->
     </div>
 
+    <main class="main-content">
+        <div class="game-container">
+            <div class="sudoku-container">
+                <h2>Sudoku</h2>
+                <div class="grid" id="grid"></div>
+                <button onclick="checkSolution()">Check Solution</button>
+                <button onclick="newGame()">New Game</button>
+                <p id="message"></p>
+            </div>
+        </div>
+    </main>
+
+    <script src="sidebar.js"></script>
     <script>
         let solution = [];
         let puzzle = [];

@@ -3,23 +3,37 @@
 
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake - My Games</title>
+    <link rel="stylesheet" href="styles.css">
     <style>
-        body {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background: linear-gradient(135deg, #ff69b4, #ff1493);
+        .game-container {
             position: relative;
-            overflow: hidden;
         }
 
-        body::before {
+        .snake-game-wrapper {
+            position: relative;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+        }
+
+        .snake-game-wrapper::before {
             content: '';
-            position: absolute;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, #ff69b4, #ff1493);
+            z-index: -2;
+            pointer-events: none;
+        }
+
+        .snake-game-wrapper::after {
+            content: '';
+            position: fixed;
             top: 0;
             left: 0;
             right: 0;
@@ -29,16 +43,8 @@
                     rgba(255, 255, 255, 0.1) 10px,
                     rgba(255, 255, 255, 0.2) 10px,
                     rgba(255, 255, 255, 0.2) 20px);
-            z-index: 0;
-        }
-
-        .game-container {
-            position: relative;
-            z-index: 1;
-            background: rgba(255, 255, 255, 0.9);
-            padding: 20px;
-            border-radius: 15px;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+            z-index: -1;
+            pointer-events: none;
         }
 
         canvas {
@@ -46,6 +52,8 @@
             max-width: 100%;
             background: rgba(255, 255, 255, 0.95);
             border-radius: 10px;
+            display: block;
+            margin: 0 auto;
         }
 
         #score {
@@ -53,12 +61,13 @@
             margin: 20px 0;
             color: #fff;
             text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            text-align: center;
         }
 
         #controls {
             display: none;
             width: 300px;
-            margin-top: 20px;
+            margin: 20px auto 0;
         }
 
         .control-row {
@@ -128,6 +137,7 @@
 
         #speed-control {
             margin: 10px 0;
+            text-align: center;
         }
 
         .speed-btn {
@@ -154,34 +164,44 @@
 </head>
 
 <body>
-    <div class="game-container">
-        <div id="score">Score: 0</div>
-        <div id="speed-control">
-            Speed:
-            <button class="speed-btn" onclick="changeSpeed('slow')">Slow</button>
-            <button class="speed-btn" onclick="changeSpeed('normal')">Normal</button>
-            <button class="speed-btn" onclick="changeSpeed('fast')">Fast</button>
-        </div>
-        <canvas id="gameCanvas"></canvas>
-        <div id="controls">
-            <div class="control-row">
-                <button class="control-btn" onclick="handleDirection('up')">↑</button>
-            </div>
-            <div class="control-row horizontal-controls">
-                <button class="control-btn" onclick="handleDirection('left')">←</button>
-                <button class="control-btn" onclick="handleDirection('right')">→</button>
-            </div>
-            <div class="control-row">
-                <button class="control-btn" onclick="handleDirection('down')">↓</button>
-            </div>
-        </div>
+    <div class="sidebar">
+        <!-- Sidebar content will be inserted here by JavaScript -->
     </div>
+
+    <main class="main-content">
+        <div class="game-container">
+            <div class="snake-game-wrapper">
+                <div id="score">Score: 0</div>
+                <div id="speed-control">
+                    Speed:
+                    <button class="speed-btn" onclick="changeSpeed('slow')">Slow</button>
+                    <button class="speed-btn" onclick="changeSpeed('normal')">Normal</button>
+                    <button class="speed-btn" onclick="changeSpeed('fast')">Fast</button>
+                </div>
+                <canvas id="gameCanvas"></canvas>
+                <div id="controls">
+                    <div class="control-row">
+                        <button class="control-btn" onclick="handleDirection('up')">↑</button>
+                    </div>
+                    <div class="control-row horizontal-controls">
+                        <button class="control-btn" onclick="handleDirection('left')">←</button>
+                        <button class="control-btn" onclick="handleDirection('right')">→</button>
+                    </div>
+                    <div class="control-row">
+                        <button class="control-btn" onclick="handleDirection('down')">↓</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
     <div id="game-over">
         <h2>Game Over!</h2>
         <p>Final Score: <span id="final-score">0</span></p>
         <button onclick="startNewGame()">Play Again</button>
     </div>
 
+    <script src="sidebar.js"></script>
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
@@ -380,6 +400,8 @@
         }
 
         function drawSnake() {
+            let frames = Date.now() / 100;
+
             // Draw snake body
             ctx.fillStyle = currentSnakeColor;
             for (let i = 1; i < snake.length; i++) {

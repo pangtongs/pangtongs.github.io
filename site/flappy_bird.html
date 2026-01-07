@@ -4,21 +4,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flappy Bird Enhanced (Easy)</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Flappy Bird - My Games</title>
+    <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         /* Apply game font */
-        body,
-        button,
-        #score,
-        #instructions,
-        #messageBox {
+        .game-container,
+        .game-container button,
+        .game-container #score,
+        .game-container #instructions,
+        .game-container #messageBox {
             font-family: 'Press Start 2P', cursive;
         }
 
         /* Center canvas and prevent selection */
-        canvas {
+        .game-container canvas {
             display: block;
             margin: 0 auto;
             background-color: #70c5ce;
@@ -37,22 +37,8 @@
             /* Subtle shadow */
         }
 
-        /* Ensure body takes full height and centers content */
-        html,
-        body {
-            height: 100%;
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            /* Center vertically */
-            background-color: #f0f0f0;
-            /* Light gray background for the page */
-        }
-
         /* Style buttons */
-        button {
+        .game-container button {
             padding: 10px 20px;
             font-size: 16px;
             color: white;
@@ -67,12 +53,12 @@
             /* Add space above button */
         }
 
-        button:hover {
+        .game-container button:hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 8px rgba(0, 0, 0, 0.3);
         }
 
-        button:active {
+        .game-container button:active {
             transform: translateY(0);
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         }
@@ -112,25 +98,44 @@
         .hidden {
             display: none;
         }
+
+        #score {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+            color: #ffffff;
+        }
+
+        #instructions {
+            margin-top: 10px;
+            font-size: 0.8rem;
+            color: #cccccc;
+        }
     </style>
 </head>
 
-<body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen p-4">
-
-    <div id="score" class="text-2xl mb-2 text-gray-700">Score: 0</div>
-
-    <div class="relative">
-        <canvas id="gameCanvas" width="320" height="480"></canvas>
-        <div id="messageBox" class="hidden">
-            <h2 id="messageTitle"></h2>
-            <p id="messageText"></p>
-            <button id="actionButton"></button>
-        </div>
+<body>
+    <div class="sidebar">
+        <!-- Sidebar content will be inserted here by JavaScript -->
     </div>
 
+    <main class="main-content">
+        <div class="game-container">
+            <div id="score">Score: 0</div>
 
-    <div id="instructions" class="mt-2 text-sm text-gray-600">Press SPACE or Tap to jump</div>
+            <div style="position: relative;">
+                <canvas id="gameCanvas" width="320" height="480"></canvas>
+                <div id="messageBox" class="hidden">
+                    <h2 id="messageTitle"></h2>
+                    <p id="messageText"></p>
+                    <button id="actionButton"></button>
+                </div>
+            </div>
 
+            <div id="instructions">Press SPACE or Tap to jump</div>
+        </div>
+    </main>
+
+    <script src="sidebar.js"></script>
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
