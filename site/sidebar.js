@@ -8,31 +8,31 @@ const sidebarContent = `
             <span class="icon">🏠</span>
             <span>Home</span>
         </a>
-        <a href="2048.html" class="nav-link" aria-label="Play 2048 game">
+        <a href="games/2048.html" class="nav-link" aria-label="Play 2048 game">
             <span class="icon">🎯</span>
             <span>2048</span>
         </a>
-        <a href="flappy_bird.html" class="nav-link" aria-label="Play Flappy Bird game">
+        <a href="games/flappy_bird.html" class="nav-link" aria-label="Play Flappy Bird game">
             <span class="icon">🐦</span>
             <span>Flappy Bird</span>
         </a>
-        <a href="slot.html" class="nav-link" aria-label="Play Slot game">
+        <a href="games/slot.html" class="nav-link" aria-label="Play Slot game">
             <span class="icon">🎰</span>
             <span>Slot</span>
         </a>
-        <a href="snake.html" class="nav-link" aria-label="Play Snake game">
+        <a href="games/snake.html" class="nav-link" aria-label="Play Snake game">
             <span class="icon">🐍</span>
             <span>Snake</span>
         </a>
-        <a href="sudoku.html" class="nav-link" aria-label="Play Sudoku game">
+        <a href="games/sudoku.html" class="nav-link" aria-label="Play Sudoku game">
             <span class="icon">🔢</span>
             <span>Sudoku</span>
         </a>
-        <a href="hangman.html" class="nav-link" aria-label="Play Hangman game">
+        <a href="games/hangman.html" class="nav-link" aria-label="Play Hangman game">
             <span class="icon">💬</span>
             <span>Hangman</span>
         </a>
-        <a href="memory.html" class="nav-link" aria-label="Play Memory game">
+        <a href="games/memory.html" class="nav-link" aria-label="Play Memory game">
             <span class="icon">🧠</span>
             <span>Memory</span>
         </a>

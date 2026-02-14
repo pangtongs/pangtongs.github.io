@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Slots</title>
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        :root {
+            --neon-gold: #ffd700;
+            --neon-blue: #00f3ff;
+            --neon-pink: #ff00ff;
+            --dark-bg: #0a0a0a;
+            --panel-bg: #1a1a1a;
+        }
+
+        body {
+            background-color: var(--dark-bg);
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        /* Sidebar integration overrides */
+        #sidebar {
+            z-index: 1000;
+        }
+
+        .game-container {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            width: 100%;
+            max-width: 600px;
+        }
+
+        .canvas-wrapper {
+            position: relative;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.8),
+                        0 0 20px rgba(255, 215, 0, 0.2);
+            border-radius: 10px;
+            overflow: hidden;
+            border: 2px solid #333;
+            background: #000;
+        }
+
+        canvas {
+            display: block;
+            max-width: 100%;
+            height: auto;
+        }
+
+        .ui-panel {
+            width: 100%;
+            background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%);
+            border: 1px solid #333;
+            border-top: none;
+            border-radius: 0 0 10px 10px;
+            padding: 15px;
+            box-sizing: border-box;
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 15px;
+            align-items: center;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+        }
+
+        .stat-box {
+            background: #000;
+            border: 1px solid #444;
+            border-radius: 5px;
+            padding: 8px 12px;
+            text-align: center;
+            min-width: 80px;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.5);
+        }
+
+        .stat-label {
+            font-size: 10px;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 2px;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            color: var(--neon-gold);
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+            text-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .btn-spin {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            color: white;
+            border: none;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(231, 76, 60, 0.4),
+                        inset 0 2px 5px rgba(255,255,255,0.2);
+            transition: transform 0.1s, box-shadow 0.1s;
+            text-transform: uppercase;
+            outline: none;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-spin:active:not(:disabled) {
+            transform: translateY(2px) scale(0.98);
+            box-shadow: 0 2px 10px rgba(231, 76, 60, 0.3);
+        }
+
+        .btn-spin:disabled {
+            background: #444;
+            color: #888;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .btn-spin::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+            transform: rotate(45deg);
+            animation: shine 3s infinite;
+        }
+
+        @keyframes shine {
+            0% { transform: translateX(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) rotate(45deg); }
+        }
+
+        .toggle-switch {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+        }
+
+        .switch-track {
+            width: 40px;
+            height: 20px;
+            background: #333;
+            border-radius: 10px;
+            position: relative;
+            transition: background 0.3s;
+        }
+
+        .switch-knob {
+            width: 16px;
+            height: 16px;
+            background: #fff;
+            border-radius: 50%;
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            transition: transform 0.3s;
+        }
+
+        .toggle-switch.active .switch-track {
+            background: var(--neon-blue);
+        }
+
+        .toggle-switch.active .switch-knob {
+            transform: translateX(20px);
+        }
+
+        .toggle-label {
+            font-size: 10px;
+            color: #888;
+            text-transform: uppercase;
+        }
+
+        .toast {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 30px;
+            border: 1px solid var(--neon-pink);
+            box-shadow: 0 0 20px rgba(255, 0, 255, 0.3);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 20;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .toast.visible {
+            opacity: 1;
+        }
+
+        @media (max-width: 500px) {
+            .ui-panel {
+                grid-template-columns: 1fr 1fr;
+                grid-template-rows: auto auto;
+            }
+            .controls {
+                grid-column: 1 / -1;
+                grid-row: 1;
+                margin-bottom: 10px;
+            }
+            .stat-box {
+                min-width: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="game-container">
+        <div class="canvas-wrapper">
+            <canvas id="slotCanvas" width="500" height="600"></canvas>
+            <div id="toast" class="toast"></div>
+        </div>
+        
+        <div class="ui-panel">
+            <div class="stat-box">
+                <div class="stat-label">Credits</div>
+                <div class="stat-value" id="creditsDisplay">100</div>
+            </div>
+
+            <div class="controls">
+                <div class="toggle-switch" id="autoToggle">
+                    <div class="switch-track"><div class="switch-knob"></div></div>
+                    <span class="toggle-label">Auto</span>
+                </div>
+                <button class="btn-spin" id="spinBtn">SPIN</button>
+            </div>
+
+            <div class="stat-box">
+                <div class="stat-label">Win</div>
+                <div class="stat-value" id="winDisplay">0</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../sidebar.js"></script>
+    <script>
+        /**
+         * Slot Machine Game Logic
+         */
+        
+        // --- Configuration ---
+        const CONFIG = {
+            width: 500,
+            height: 600,
+            reelWidth: 140,
+            reelHeight: 400, // Visible area height
+            reelY: 100,      // Top margin for reels
+            symbolSize: 100, // Height of one symbol cell
+            reelGap: 10,
+            reelCount: 3,
+            rows: 3,
+            symbolsPerReel: 20,
+            spinSpeed: 40,   // Pixels per frame max speed
+            spinDuration: 2000, // Base spin duration ms
+            reelDelay: 300,  // Delay between reels stopping
+            colors: {
+                gold: '#ffd700',
+                bg: '#111',
+                reelBg: '#000',
+                line: 'rgba(255, 0, 0, 0.8)'
+            }
+        };
+
+        const SYMBOLS = [
+            { id: 'apple', color: '#ff4444', value: 1 },
+            { id: 'orange', color: '#ffaa00', value: 2 },
+            { id: 'grapes', color: '#aa44ff', value: 3 },
+            { id: 'cherry', color: '#cc0000', value: 4 },
+            { id: 'lemon', color: '#ffff00', value: 5 },
+            { id: 'diamond', color: '#00ffff', value: 10 } // High value
+        ];
+
+        // --- Audio Context (Lazy load) ---
+        const AudioSys = {
+            ctx: null,
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            },
+            playTone(freq, type, duration, vol = 0.1) {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + duration);
+            },
+            playSpin() { this.playTone(200, 'square', 0.1, 0.05); },
+            playStop() { this.playTone(100, 'sine', 0.2, 0.1); },
+            playWin() { 
+                this.playTone(400, 'sine', 0.1, 0.1); 
+                setTimeout(() => this.playTone(600, 'sine', 0.2, 0.1), 100);
+            },
+            playJackpot() {
+                for(let i=0; i<10; i++) {
+                    setTimeout(() => this.playTone(400 + i*50, 'square', 0.1, 0.1), i*100);
+                }
+            }
+        };
+
+        // --- Graphics Helpers ---
+        function drawSymbol(ctx, type, x, y, size) {
+            const pad = size * 0.2;
+            const s = size - pad * 2;
+            const cx = x + size/2;
+            const cy = y + size/2;
+            
+            ctx.save();
+            ctx.shadowColor = 'rgba(0,0,0,0.5)';
+            ctx.shadowBlur = 5;
+            ctx.shadowOffsetY = 2;
+
+            switch(type) {
+                case 'apple':
+                    ctx.fillStyle = '#e74c3c';
+                    ctx.beginPath();
+                    ctx.arc(cx, cy + 5, s/2.5, 0, Math.PI * 2);
+                    ctx.fill();
+                    // Leaf
+                    ctx.fillStyle = '#2ecc71';
+                    ctx.beginPath();
+                    ctx.ellipse(cx, cy - s/2.5, s/6, s/4, Math.PI/4, 0, Math.PI*2);
+                    ctx.fill();
+                    break;
+                case 'orange':
+                    ctx.fillStyle = '#f39c12';
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, s/2.2, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+                    ctx.beginPath();
+                    ctx.arc(cx - s/6, cy - s/6, s/10, 0, Math.PI * 2);
+                    ctx.fill();
+                    break;
+                case 'grapes':
+                    ctx.fillStyle = '#9b59b6';
+                    const r = s/6;
+                    [[0, -r], [-r, 0], [r, 0], [-r/2, r*1.5], [r/2, r*1.5], [0, r*3]].forEach(pos => {
+                        ctx.beginPath();
+                        ctx.arc(cx + pos[0], cy + pos[1] - r, r, 0, Math.PI * 2);
+                        ctx.fill();
+                    });
+                    break;
+                case 'cherry':
+                    ctx.fillStyle = '#c0392b';
+                    ctx.beginPath();
+                    ctx.arc(cx - s/4, cy + s/4, s/4, 0, Math.PI * 2);
+                    ctx.arc(cx + s/4, cy + s/4, s/4, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = '#27ae60';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.moveTo(cx - s/4, cy + s/4);
+                    ctx.quadraticCurveTo(cx, cy - s/2, cx + s/4, cy + s/4); // Stems
+                    ctx.stroke();
+                    break;
+                case 'lemon':
+                    ctx.fillStyle = '#f1c40f';
+                    ctx.beginPath();
+                    ctx.ellipse(cx, cy, s/2.2, s/3, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    // End points
+                    ctx.beginPath();
+                    ctx.arc(cx - s/2.2, cy, s/10, 0, Math.PI * 2);
+                    ctx.arc(cx + s/2.2, cy, s/10, 0, Math.PI * 2);
+                    ctx.fill();
+                    break;
+                case 'diamond':
+                    ctx.fillStyle = '#3498db';
+                    ctx.beginPath();
+                    ctx.moveTo(cx, cy - s/2);
+                    ctx.lineTo(cx + s/2, cy);
+                    ctx.lineTo(cx, cy + s/2);
+                    ctx.lineTo(cx - s/2, cy);
+                    ctx.closePath();
+                    ctx.fill();
+                    // Facets
+                    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+                    ctx.beginPath();
+                    ctx.moveTo(cx, cy - s/2);
+                    ctx.lineTo(cx + s/4, cy - s/4);
+                    ctx.lineTo(cx, cy);
+                    ctx.lineTo(cx - s/4, cy - s/4);
+                    ctx.closePath();
+                    ctx.fill();
+                    break;
+            }
+            ctx.restore();
+        }
+
+        // --- Particle System ---
+        class Particle {
+            constructor(x, y, type) {
+                this.x = x;
+                this.y = y;
+                this.type = type; // 'confetti', 'sparkle'
+                this.vx = (Math.random() - 0.5) * 10;
+                this.vy = (Math.random() - 0.5) * 10 - 5;
+                this.life = 1.0;
+                this.color = `hsl(${Math.random() * 360}, 100%, 50%)`;
+                this.size = Math.random() * 8 + 2;
+                this.rotation = Math.random() * Math.PI * 2;
+                this.rotSpeed = (Math.random() - 0.5) * 0.2;
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vy += 0.2; // Gravity
+                this.life -= 0.01;
+                this.rotation += this.rotSpeed;
+            }
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+                ctx.globalAlpha = this.life;
+                ctx.fillStyle = this.color;
+                ctx.fillRect(-this.size/2, -this.size/2, this.size, this.size);
+                ctx.restore();
+            }
+        }
+
+        // --- Reel Class ---
+        class Reel {
+            constructor(id, x) {
+                this.id = id;
+                this.x = x;
+                this.symbols = [];
+                this.offset = 0; // Pixel offset
+                this.speed = 0;
+                this.state = 'idle'; // idle, spinning, stopping
+                this.targetSymbolIndex = -1;
+                this.stopDelay = 0;
+                
+                // Init strip
+                this.generateStrip();
+                // Randomize start position
+                this.offset = Math.floor(Math.random() * this.symbols.length) * CONFIG.symbolSize;
+            }
+
+            generateStrip() {
+                this.symbols = [];
+                for (let i = 0; i < CONFIG.symbolsPerReel; i++) {
+                    const sym = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
+                    this.symbols.push(sym);
+                }
+            }
+
+            // Force a specific symbol at a specific index (for jackpot)
+            setSymbolAt(index, symbolId) {
+                const sym = SYMBOLS.find(s => s.id === symbolId);
+                if (sym) this.symbols[index] = sym;
+            }
+
+            startSpin(delay) {
+                this.state = 'spinning';
+                this.speed = 0;
+                this.targetSpeed = CONFIG.spinSpeed;
+                this.stopDelay = delay;
+            }
+
+            stopSpin(targetIndex) {
+                this.state = 'stopping';
+                this.targetSymbolIndex = targetIndex;
+                
+                // Ensure the strip has the target symbols at the target index
+                // We need 3 symbols visible: targetIndex, targetIndex+1, targetIndex+2
+                // Since scrolling is down (offset increases), we look at indices.
+                // Let's say we want to land such that 'targetIndex' is the TOP visible row.
+                // The strip is circular.
+            }
+
+            update() {
+                const totalHeight = this.symbols.length * CONFIG.symbolSize;
+
+                if (this.state === 'spinning') {
+                    if (this.speed < this.targetSpeed) this.speed += 1;
+                    this.offset += this.speed;
+                } else if (this.state === 'stopping') {
+                    // Calculate target offset
+                    // We want the target symbol to be at the top of the visible area
+                    // Visible area starts at 0 (relative to reel top)
+                    // So offset should be targetIndex * symbolSize
+                    
+                    let targetOffset = this.targetSymbolIndex * CONFIG.symbolSize;
+                    
+                    // Handle wrapping logic to find the nearest target ahead
+                    const currentMod = this.offset % totalHeight;
+                    
+                    // We want to land on targetOffset. 
+                    // If currentMod < targetOffset, we need to go to targetOffset.
+                    // If currentMod > targetOffset, we need to go to totalHeight + targetOffset
+                    
+                    let dist = targetOffset - currentMod;
+                    if (dist < 0) dist += totalHeight;
+                    
+                    // If we are close and speed is low, snap
+                    if (dist < 10 && this.speed < 5) {
+                        this.offset = Math.floor(this.offset / totalHeight) * totalHeight + targetOffset;
+                        this.speed = 0;
+                        this.state = 'idle';
+                        AudioSys.playStop();
+                        // Shake effect trigger could go here
+                    } else {
+                        // Easing
+                        // Distance to travel needs to account for at least one more rotation if we are going too fast
+                        // Simplified: just slow down as we approach
+                        
+                        // If we are far, keep speed high. If close, decelerate.
+                        // But we need to ensure we don't overshoot.
+                        
+                        // Simple approach: Constant deceleration once we decide to stop
+                        // But we need to align exactly.
+                        
+                        // Better approach: Move towards target using lerp or fixed deceleration
+                        const d = dist;
+                        const brakingDist = (this.speed * this.speed) / (2 * 0.5); // v^2 / 2a
+                        
+                        if (d <= brakingDist || this.speed < 2) {
+                            // Decelerate
+                            this.speed = Math.max(2, this.speed * 0.95);
+                            // Final snap logic
+                            if (d < this.speed) {
+                                this.offset += d;
+                                this.speed = 0;
+                                this.state = 'idle';
+                                AudioSys.playStop();
+                            } else {
+                                this.offset += this.speed;
+                            }
+                        } else {
+                            this.offset += this.speed;
+                        }
+                    }
+                }
+                
+                // Wrap offset to keep numbers sane, but careful not to break interpolation
+                // Actually, for circular drawing, we just need % totalHeight
+            }
+
+            draw(ctx) {
+                const totalHeight = this.symbols.length * CONFIG.symbolSize;
+                const viewOffset = this.offset % totalHeight;
+                
+                ctx.save();
+                ctx.beginPath();
+                ctx.rect(this.x, CONFIG.reelY, CONFIG.reelWidth, CONFIG.reelHeight);
+                ctx.clip();
+
+                // Draw background strip
+                ctx.fillStyle = CONFIG.colors.reelBg;
+                ctx.fillRect(this.x, CONFIG.reelY, CONFIG.reelWidth, CONFIG.reelHeight);
+                
+                // Draw vertical lines for reel edges
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(this.x, CONFIG.reelY);
+                ctx.lineTo(this.x, CONFIG.reelY + CONFIG.reelHeight);
+                ctx.moveTo(this.x + CONFIG.reelWidth, CONFIG.reelY);
+                ctx.lineTo(this.x + CONFIG.reelWidth, CONFIG.reelY + CONFIG.reelHeight);
+                ctx.stroke();
+
+                // Draw symbols
+                // We need to draw enough symbols to cover the visible area + buffer
+                // Visible start index in the strip:
+                const startIndex = Math.floor(viewOffset / CONFIG.symbolSize);
+                const startY = -(viewOffset % CONFIG.symbolSize); // Y pos of first symbol relative to reel top
+                
+                // Draw 5 symbols (1 buffer top, 3 visible, 1 buffer bottom) to be safe
+                for (let i = -1; i < 5; i++) {
+                    let idx = (startIndex + i) % this.symbols.length;
+                    if (idx < 0) idx += this.symbols.length;
+                    
+                    const sym = this.symbols[idx];
+                    const y = CONFIG.reelY + startY + (i * CONFIG.symbolSize);
+                    
+                    // Simple motion blur effect: stretch if spinning fast
+                    if (this.speed > 10) {
+                        ctx.save();
+                        ctx.translate(this.x + CONFIG.reelWidth/2, y + CONFIG.symbolSize/2);
+                        ctx.scale(0.8, 1 + this.speed/50);
+                        drawSymbol(ctx, sym.id, -CONFIG.symbolSize/2, -CONFIG.symbolSize/2, CONFIG.symbolSize);
+                        ctx.restore();
+                    } else {
+                        drawSymbol(ctx, sym.id, this.x + (CONFIG.reelWidth - CONFIG.symbolSize)/2, y, CONFIG.symbolSize);
+                    }
+                }
+                
+                // Inner Shadow for depth
+                const grad = ctx.createLinearGradient(0, CONFIG.reelY, 0, CONFIG.reelY + CONFIG.reelHeight);
+                grad.addColorStop(0, 'rgba(0,0,0,0.8)');
+                grad.addColorStop(0.1, 'rgba(0,0,0,0)');
+                grad.addColorStop(0.9, 'rgba(0,0,0,0)');
+                grad.addColorStop(1, 'rgba(0,0,0,0.8)');
+                ctx.fillStyle = grad;
+                ctx.fillRect(this.x, CONFIG.reelY, CONFIG.reelWidth, CONFIG.reelHeight);
+
+                ctx.restore();
+            }
+        }
+
+        // --- Main Game Class ---
+        class SlotGame {
+            constructor() {
+                this.canvas = document.getElementById('slotCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.credits = 100;
+                this.bet = 10;
+                this.spinCount = 0;
+                this.isAuto = false;
+                this.state = 'ready'; // ready, spinning, payout
+                this.winAmount = 0;
+                this.particles = [];
+                this.shake = 0;
+                
+                this.reels = [];
+                this.initReels();
+                
+                this.ui = {
+                    credits: document.getElementById('creditsDisplay'),
+                    win: document.getElementById('winDisplay'),
+                    spinBtn: document.getElementById('spinBtn'),
+                    autoToggle: document.getElementById('autoToggle'),
+                    toast: document.getElementById('toast')
+                };
+
+                // Bind events
+                this.ui.spinBtn.addEventListener('click', () => this.spin());
+                this.ui.autoToggle.addEventListener('click', () => this.toggleAuto());
+                
+                // Start Loop
+                this.lastTime = 0;
+                requestAnimationFrame(t => this.loop(t));
+            }
+
+            initReels() {
+                const totalReelWidth = (CONFIG.reelWidth * CONFIG.reelCount) + (CONFIG.reelGap * (CONFIG.reelCount - 1));
+                const startX = (CONFIG.width - totalReelWidth) / 2;
+                
+                for (let i = 0; i < CONFIG.reelCount; i++) {
+                    this.reels.push(new Reel(i, startX + i * (CONFIG.reelWidth + CONFIG.reelGap)));
+                }
+            }
+
+            toggleAuto() {
+                this.isAuto = !this.isAuto;
+                this.ui.autoToggle.classList.toggle('active', this.isAuto);
+                if (this.isAuto && this.state === 'ready') {
+                    this.spin();
+                }
+            }
+
+            showToast(msg) {
+                this.ui.toast.textContent = msg;
+                this.ui.toast.classList.add('visible');
+                setTimeout(() => this.ui.toast.classList.remove('visible'), 2000);
+            }
+
+            spin() {
+                if (this.state !== 'ready') return;
+                if (this.credits < this.bet) {
+                    this.showToast("Not enough credits!");
+                    this.isAuto = false;
+                    this.ui.autoToggle.classList.remove('active');
+                    return;
+                }
+
+                AudioSys.init();
+                AudioSys.playSpin();
+
+                this.credits -= this.bet;
+                this.updateUI();
+                this.winAmount = 0;
+                this.state = 'spinning';
+                this.spinCount++;
+                this.ui.spinBtn.disabled = true;
+                
+                // Determine Outcome
+                const isJackpot = this.spinCount % 3 === 0;
+                let targets = []; // Indices for each reel
+                
+                if (isJackpot) {
+                    // Pick random symbol
+                    const symIndex = Math.floor(Math.random() * SYMBOLS.length);
+                    // We want the WHOLE grid to match.
+                    // So every reel needs the same strip segment or we force the strip.
+                    // To make it easy: we force the strip content at the target indices.
+                    
+                    // Let's say we want index 10 to be the top row.
+                    // Then index 10, 11, 12 will be visible.
+                    // We set those symbols to be the jackpot symbol.
+                    const targetIdx = 10; 
+                    const jackSym = SYMBOLS[symIndex];
+                    
+                    this.reels.forEach(reel => {
+                        reel.setSymbolAt(targetIdx, jackSym.id);
+                        reel.setSymbolAt(targetIdx+1, jackSym.id);
+                        reel.setSymbolAt(targetIdx+2, jackSym.id);
+                        targets.push(targetIdx);
+                    });
+                } else {
+                    // Random outcomes
+                    this.reels.forEach(reel => {
+                        targets.push(Math.floor(Math.random() * (reel.symbols.length - 5)));
+                    });
+                }
+
+                // Start Reels
+                this.reels.forEach((reel, i) => {
+                    reel.startSpin();
+                    // Sequential stopping
+                    setTimeout(() => {
+                        reel.stopSpin(targets[i]);
+                    }, CONFIG.spinDuration + (i * CONFIG.reelDelay) + (isJackpot && i===2 ? 1000 : 0)); // Extra delay for last reel on jackpot
+                });
+            }
+
+            checkWin() {
+                // Get visible symbols (middle row is index + 1)
+                // Reel logic: targetIndex is Top Row. Middle is targetIndex + 1.
+                
+                const r1 = this.reels[0].symbols[this.reels[0].targetSymbolIndex + 1];
+                const r2 = this.reels[1].symbols[this.reels[1].targetSymbolIndex + 1];
+                const r3 = this.reels[2].symbols[this.reels[2].targetSymbolIndex + 1];
+
+                // Check Middle Row Match
+                if (r1.id === r2.id && r2.id === r3.id) {
+                    // Win!
+                    const isFullJackpot = (this.spinCount % 3 === 0); // Logic matches spin generation
+                    const amount = isFullJackpot ? 500 : 50; // Bonus for full screen? Prompt says 50 for middle match.
+                    // Prompt: "Jackpot every 3rd spin (all 9 slots match), 50 credit win on middle row match."
+                    // It implies the 3rd spin IS a win.
+                    
+                    this.winAmount = amount;
+                    this.credits += amount;
+                    this.triggerWinEffects(isFullJackpot);
+                    this.showToast(`WIN! +${amount}`);
+                } else {
+                    // Lose
+                }
+                
+                this.state = 'ready';
+                this.ui.spinBtn.disabled = false;
+                this.updateUI();
+
+                if (this.isAuto && this.credits >= this.bet) {
+                    setTimeout(() => this.spin(), 1000);
+                }
+            }
+
+            triggerWinEffects(isBig) {
+                // Particles
+                for(let i=0; i<50; i++) {
+                    this.particles.push(new Particle(CONFIG.width/2, CONFIG.height/2, 'confetti'));
+                }
+                if (isBig) {
+                    this.shake = 20;
+                    AudioSys.playJackpot();
+                    for(let i=0; i<100; i++) {
+                        setTimeout(() => {
+                            this.particles.push(new Particle(Math.random()*CONFIG.width, CONFIG.height, 'confetti'));
+                        }, i * 20);
+                    }
+                } else {
+                    AudioSys.playWin();
+                }
+            }
+
+            updateUI() {
+                this.ui.credits.textContent = this.credits;
+                this.ui.win.textContent = this.winAmount;
+            }
+
+            loop(time) {
+                const dt = time - this.lastTime;
+                this.lastTime = time;
+
+                // Clear
+                this.ctx.fillStyle = '#000';
+                this.ctx.fillRect(0, 0, CONFIG.width, CONFIG.height);
+
+                // Shake
+                this.ctx.save();
+                if (this.shake > 0) {
+                    const dx = (Math.random() - 0.5) * this.shake;
+                    const dy = (Math.random() - 0.5) * this.shake;
+                    this.ctx.translate(dx, dy);
+                    this.shake *= 0.9;
+                    if (this.shake < 0.5) this.shake = 0;
+                }
+
+                // Draw Frame Background (Metallic)
+                const grad = this.ctx.createLinearGradient(0, 0, CONFIG.width, CONFIG.height);
+                grad.addColorStop(0, '#333');
+                grad.addColorStop(0.5, '#111');
+                grad.addColorStop(1, '#333');
+                this.ctx.fillStyle = grad;
+                this.ctx.fillRect(20, 20, CONFIG.width-40, CONFIG.height-40);
+                
+                // Draw Title
+                this.ctx.fillStyle = CONFIG.colors.gold;
+                this.ctx.font = 'bold 40px Arial';
+                this.ctx.textAlign = 'center';
+                this.ctx.shadowColor = CONFIG.colors.gold;
+                this.ctx.shadowBlur = 10;
+                this.ctx.fillText("NEON SLOTS", CONFIG.width/2, 80);
+                this.ctx.shadowBlur = 0;
+
+                // Update and Draw Reels
+                let allStopped = true;
+                this.reels.forEach(reel => {
+                    reel.update();
+                    reel.draw(this.ctx);
+                    if (reel.state !== 'idle') allStopped = false;
+                });
+
+                // Check for state transition
+                if (this.state === 'spinning' && allStopped) {
+                    this.checkWin();
+                }
+
+                // Draw Payline
+                this.ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)';
+                this.ctx.lineWidth = 4;
+                this.ctx.beginPath();
+                const midY = CONFIG.reelY + CONFIG.reelHeight/2;
+                this.ctx.moveTo(30, midY);
+                this.ctx.lineTo(CONFIG.width-30, midY);
+                this.ctx.stroke();
+                
+                // Draw Particles
+                this.particles.forEach((p, i) => {
+                    p.update();
+                    p.draw(this.ctx);
+                    if (p.life <= 0) this.particles.splice(i, 1);
+                });
+
+                // Big Win Overlay
+                if (this.winAmount > 0 && this.shake > 1) {
+                    this.ctx.save();
+                    this.ctx.translate(CONFIG.width/2, CONFIG.height/2);
+                    const scale = 1 + Math.sin(time / 100) * 0.2;
+                    this.ctx.scale(scale, scale);
+                    this.ctx.fillStyle = '#fff';
+                    this.ctx.font = 'bold 60px Arial';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.shadowColor = '#f0f';
+                    this.ctx.shadowBlur = 20;
+                    this.ctx.fillText("JACKPOT!", 0, 0);
+                    this.ctx.restore();
+                }
+
+                this.ctx.restore(); // End Shake
+
+                requestAnimationFrame(t => this.loop(t));
+            }
+        }
+
+        // Start Game
+        window.onload = () => {
+            new SlotGame();
+        };
+
+    </script>
+</body>
+</html>
