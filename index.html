@@ -1,110 +1,93 @@
 <!DOCTYPE html>
-
-<!-- 
-  To change the theme, change the class on the html tag below to one of:
-  - theme-auto: Automatically switches based on user's system preferences
-  - theme-light: Forces light theme
-  - theme-dark: Forces dark theme
--->
-
-<html class="theme-auto" lang="en"> <!-- Update`class="theme-auto" with your preference -->
-
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-
-  <!-- Page Title - Change this to your name/brand (50-60 characters recommended) -->
-  <title>Winston Links</title>
-  <link rel="icon" type="image/x-icon" href="/images/avatar.png"> <!-- Update this with your own favicon -->
-
-  <!-- Meta Description - Write a description (150-160 characters recommended) -->
-  <meta name="description" content="Software Engineer. Entrepreneur. Runner. Lifelong Learner">
-
-  <!-- Keywords -->
-  <meta name="keywords" content="your name, industry, and specialties">
-
-  <!-- Canonical URL - Helps prevent duplicate content issues -->
-  <meta rel="canonical" href="https://pangtongs.github.io/collection">
-
-  <!-- Author Information -->
-  <meta name="author" content="Winston Andersen">
-
-  <!-- Stylesheets -->
-  <link rel="stylesheet" href="css/reset.css">
-  <link rel="stylesheet" href="css/style.css">
-  <link rel="stylesheet" href="css/brands.css">
-
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Turn your skills library into a clear, visual presentation." />
+  <title>Storyfold — Presentation Generator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
+  <style>
+    :root { --ink:#152132; --muted:#617087; --line:#dbe3ed; --paper:#f7f9fc; --blue:#4379f5; --blue-deep:#234fba; --navy:#102442; --yellow:#ffc84d; --mint:#78dcc5; --coral:#f77f6c; --shadow:0 18px 45px rgba(33,57,90,.12); }
+    * { box-sizing:border-box; } body { margin:0; background:var(--paper); color:var(--ink); font-family:"DM Sans",system-ui,sans-serif; } button,input,textarea,select { font:inherit; } button { cursor:pointer; }
+    .app-shell { min-height:100vh; display:grid; grid-template-columns:262px 1fr; }
+    .sidebar { background:#fff; border-right:1px solid var(--line); padding:28px 18px; display:flex; flex-direction:column; gap:30px; }
+    .brand { display:flex; align-items:center; gap:10px; padding:0 8px; font-weight:700; letter-spacing:-.5px; font-size:20px; } .brand-mark { width:28px; height:28px; background:var(--blue); border-radius:9px 9px 9px 2px; box-shadow:inset -5px -5px 0 rgba(17,52,139,.17); position:relative; } .brand-mark:after{content:""; position:absolute; width:8px;height:8px;background:var(--yellow);border-radius:50%; right:5px; top:5px;}
+    .workspace-label { margin:0 10px 8px; color:#93a1b5; font-size:11px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; } .nav { display:grid; gap:6px; }.nav button { border:0; background:transparent; color:#5b6c82; padding:11px 12px; border-radius:10px; text-align:left; display:flex; align-items:center; gap:12px; font-weight:600; }.nav button.active { background:#eaf0ff; color:#2d60d8; }.nav-icon { width:18px; height:18px; display:grid;place-items:center; font-size:16px; }
+    .source-card { margin-top:auto; background:#152e55; color:white; padding:17px; border-radius:14px; overflow:hidden; position:relative; }.source-card:after { content:""; position:absolute; width:90px;height:90px;border:18px solid rgba(120,220,197,.22); border-radius:50%; right:-39px;top:-35px; }.source-card strong { display:block;font-size:14px;margin-bottom:6px;position:relative;z-index:1}.source-card p{color:#b9c6da;font-size:12px;line-height:1.5;margin:0 0 13px;position:relative;z-index:1}.source-card button{position:relative;z-index:1;border:0;background:#fff;color:#173158;border-radius:7px;padding:7px 10px;font-size:12px;font-weight:700}
+    .content { padding:30px clamp(20px,4vw,60px) 42px; max-width:1600px; width:100%; margin:auto; }.topbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:34px; }.breadcrumb{color:#78879a;font-size:14px}.breadcrumb span{color:#b3becc;margin:0 7px}.avatar{width:35px;height:35px;border-radius:50%;display:grid;place-items:center;background:#e9d8c7;color:#6c4b34;font-size:13px;font-weight:700}
+    .intro { display:flex; align-items:end; justify-content:space-between; gap:30px; margin-bottom:30px; }.eyebrow{color:#4071dc;font-family:"DM Mono",monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;font-weight:500;margin-bottom:9px}.intro h1{font-family:Fraunces,serif;font-size:clamp(32px,4vw,53px);letter-spacing:-.045em;line-height:1.02;margin:0;max-width:710px}.intro h1 em{font-style:normal;color:#487af0}.intro p{color:var(--muted);line-height:1.6;max-width:420px;margin:0;font-size:15px}
+    .generator-grid { display:grid;grid-template-columns:minmax(300px,.78fr) minmax(460px,1.35fr); gap:23px; align-items:start; }.panel {background:#fff;border:1px solid var(--line);border-radius:17px;box-shadow:0 3px 5px rgba(27,55,90,.02);}.panel-title{font-size:15px;font-weight:700;margin:0}.panel-sub{font-size:12px;color:#77879b;margin:5px 0 0;line-height:1.45}
+    .brief-panel{padding:23px}.step{display:flex; gap:10px;margin-bottom:22px}.step-number{flex:0 0 24px;height:24px;border-radius:50%;display:grid;place-items:center;color:#3065df;background:#eaf0ff;font-family:"DM Mono",monospace;font-size:11px;font-weight:500}.field-label{font-size:12px;font-weight:700;display:block;margin:19px 0 8px;color:#43536a}.dropzone{border:1.5px dashed #b6c5db;background:#fbfcff;border-radius:11px;padding:17px;display:flex;gap:13px;align-items:center;transition:.2s}.dropzone:hover,.dropzone.dragging{border-color:var(--blue);background:#f4f7ff}.folder-icon{width:37px;height:31px;background:#ffd365;border-radius:4px;position:relative;flex:none}.folder-icon:before{content:"";position:absolute;width:17px;height:7px;background:#ffd365;border-radius:4px 4px 0 0;top:-4px;left:2px}.dropzone strong{font-size:13px;display:block}.dropzone small{display:block;color:#8492a4;font-size:11px;margin-top:3px}.browse{color:#3971eb;background:transparent;border:0;text-decoration:underline;font-size:12px;font-weight:700;padding:0}.file-list{display:grid;gap:7px;margin-top:13px}.file-chip{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:#f5f8fc;border-radius:7px;color:#52647a;font-family:"DM Mono",monospace;font-size:10px}.file-chip b{color:#2761d7;font-size:10px}.prompt-box{width:100%;border:1px solid #c9d5e5;border-radius:10px;resize:vertical;min-height:87px;padding:11px;font-size:13px;color:#314159;outline:0;line-height:1.45}.prompt-box:focus{border-color:var(--blue);box-shadow:0 0 0 3px #eaf0ff}.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}.chip{border:1px solid #dce5f1;border-radius:99px;color:#62738a;background:#fff;padding:5px 8px;font-size:10px;font-weight:600}.chip:hover{border-color:#a7bff4;color:#386ce1;background:#f5f8ff}.control-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}.select-wrap select{width:100%;border:1px solid #cbd7e5;background:#fff;border-radius:8px;padding:8px 10px;color:#40516a;font-size:12px;outline:0}.tone-select{display:flex;gap:6px}.tone{border:1px solid #d7e0ec;color:#607187;background:#fff;border-radius:7px;padding:7px 9px;font-size:11px;flex:1}.tone.active{background:#eef3ff;border-color:#a8c0f8;color:#386bd9;font-weight:700}.generate{width:100%;border:0;color:white;background:var(--blue);padding:12px 14px;border-radius:9px;font-weight:700;font-size:13px;margin-top:20px;box-shadow:0 8px 17px rgba(67,121,245,.23);transition:transform .2s,background .2s}.generate:hover{transform:translateY(-2px);background:#3269e9}.generate .spark{margin-right:6px}
+    .deck-panel{overflow:hidden}.deck-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px 15px;border-bottom:1px solid #e8eef5}.deck-status{font-family:"DM Mono",monospace;font-size:10px;background:#e8faf6;color:#238d76;padding:5px 8px;border-radius:99px}.deck-frame{padding:24px;background:#edf2f8;min-height:500px}.slide{background:#fff9ee;min-height:420px;border-radius:8px;position:relative;overflow:hidden;box-shadow:var(--shadow);padding:46px 50px;transition:opacity .25s,transform .25s}.slide:after{content:"";position:absolute;width:340px;height:340px;border:42px solid #f7d074;border-radius:50%;right:-140px;bottom:-178px}.slide .deck-brand{font-size:10px;font-weight:700;letter-spacing:.08em;color:#5774b0;text-transform:uppercase}.slide .slide-count{font-family:"DM Mono",monospace;color:#8390a3;font-size:10px;float:right}.slide h2{position:relative;z-index:1;font-family:Fraunces,serif;font-size:clamp(32px,4vw,50px);line-height:1.02;letter-spacing:-.045em;max-width:650px;margin:58px 0 15px}.slide h2 .accent{color:#3474ea}.slide .slide-body{max-width:440px;color:#506078;font-size:15px;line-height:1.55;position:relative;z-index:1}.slide .deck-footer{position:absolute;left:50px;bottom:35px;font-family:"DM Mono",monospace;font-size:10px;color:#8f9aae;z-index:1}.visual-stack{position:absolute;right:66px;top:75px;width:164px;z-index:2}.visual-stack .bubble{width:150px;height:150px;background:#4c7df0;border-radius:50%;display:grid;place-items:center;color:#fff;font-family:Fraunces,serif;font-size:24px;line-height:.95;text-align:center;box-shadow:18px 18px 0 #bceadf}.visual-stack .star{position:absolute;right:-10px;top:-10px;background:#ff806b;width:45px;height:45px;clip-path:polygon(50% 0,61% 35%,98% 35%,68% 56%,79% 94%,50% 71%,21% 94%,32% 56%,2% 35%,39% 35%)}
+    .slide.content-slide{background:#112a4e;color:#fff}.slide.content-slide:after{border-color:#26588c}.slide.content-slide .deck-brand,.slide.content-slide .slide-count{color:#a9c1ee}.slide.content-slide h2{margin-top:30px;max-width:500px}.slide.content-slide .slide-body{color:#c4d2e9}.insight-list{display:grid;gap:9px;position:absolute;right:45px;top:92px;width:242px;z-index:2}.insight{display:flex;gap:10px;align-items:center;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.12);padding:10px;border-radius:8px;font-size:11px;color:#d7e4f9}.insight i{font-style:normal;width:22px;height:22px;border-radius:6px;background:#82ddca;color:#163454;display:grid;place-items:center;font-weight:bold}
+    .slide.summary-slide{background:#f0f6ff}.slide.summary-slide:after{border-color:#a9c9ff}.summary-metrics{display:flex;gap:11px;position:absolute;left:50px;bottom:44px;z-index:2}.metric{background:#fff;padding:12px 16px;border-radius:9px;min-width:100px;box-shadow:0 8px 20px rgba(35,76,131,.1)}.metric b{display:block;font-family:Fraunces,serif;font-size:25px;color:#3065dc}.metric span{font-size:10px;color:#6e7e91}
+    .deck-controls{display:flex;align-items:center;gap:8px;padding:13px 20px;border-top:1px solid #e5ecf4;background:#fff}.deck-controls button{border:1px solid #d9e3ee;background:#fff;color:#3c516f;width:29px;height:29px;border-radius:7px;font-size:16px;line-height:1}.deck-controls button:hover{background:#f1f5fc;border-color:#acc0de}.progress{height:4px;background:#e9eef5;flex:1;border-radius:6px;margin:0 5px}.progress span{display:block;background:#4d7df0;height:100%;border-radius:6px;transition:width .25s}.slide-index{font-family:"DM Mono",monospace;font-size:10px;color:#687990;margin-left:3px}.present{border:0;background:#17315a!important;color:#fff!important;width:auto!important;padding:0 10px;font-size:11px!important;font-weight:700}
+    .deck-strip{display:flex;gap:9px;padding:16px 0 0;overflow:auto}.thumbnail{height:69px;min-width:103px;background:#fff9ee;border:2px solid transparent;border-radius:7px;padding:9px;position:relative;text-align:left;overflow:hidden}.thumbnail.active{border-color:#4b7af1}.thumbnail span{font-family:Fraunces,serif;font-size:10px;color:#223052;display:block;max-width:60px}.thumbnail i{position:absolute;width:35px;height:35px;border-radius:50%;background:#4b7af1;right:8px;bottom:-12px}.thumbnail.dark{background:#112a4e}.thumbnail.dark span{color:#fff}.thumbnail.blue{background:#f0f6ff}.thumbnail.blue i{background:#96bbff}
+    .export-bar{margin-top:24px;border:1px solid #cfdcf0;background:#edf3ff;border-radius:13px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;gap:16px}.export-info{display:flex;gap:11px;align-items:center}.export-icon{width:31px;height:31px;border-radius:8px;background:#fff;color:#3b70dd;display:grid;place-items:center;font-size:16px}.export-info b{font-size:12px;display:block}.export-info small{font-size:11px;color:#6b7f9c;display:block;margin-top:2px}.export-actions{display:flex;gap:7px}.export-actions button{border:1px solid #b6c9ec;border-radius:7px;padding:7px 10px;background:#fff;color:#3869ce;font-size:11px;font-weight:700}.export-actions .primary{background:#386fe6;color:#fff;border-color:#386fe6}
+    .toast{position:fixed;right:25px;bottom:25px;background:#173158;color:#fff;padding:11px 15px;border-radius:9px;font-size:12px;box-shadow:var(--shadow);transform:translateY(90px);opacity:0;transition:.25s;z-index:20}.toast.show{transform:translateY(0);opacity:1}
+    .presentation-mode .sidebar,.presentation-mode .topbar,.presentation-mode .intro,.presentation-mode .brief-panel,.presentation-mode .deck-strip,.presentation-mode .export-bar{display:none}.presentation-mode .app-shell{display:block}.presentation-mode .content{max-width:1200px;padding:22px}.presentation-mode .generator-grid{display:block}.presentation-mode .deck-frame{min-height:calc(100vh - 118px);display:grid;place-items:center}.presentation-mode .slide{width:min(100%,1010px);min-height:calc(100vh - 178px)}.presentation-mode .deck-panel{border:0}.presentation-mode .deck-head{border:0}.presentation-mode .deck-controls{border-top:0}.presentation-mode .present{background:#f2f5fa!important;color:#3e526e!important}
+    @media(max-width:1000px){.app-shell{grid-template-columns:1fr}.sidebar{display:none}.content{padding:24px}.generator-grid{grid-template-columns:1fr}.brief-panel{order:2}.deck-panel{order:1}.intro{align-items:start;flex-direction:column}.visual-stack{right:46px}.insight-list{right:24px}.slide h2{max-width:460px}}@media(max-width:620px){.content{padding:18px}.topbar{margin-bottom:24px}.intro{margin-bottom:22px}.intro h1{font-size:35px}.deck-frame{padding:12px}.slide{padding:30px 25px;min-height:390px}.slide h2{font-size:35px;margin-top:40px;max-width:100%}.visual-stack{opacity:.3;right:17px;top:165px}.insight-list{position:relative;top:auto;right:auto;width:100%;margin-top:28px}.summary-metrics{left:25px;bottom:27px}.slide.content-slide h2{margin-top:12px}.slide .deck-footer{left:25px;bottom:22px}.control-grid{grid-template-columns:1fr}.export-bar{align-items:start;flex-direction:column}.deck-head{padding:15px}.deck-controls{padding:11px 13px}.present{padding:0 8px}.slide-index{display:none}}
+  </style>
 </head>
-
 <body>
-
-  <div class="container">
-    <div class="column">
-
-      <!-- 
-              By default, the Avatar is rounded. Use the following:
-              - avatar--rounded: Automatically rounds the image
-              - avatar--soft: Slightly rounds the image
-              - avatar--none: Removes any rounding
-
-              Be sure to replace the src with your own image path and update the alt text
-            -->
-      <img class="avatar avatar--rounded" src="images/avatar.jpeg" alt="Winston">
-
-      <!-- Replace with your name or brand -->
-      <h1 tabindex="0">
-        <div>Winston Andersen</div>
-      </h1>
-
-      <!-- Add a short description about yourself or your brand -->
-      <p tabindex="0">Software Engineer. Entrepreneur. Runner. Lifelong Learner.</p>
-
-      <!-- All your buttons go here -->
-      <div class="button-stack" role="navigation">
-        <!-- Facebook -->
-        <a class="button button-faceb" href="https://www.facebook.com/winstonandersen/" target="_blank" rel="noopener"
-          role="button"><img class="icon" aria-hidden="true" src="images/icons/facebook.svg" alt="Facebook Logo">Find us
-          on Facebook</a>
-
-        <!-- GitHub -->
-        <a class="button button-github" href="https://github.com/pangtongs" target="_blank" rel="noopener"
-          role="button"><img class="icon" aria-hidden="true" src="images/icons/github.svg" alt="GitHub Logo">GitHub</a>
-
-        <!-- Instagram -->
-        <a class="button button-instagram" href="https://www.instagram.com/winstonandersen/" target="_blank"
-          rel="noopener" role="button"><img class="icon" aria-hidden="true" src="images/icons/instagram.svg"
-            alt="Instagram Logo">Instagram</a>
-
-        <!-- LinkedIn -->
-        <a class="button button-linked" href="https://www.linkedin.com/in/winston-andersen/" target="_blank"
-          rel="noopener" role="button"><img class="icon" aria-hidden="true" src="images/icons/linkedin.svg"
-            alt="LinkedIn Logo">LinkedIn</a>
-
-        <!-- Medium -->
-        <a class="button button-medium" href="https://medium.com/@winston_56087" target="_blank" rel="noopener"
-          role="button"><img class="icon" aria-hidden="true" src="images/icons/medium.svg" alt="Medium Logo">Medium</a>
-
-        <!-- Stack Overflow -->
-        <a class="button button-stack-overflow" href="https://stackoverflow.com/users/4114089/wanda" target="_blank"
-          rel="noopener" role="button"><img class="icon" aria-hidden="true" src="images/icons/stack-overflow.svg"
-            alt="Stack Overflow Logo">Stack Overflow</a>
-
-        <!-- Generic Website -->
-        <a class="button button-default" href="https://pangtongs.github.io/site" target="_blank" rel="noopener"
-          role="button"><img class="icon" aria-hidden="true" src="images/icons/generic-website.svg"
-            alt="Website Icon">Visit Website</a>
-
+  <div class="app-shell" id="app">
+    <aside class="sidebar">
+      <div class="brand"><span class="brand-mark"></span>storyfold</div>
+      <div><p class="workspace-label">Workspace</p><nav class="nav"><button class="active"><span class="nav-icon">✦</span>New presentation</button><button><span class="nav-icon">▣</span>My decks</button><button><span class="nav-icon">◌</span>Templates</button><button><span class="nav-icon">◎</span>Brand library</button></nav></div>
+      <div class="source-card"><strong>Bring your brain files</strong><p>Drop in a folder of skills, notes, or research. We’ll find the story.</p><button id="add-source">Add source files</button></div>
+    </aside>
+    <main class="content">
+      <div class="topbar"><div class="breadcrumb">Workspace <span>/</span> New deck</div><div class="avatar">WA</div></div>
+      <section class="intro"><div><div class="eyebrow">Presentation studio</div><h1>From scattered <em>skills</em><br>to a story people remember.</h1></div><p>Build a clear, visual deck from the knowledge you already have. Set the scene, then make every slide count.</p></section>
+      <div class="generator-grid" data-testid="presentation-generator">
+        <section class="panel brief-panel" aria-labelledby="brief-title">
+          <div class="step"><span class="step-number">01</span><div><h2 class="panel-title" id="brief-title">Choose your source</h2><p class="panel-sub">Add a skills folder, or start with the sample library.</p></div></div>
+          <div class="dropzone" id="dropzone"><span class="folder-icon"></span><div><strong>skills-library /</strong><small><span id="file-count">8</span> files ready to shape into a story</small></div><button class="browse" id="browse">Replace</button><input id="file-input" type="file" multiple hidden /></div>
+          <div class="file-list" id="file-list"><div class="file-chip">strategy-playbook.md <b>1.8 KB</b></div><div class="file-chip">facilitation-systems.md <b>2.1 KB</b></div><div class="file-chip">+ 6 more skill files <b>ready</b></div></div>
+          <div class="step" style="margin-top:26px;margin-bottom:0"><span class="step-number">02</span><div><h2 class="panel-title">Frame the presentation</h2><p class="panel-sub">A little direction makes a much stronger first draft.</p></div></div>
+          <label class="field-label" for="prompt">What should this presentation help people do?</label><textarea id="prompt" class="prompt-box" placeholder="e.g. Help our leadership team see why better facilitation is a strategic advantage.">Make the case for a more intentional facilitation practice.</textarea>
+          <div class="chips"><button class="chip" data-prompt="Teach a new team the essentials.">Teach a new team</button><button class="chip" data-prompt="Turn this expertise into a focused client pitch.">Create a client pitch</button><button class="chip" data-prompt="Make an inspiring talk for a community event.">Inspire a community</button></div>
+          <div class="control-grid"><div class="select-wrap"><label class="field-label" for="audience">Audience</label><select id="audience"><option>Leadership team</option><option>New hires</option><option>Clients & partners</option><option>Community audience</option></select></div><div class="select-wrap"><label class="field-label" for="length">Deck length</label><select id="length"><option>7 slides · concise</option><option>10 slides · standard</option><option>15 slides · in depth</option></select></div></div>
+          <label class="field-label">Tone</label><div class="tone-select"><button class="tone active">Clear</button><button class="tone">Bold</button><button class="tone">Warm</button></div>
+          <button class="generate" id="generate"><span class="spark">✦</span>Generate presentation</button>
+        </section>
+        <section class="panel deck-panel" aria-labelledby="deck-title" data-testid="deck-preview">
+          <div class="deck-head"><div><h2 class="panel-title" id="deck-title">Your presentation</h2><p class="panel-sub" id="deck-subtitle">A visual narrative from your skills library</p></div><span class="deck-status" id="deck-status">DRAFT READY</span></div>
+          <div class="deck-frame"><article class="slide" id="slide" data-testid="active-slide"></article></div>
+          <div class="deck-controls"><button id="previous" aria-label="Previous slide">←</button><button id="next" aria-label="Next slide">→</button><div class="progress"><span id="progress"></span></div><span class="slide-index" id="slide-index">01 / 07</span><button class="present" id="present">Present ↗</button></div>
+        </section>
       </div>
-
-      <!-- Feel free to add your own footer information, including updating `privacy.html` to reflect how your LittleLink fork is set up -->
-      <footer>
-        <a href="privacy.html">Privacy Policy</a> | Build your own by forking <a href="https://littlelink.io"
-          target="_blank" rel="noopener">LittleLink</a>
-      </footer>
-
-    </div>
+      <div class="deck-strip" id="deck-strip" aria-label="Slide navigator"></div>
+      <section class="export-bar"><div class="export-info"><span class="export-icon">↧</span><div><b>Ready to keep shaping?</b><small>Export this deck as editable Markdown, or copy the outline.</small></div></div><div class="export-actions"><button id="copy-outline">Copy outline</button><button class="primary" id="download-markdown">Download .md</button></div></section>
+    </main>
   </div>
-
+  <div class="toast" id="toast" role="status">Presentation updated</div>
+  <script>
+    const slides = [
+      { kind:'cover', title:'Make the room<br>work <span class="accent">with you.</span>', body:'A practical case for more intentional facilitation — and the skill systems that make it stick.', foot:'Leadership team  ·  2026', thumb:'The opening' },
+      { kind:'content', title:'The best work<br>happens <span class="accent">between</span> people.', body:'Strong facilitation turns individual expertise into shared momentum. It makes space for better questions, sharper decisions, and genuine ownership.', items:['Create clarity before the room', 'Design for many voices', 'Leave with an owner, not just notes'], thumb:'The opportunity' },
+      { kind:'summary', title:'Three shifts<br>change <span class="accent">everything.</span>', body:'Small, repeatable practices create a compounding advantage across every important conversation.', metrics:[['3×','more useful input'],['42%','faster alignment'],['1 shared','way of working']], thumb:'The shifts' },
+      { kind:'content', title:'Begin with a<br><span class="accent">better brief.</span>', body:'Before you plan the session, name the decision that needs to move. A clear outcome gives every moment in the room a purpose.', items:['Name the decision', 'Invite the right evidence', 'Make the next step visible'], thumb:'Set the stage' },
+      { kind:'summary', title:'Design the<br>moment of <span class="accent">choice.</span>', body:'Use the skills library as a flexible toolkit: prepare the context, create connection, then make the decision tangible.', metrics:[['01','prepare'],['02','participate'],['03','progress']], thumb:'The system' },
+      { kind:'content', title:'Build the habit,<br>not just the <span class="accent">event.</span>', body:'The real payoff arrives when teams use the same simple practices again and again — in planning, discovery, retrospectives, and decisions.', items:['One shared language', 'Lighter repeatable tools', 'Confidence to lead the room'], thumb:'Make it stick' },
+      { kind:'cover', title:'Your next room<br>can change <span class="accent">the work.</span>', body:'Start with one meaningful conversation. Bring a sharper brief, a more inclusive structure, and a visible next move.', foot:'Skill library → action', thumb:'The invitation' }
+    ];
+    let current = 0;
+    const slide = document.getElementById('slide'), strip = document.getElementById('deck-strip');
+    function renderSlide(){ const s=slides[current]; slide.className='slide '+(s.kind==='content'?'content-slide':s.kind==='summary'?'summary-slide':''); let inside=`<div class="deck-brand">Storyfold / Skills into stories</div><span class="slide-count">${String(current+1).padStart(2,'0')}</span><h2>${s.title}</h2><p class="slide-body">${s.body}</p>`; if(s.kind==='cover') inside+=`<div class="visual-stack"><div class="bubble">good<br>rooms</div><i class="star"></i></div><div class="deck-footer">${s.foot}</div>`; if(s.kind==='content') inside+=`<div class="insight-list">${s.items.map((x,i)=>`<div class="insight"><i>${i+1}</i>${x}</div>`).join('')}</div>`; if(s.kind==='summary') inside+=`<div class="summary-metrics">${s.metrics.map(m=>`<div class="metric"><b>${m[0]}</b><span>${m[1]}</span></div>`).join('')}</div>`; slide.innerHTML=inside; document.getElementById('slide-index').textContent=`${String(current+1).padStart(2,'0')} / ${String(slides.length).padStart(2,'0')}`; document.getElementById('progress').style.width=`${((current+1)/slides.length)*100}%`; [...strip.children].forEach((el,i)=>el.classList.toggle('active',i===current)); }
+    function renderStrip(){ strip.innerHTML=slides.map((s,i)=>`<button class="thumbnail ${s.kind==='content'?'dark':s.kind==='summary'?'blue':''} ${i===0?'active':''}" data-slide="${i}" aria-label="Slide ${i+1}: ${s.thumb}"><span>${s.thumb}</span><i></i></button>`).join(''); strip.querySelectorAll('.thumbnail').forEach(b=>b.addEventListener('click',()=>{current=+b.dataset.slide;renderSlide()})); }
+    function toast(message){const t=document.getElementById('toast');t.textContent=message;t.classList.add('show');clearTimeout(window.toastTimer);window.toastTimer=setTimeout(()=>t.classList.remove('show'),2200)}
+    document.getElementById('previous').onclick=()=>{current=(current+slides.length-1)%slides.length;renderSlide()}; document.getElementById('next').onclick=()=>{current=(current+1)%slides.length;renderSlide()};
+    document.querySelectorAll('.tone').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tone').forEach(x=>x.classList.remove('active'));b.classList.add('active')}); document.querySelectorAll('.chip').forEach(b=>b.onclick=()=>document.getElementById('prompt').value=b.dataset.prompt);
+    document.getElementById('generate').onclick=()=>{const audience=document.getElementById('audience').value; const brief=document.getElementById('prompt').value.trim(); document.getElementById('deck-subtitle').textContent=brief?`Built for ${audience.toLowerCase()}`:'A visual narrative from your skills library';document.getElementById('deck-status').textContent='FRESHLY GENERATED';current=0;renderSlide();toast('New presentation generated')};
+    const input=document.getElementById('file-input');document.getElementById('browse').onclick=()=>input.click();document.getElementById('add-source').onclick=()=>input.click();input.onchange=()=>{if(!input.files.length)return; const files=[...input.files];document.getElementById('file-count').textContent=files.length;document.getElementById('file-list').innerHTML=files.slice(0,2).map(f=>`<div class="file-chip">${f.name} <b>${Math.max(1,Math.round(f.size/1024))} KB</b></div>`).join('')+(files.length>2?`<div class="file-chip">+ ${files.length-2} more files <b>ready</b></div>`:'');toast(`${files.length} source files added`)};
+    const dz=document.getElementById('dropzone');['dragenter','dragover'].forEach(e=>dz.addEventListener(e,x=>{x.preventDefault();dz.classList.add('dragging')}));['dragleave','drop'].forEach(e=>dz.addEventListener(e,x=>{x.preventDefault();dz.classList.remove('dragging')}));dz.addEventListener('drop',e=>{const f=[...e.dataTransfer.files];if(f.length){document.getElementById('file-count').textContent=f.length;toast(`${f.length} source files added`)}});
+    document.getElementById('copy-outline').onclick=async()=>{const text=slides.map((s,i)=>`${i+1}. ${s.thumb}`).join('\n');try{await navigator.clipboard.writeText(text);toast('Outline copied to clipboard')}catch{toast('Outline ready to copy')}};
+    document.getElementById('download-markdown').onclick=()=>{const brief=document.getElementById('prompt').value;const md=`# Make the room work with you\n\n> ${brief}\n\n${slides.map(s=>`## ${s.thumb}\n\n${s.body}`).join('\n\n')}`;const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([md],{type:'text/markdown'}));a.download='facilitation-storyfold-deck.md';a.click();URL.revokeObjectURL(a.href);toast('Markdown presentation downloaded')};
+    document.getElementById('present').onclick=()=>{document.getElementById('app').classList.toggle('presentation-mode');document.getElementById('present').textContent=document.getElementById('app').classList.contains('presentation-mode')?'Exit presentation':'Present ↗'};
+    document.addEventListener('keydown',e=>{if(e.key==='ArrowRight')document.getElementById('next').click();if(e.key==='ArrowLeft')document.getElementById('previous').click();if(e.key==='Escape'&&document.getElementById('app').classList.contains('presentation-mode'))document.getElementById('present').click()});renderStrip();renderSlide();
+  </script>
 </body>
-
 </html>
