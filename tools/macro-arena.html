@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Macro Arena — Turn-Based MOBA</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+  body { background: #0d1117; color: #e6edf3; min-height: 100vh; }
+  #app { max-width: 1150px; margin: 0 auto; padding: 10px; }
+  h1 { font-size: 22px; text-align: center; padding: 8px 0 2px; letter-spacing: 1px; }
+  .sub { text-align: center; color: #8b949e; font-size: 12px; margin-bottom: 10px; }
+  .btn { background: #238636; color: #fff; border: none; padding: 10px 22px; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; }
+  .btn:hover { background: #2ea043; }
+  .btn-sm { padding: 3px 7px; font-size: 11px; border-radius: 5px; border: 1px solid #30363d; background: #161b22; color: #c9d1d9; cursor: pointer; }
+  .btn-sm:hover { background: #21262d; }
+  .btn-sm:disabled { opacity: .35; cursor: not-allowed; }
+  .btn-sm.tp-on { background: rgba(210,153,34,.25); border-color: #d29922; color: #d29922; }
+  /* DRAFT */
+  .draft-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin: 10px 0; }
+  .dcard { background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 10px; cursor: pointer; transition: .15s; text-align: center; }
+  .dcard:hover { border-color: #58a6ff; transform: translateY(-2px); }
+  .dcard.taken { opacity: .3; pointer-events: none; }
+  .dcard .ico { font-size: 30px; }
+  .dcard .nm { font-weight: bold; font-size: 14px; margin: 3px 0; }
+  .dcard .rl { font-size: 11px; color: #d29922; font-weight: bold; }
+  .dcard .st { font-size: 11px; color: #8b949e; margin-top: 3px; }
+  .dcard .ds { font-size: 10px; color: #58a6ff; margin-top: 4px; min-height: 26px; }
+  .teams { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 6px; }
+  .teambox { background: #161b22; border-radius: 10px; padding: 8px 14px; min-width: 150px; }
+  .teambox h3 { font-size: 13px; margin-bottom: 4px; }
+  .pickturn { text-align: center; font-size: 15px; font-weight: bold; margin: 8px 0; color: #d29922; }
+  /* GAME LAYOUT */
+  .gamewrap { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 10px; }
+  @media (max-width: 850px) { .gamewrap { grid-template-columns: 1fr; } }
+  .topbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; background: #161b22; border-radius: 10px; padding: 8px 12px; margin-bottom: 8px; }
+  .ancbar { flex: 1; min-width: 120px; }
+  .ancbar .lbl { font-size: 11px; font-weight: bold; }
+  .bar { background: #21262d; border-radius: 4px; height: 10px; overflow: hidden; margin-top: 2px; }
+  .bar > div { height: 100%; transition: width .4s; }
+  /* MAP */
+  .mapbox { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 8px; }
+  .selbanner { text-align: center; font-size: 13px; font-weight: bold; padding: 6px; border-radius: 8px; margin-bottom: 6px; background: #21262d; color: #8b949e; }
+  .selbanner.on { background: rgba(210,153,34,.15); color: #d29922; border: 1px solid rgba(210,153,34,.4); }
+  svg { width: 100%; height: auto; display: block; border-radius: 8px; }
+  .zoneHit { fill: transparent; stroke: transparent; cursor: default; transition: .15s; }
+  .selecting .zoneHit { cursor: pointer; }
+  .selecting .zoneHit.lz { stroke: rgba(210,153,34,.35); }
+  .selecting .zoneHit.lz:hover { stroke: rgba(210,153,34,.75); }
+  .selecting .zoneHit.az { fill: rgba(210,153,34,.18); stroke: rgba(210,153,34,.45); stroke-width: .6; }
+  .selecting .zoneHit.az:hover { fill: rgba(210,153,34,.4); }
+  .htok { cursor: pointer; }
+  .htok circle.ring { transition: .15s; }
+  .htok.sel circle.ring { stroke: #ffd33d; stroke-width: 1.4; animation: pulse 1s infinite; }
+  @keyframes pulse { 50% { stroke-opacity: .4; } }
+  .legend { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .legend > div { flex: 1; min-width: 140px; background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 6px 8px; font-size: 11px; line-height: 1.45; color: #8b949e; }
+  .legend b { color: #e6edf3; font-size: 12px; }
+  /* HERO CARDS */
+  .hcard { background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 8px; margin-bottom: 8px; cursor: pointer; transition: .15s; }
+  .hcard:hover { border-color: #58a6ff; }
+  .hcard.sel { border-color: #ffd33d; box-shadow: 0 0 0 1px #ffd33d; }
+  .hcard.dead-h, .hcard.trav-h { opacity: .6; cursor: default; }
+  .hrow { display: flex; align-items: center; gap: 8px; }
+  .hico { font-size: 26px; }
+  .hinfo { flex: 1; }
+  .hname { font-weight: bold; font-size: 13px; }
+  .hstats { font-size: 11px; color: #8b949e; }
+  .assign-tag { font-size: 10px; font-weight: bold; padding: 2px 7px; border-radius: 10px; background: #21262d; color: #d29922; white-space: nowrap; }
+  .assign-tag.trav { color: #58a6ff; }
+  .shoprow { display: flex; gap: 4px; margin-top: 5px; flex-wrap: wrap; align-items: center; }
+  .gold { color: #d29922; font-weight: bold; font-size: 12px; }
+  /* panels */
+  .panel { background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 8px; margin-bottom: 8px; }
+  .panel h3 { font-size: 13px; margin-bottom: 6px; color: #f85149; }
+  .panel.logp h3 { color: #58a6ff; }
+  .erow { display: flex; align-items: center; gap: 6px; font-size: 12px; margin-bottom: 5px; }
+  .erow .bar { flex: 1; }
+  .logbox { max-height: 200px; overflow-y: auto; font-size: 12px; line-height: 1.5; }
+  .logbox .turnhead { color: #d29922; font-weight: bold; margin-top: 4px; }
+  .logbox .kill { color: #f85149; }
+  .logbox .twr { color: #a371f7; }
+  .logbox .gd { color: #3fb950; }
+  .logbox .mv { color: #58a6ff; }
+  .endturn { width: 100%; margin: 8px 0; }
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.85); display: flex; align-items: center; justify-content: center; z-index: 50; }
+  .obox { background: #161b22; border: 1px solid #30363d; border-radius: 14px; padding: 30px 40px; text-align: center; }
+  .obox h2 { font-size: 28px; margin-bottom: 10px; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const POOL = [
+  {name:'Axemaster',  icon:'🪓', role:'Tank',    atk:34, hp:800, tier:8},
+  {name:'Shadowblade',icon:'🗡️', role:'Carry',   atk:42, hp:520, tier:9},
+  {name:'Pyromancer', icon:'🔥', role:'Nuker',   atk:50, hp:460, tier:8},
+  {name:'Treeshaman', icon:'🌿', role:'Support', atk:26, hp:560, tier:7},
+  {name:'Siegelord',  icon:'🏰', role:'Pusher',  atk:38, hp:600, tier:7},
+  {name:'Nightstalker',icon:'🦇',role:'Ganker',  atk:44, hp:540, tier:8},
+  {name:'Frostmage',  icon:'❄️', role:'Nuker',   atk:48, hp:440, tier:7},
+  {name:'Paladin',    icon:'✨', role:'Support', atk:30, hp:680, tier:8},
+  {name:'Windranger', icon:'🏹', role:'Carry',   atk:40, hp:500, tier:8},
+  {name:'Bonecrusher',icon:'🔨', role:'Tank',    atk:32, hp:840, tier:7},
+  {name:'Trickster',  icon:'🎭', role:'Ganker',  atk:46, hp:480, tier:7},
+  {name:'Terraclash', icon:'🌋', role:'Pusher',  atk:36, hp:640, tier:7},
+];
+const ROLEDESC = {
+  Tank:'Soaks enemy damage first in fights',
+  Carry:'+9 atk per level (others get +4)',
+  Nuker:'+35% damage vs heroes, -30% vs towers',
+  Support:'Heals all lane allies every turn',
+  Pusher:'+80% damage to towers',
+  Ganker:'+45% atk when outnumbering the enemy'
+};
+const ITEMS = [
+  {n:'Blade', i:'⚔️', cost:400,  atk:12, hp:0},
+  {n:'Plate', i:'🛡️', cost:400,  atk:0,  hp:180},
+  {n:'Relic', i:'💎', cost:1000, atk:30, hp:0},
+  {n:'Heart', i:'❤️', cost:1000, atk:0,  hp:450},
+];
+const TP_COST = 250;
+const HEAL_COST = 150;
+const LANES = ['top','mid','bot'];
+const ZONES = ['top','mid','bot','jungle','base'];
+const LANE_LBL = {top:'TOP', mid:'MID', bot:'BOT'};
+const ZONE_LBL = {top:'⚔️ TOP', mid:'⚔️ MID', bot:'⚔️ BOT', jungle:'🌲 Jungle', base:'⛲ Base'};
+
+// Travel time in turns between zones — mid is the crossroads (1 to everywhere)
+const DIST = {
+  base:   {base:0, mid:1, jungle:1, top:2, bot:2},
+  mid:    {base:1, mid:0, jungle:1, top:1, bot:1},
+  jungle: {base:1, mid:1, jungle:0, top:2, bot:2},
+  top:    {base:2, mid:1, jungle:2, top:0, bot:3},
+  bot:    {base:2, mid:1, jungle:2, top:3, bot:0},
+};
+
+// map coordinates (viewBox 0 0 100 100)
+const POS = {
+  player: { top:[13,40], mid:[40,62], bot:[60,87], jungle:[31,69], base:[11,89] },
+  enemy:  { top:[40,13], mid:[62,40], bot:[87,60], jungle:[69,31], base:[89,11] }
+};
+const TPOS = {
+  player: { top:[[11,48],[12,70]], mid:[[35,67],[25,77]], bot:[[52,89],[30,88]] },
+  enemy:  { top:[[48,11],[70,12]], mid:[[67,35],[77,25]], bot:[[89,52],[88,30]] }
+};
+
+let S = {};
+
+function newGame(){
+  S = { phase:'draft', taken:{}, playerPicks:[], enemyPicks:[], pickTurn:'player', picksLeft:6 };
+  render();
+}
+
+/* ---------------- DRAFT ---------------- */
+function pick(i){
+  if(S.phase!=='draft' || S.taken[i] || S.pickTurn!=='player') return;
+  S.taken[i]='player'; S.playerPicks.push(i); S.picksLeft--;
+  S.pickTurn='enemy'; render();
+  if(S.picksLeft>0) setTimeout(aiPick, 600);
+}
+function aiPick(){
+  const avail = POOL.map((_,i)=>i).filter(i=>!S.taken[i]);
+  const have = S.enemyPicks.map(i=>POOL[i].role);
+  const picksDone = S.enemyPicks.length;
+  let candidates = avail;
+  const hasFront = have.some(r=>r==='Tank'||r==='Support');
+  const hasDmg = have.some(r=>r==='Carry'||r==='Nuker');
+  if(picksDone===2){
+    if(!hasFront) candidates = avail.filter(i=>['Tank','Support'].includes(POOL[i].role));
+    else if(!hasDmg) candidates = avail.filter(i=>['Carry','Nuker'].includes(POOL[i].role));
+    if(candidates.length===0) candidates = avail;
+  }
+  candidates.sort((a,b)=> (POOL[b].tier+Math.random()*2) - (POOL[a].tier+Math.random()*2));
+  const c = candidates[0];
+  S.taken[c]='enemy'; S.enemyPicks.push(c); S.picksLeft--;
+  S.pickTurn='player';
+  if(S.picksLeft===0) startGame(); else render();
+}
+
+/* ---------------- GAME SETUP ---------------- */
+function mkHero(poolIdx, team, uid, defLane){
+  const p = POOL[poolIdx];
+  return { uid, team, name:p.name, icon:p.icon, role:p.role,
+    atk:p.atk, hp:p.hp, maxhp:p.hp, lvl:1, xp:0, gold:200,
+    items:[], dead:false, respawn:0, kills:0,
+    loc:defLane, dest:defLane, travel:0, travelTotal:0,
+    scrolls:0, tpArm:false };
+}
+function startGame(){
+  S.phase='game';
+  S.heroes = [];
+  S.playerPicks.forEach((pi,k)=> S.heroes.push(mkHero(pi,'player','p'+k, LANES[k])));
+  S.enemyPicks.forEach((pi,k)=> S.heroes.push(mkHero(pi,'enemy','e'+k, LANES[k])));
+  S.towers = {
+    player:{top:[500,650], mid:[500,650], bot:[500,650]},
+    enemy: {top:[500,650], mid:[500,650], bot:[500,650]},
+  };
+  S.ancient = {player:900, enemy:900};
+  S.turn = 1; S.log = []; S.sel = null;
+  S.playerPrev = {top:1,mid:1,bot:1};
+  S.enemyShown = {top:['e0'],mid:['e1'],bot:['e2'],jungle:[],base:[]};
+  S.over = null;
+  render();
+}
+
+const heroesOf = (team)=> S.heroes.filter(h=>h.team===team);
+const present = (team,zone)=> S.heroes.filter(h=>h.team===team && !h.dead && h.travel===0 && h.loc===zone);
+const byUid = (uid)=> S.heroes.find(h=>h.uid===uid);
+
+function gainXp(h, amt){
+  h.xp += amt;
+  const target = Math.min(12, 1 + Math.floor(h.xp/220));
+  while(h.lvl < target){
+    h.lvl++;
+    h.atk += (h.role==='Carry'? 9 : 4);
+    h.maxhp += 60; h.hp = Math.min(h.maxhp, h.hp+60);
+  }
+}
+
+/* ---------------- SELECTION / ORDERS / SHOP ---------------- */
+function selectHero(uid){
+  const h = byUid(uid);
+  if(!h || h.dead || h.travel>0) return;
+  S.sel = (S.sel===uid) ? null : uid;
+  render();
+}
+function zoneClick(zone){
+  if(!S.sel) return;
+  const h = byUid(S.sel);
+  if(h && !h.dead && h.travel===0){
+    const d = DIST[h.loc][zone];
+    if(d===0){ /* already there */ }
+    else if(h.tpArm && h.scrolls>0){
+      h.scrolls--; h.tpArm=false;
+      h.loc = zone; h.dest = zone;
+      S.log = [`<span class="mv">📜 ${h.icon} ${h.name} teleports to ${ZONE_LBL[zone]} instantly!</span>`, ...S.log];
+    } else {
+      h.dest = zone; h.travel = d; h.travelTotal = d;
+    }
+  }
+  S.sel = null;
+  render();
+}
+function buy(ev, uid, idx){
+  ev.stopPropagation();
+  const h = byUid(uid), it = ITEMS[idx];
+  if(!h || h.gold < it.cost) return;
+  h.gold -= it.cost; h.items.push(idx);
+  h.atk += it.atk; h.maxhp += it.hp; h.hp = Math.min(h.maxhp, h.hp + it.hp);
+  render();
+}
+function buyTp(ev, uid){
+  ev.stopPropagation();
+  const h = byUid(uid);
+  if(!h || h.gold < TP_COST) return;
+  h.gold -= TP_COST; h.scrolls++;
+  render();
+}
+function toggleTp(ev, uid){
+  ev.stopPropagation();
+  const h = byUid(uid);
+  if(!h || h.scrolls<1) return;
+  h.tpArm = !h.tpArm;
+  render();
+}
+function aiBuy(){
+  heroesOf('enemy').forEach(h=>{
+    let guard = 0;
+    while(guard++ < 6){
+      const wantHp = (h.role==='Tank'||h.role==='Support');
+      let idx = -1;
+      if(h.gold >= 1300) idx = wantHp ? 3 : 2;
+      else if(h.gold >= 700) idx = wantHp ? 1 : 0;
+      if(idx<0) break;
+      const it = ITEMS[idx];
+      h.gold -= it.cost; h.items.push(idx);
+      h.atk += it.atk; h.maxhp += it.hp; h.hp = Math.min(h.maxhp, h.hp+it.hp);
+    }
+  });
+}
+
+/* ---------------- ENEMY AI ASSIGNMENT ---------------- */
+function aiAssign(){
+  const scores = {};
+  LANES.forEach(l=>{
+    let s = 1;
+    const myT = S.towers.enemy[l], pT = S.towers.player[l];
+    if(myT[0]<=0) s += 1.5;
+    if(myT[0]>0 && myT[0]<300) s += 1.5;
+    if(myT[0]<=0 && myT[1]<400) s += 2.5;
+    if(myT[0]<=0 && myT[1]<=0) s += 4;
+    s += (S.playerPrev[l]||0) * 1.2;
+    if(pT[0]<300 && pT[0]>0) s += 1;
+    if(pT[0]<=0) s += 1.5;
+    if(pT[0]<=0 && pT[1]<350 && pT[1]>0) s += 1.5;
+    if(pT[0]<=0 && pT[1]<=0) s += 4;
+    scores[l] = s;
+  });
+  heroesOf('enemy').forEach(h=>{
+    if(h.dead || h.travel>0) return; // committed to journey
+    const order = (zone)=>{
+      if(zone===h.loc) return;
+      const d = DIST[h.loc][zone];
+      if(d>=2 && h.gold >= TP_COST+200){ h.gold -= TP_COST; h.loc=zone; h.dest=zone; }
+      else { h.dest=zone; h.travel=d; h.travelTotal=d; }
+    };
+    if(h.hp < h.maxhp*0.28){ order('base'); return; }
+    if(h.hp < h.maxhp*0.45 && Math.random()<0.5){ order('base'); return; }
+    // weigh lanes by value, discounted by travel time, sticky to current spot
+    const w = {};
+    let total = 0;
+    LANES.forEach(l=>{
+      let v = scores[l] / (1 + DIST[h.loc][l]*0.7);
+      if(l===h.loc) v *= 1.5;
+      w[l]=v; total+=v;
+    });
+    const maxScore = Math.max(...LANES.map(l=>scores[l]));
+    if(maxScore < 3.5 && Math.random() < 0.15){ order('jungle'); return; }
+    let r = Math.random()*total;
+    for(const l of LANES){ r -= w[l]; if(r<=0){ order(l); return; } }
+    order('mid');
+  });
+}
+
+/* ---------------- COMBAT ---------------- */
+function heroPower(side, opp){
+  let sum = 0;
+  side.forEach(h=>{
+    let a = h.atk;
+    if(h.role==='Ganker' && opp.length>0 && side.length>opp.length) a*=1.45;
+    if(h.role==='Nuker') a*=1.35;
+    sum += a;
+  });
+  return Math.round(sum*2 + 35);
+}
+function towerPower(side){
+  let sum = 0;
+  side.forEach(h=>{
+    let a = h.atk;
+    if(h.role==='Pusher') a*=1.8;
+    if(h.role==='Nuker') a*=0.7;
+    sum += a;
+  });
+  return Math.round(sum + 35);
+}
+function dealDamage(targets, dmg, killers, L, srcName){
+  const order = [...targets].sort((a,b)=>{
+    const ta = a.role==='Tank'?0:1, tb = b.role==='Tank'?0:1;
+    return ta-tb || a.hp-b.hp;
+  });
+  for(const t of order){
+    if(dmg<=0 || t.dead) continue;
+    const hit = Math.min(t.hp, dmg);
+    t.hp -= hit; dmg -= hit;
+    if(t.hp<=0){
+      t.dead = true; t.hp = 0;
+      t.respawn = 1 + Math.floor(t.lvl/5) + 1;
+      t.loc='base'; t.dest='base'; t.travel=0; t.tpArm=false;
+      L.push(`<span class="kill">💀 ${t.icon} ${t.name} was slain${srcName? ' by '+srcName : ''}!</span>`);
+      const alive = killers.filter(k=>!k.dead);
+      alive.forEach(k=>{
+        k.gold += Math.floor(300/Math.max(1,alive.length)) + 100;
+        k.kills++; gainXp(k, 200);
+      });
+    }
+  }
+}
+function hitTower(defTeam, lane, dmg, attackers, L){
+  const t = S.towers[defTeam][lane];
+  const who = defTeam==='player' ? 'Your' : 'Enemy';
+  if(t[0] > 0){
+    t[0] -= dmg;
+    if(t[0] <= 0){ t[0]=0; L.push(`<span class="twr">🏯 ${who} T1 ${LANE_LBL[lane]} tower DESTROYED!</span>`); attackers.forEach(a=>{a.gold+=250; gainXp(a,120);}); }
+  } else if(t[1] > 0){
+    t[1] -= dmg;
+    if(t[1] <= 0){ t[1]=0; L.push(`<span class="twr">🏯 ${who} T2 ${LANE_LBL[lane]} tower DESTROYED! Ancient exposed in ${LANE_LBL[lane]}!</span>`); attackers.forEach(a=>{a.gold+=250; gainXp(a,120);}); }
+  } else {
+    S.ancient[defTeam] -= dmg;
+    L.push(`<span class="twr">⚡ ${who} ANCIENT takes ${dmg} damage!</span>`);
+  }
+}
+function towerRetaliate(defTeam, lane, attackers, L){
+  const t = S.towers[defTeam][lane];
+  if(t[0]>0 || t[1]>0){
+    dealDamage(attackers, 70, [], L, 'a tower');
+  }
+}
+function resolveLane(lane, L){
+  const P = present('player',lane), E = present('enemy',lane);
+  [P,E].forEach(side=>{
+    side.filter(h=>h.role==='Support').forEach(s=>{
+      const heal = 50 + s.lvl*12;
+      side.forEach(a=>{ a.hp = Math.min(a.maxhp, a.hp+heal); });
+      if(side.length) L.push(`${s.icon} ${s.name} heals ${LANE_LBL[lane]} allies for ${heal}.`);
+    });
+  });
+  if(P.length && E.length){
+    const pPow = heroPower(P,E), ePow = heroPower(E,P);
+    L.push(`⚔️ ${LANE_LBL[lane]}: ${P.map(h=>h.icon).join('')} (${pPow}) clash with ${E.map(h=>h.icon).join('')} (${ePow})`);
+    dealDamage(E, pPow, P, L, 'your team');
+    dealDamage(P, ePow, E, L, 'the enemy');
+    const pA = P.filter(h=>!h.dead), eA = E.filter(h=>!h.dead);
+    if(pA.length && !eA.length){
+      const td = Math.round(towerPower(pA)*0.5);
+      L.push(`✅ ${LANE_LBL[lane]} fight won — survivors push for ${td}!`);
+      hitTower('enemy', lane, td, pA, L);
+    } else if(eA.length && !pA.length){
+      const td = Math.round(towerPower(eA)*0.5);
+      L.push(`❌ ${LANE_LBL[lane]} fight lost — enemy pushes for ${td}!`);
+      hitTower('player', lane, td, eA, L);
+    }
+  } else if(P.length){
+    const td = towerPower(P);
+    L.push(`➡️ ${P.map(h=>h.icon).join('')} push ${LANE_LBL[lane]} uncontested for ${td}.`);
+    hitTower('enemy', lane, td, P, L);
+    towerRetaliate('enemy', lane, P, L);
+  } else if(E.length){
+    const td = towerPower(E);
+    L.push(`⬅️ Enemy ${E.map(h=>h.icon).join('')} push ${LANE_LBL[lane]} for ${td}.`);
+    hitTower('player', lane, td, E, L);
+    towerRetaliate('player', lane, E, L);
+  } else {
+    hitTowerSilent('player', lane, 10);
+    hitTowerSilent('enemy', lane, 10);
+  }
+  [...P,...E].filter(h=>!h.dead).forEach(h=>{ h.gold += 160; gainXp(h,100); });
+}
+function hitTowerSilent(team, lane, dmg){
+  const t = S.towers[team][lane];
+  if(t[0]>0) t[0]=Math.max(0,t[0]-dmg);
+  else if(t[1]>0) t[1]=Math.max(0,t[1]-dmg);
+}
+
+/* ---------------- TURN ---------------- */
+function endTurn(){
+  if(S.over) return;
+  S.sel = null;
+  aiBuy();
+  aiAssign();
+  const L = [];
+  L.push(`<span class="turnhead">━━ Turn ${S.turn} ━━</span>`);
+  // 1. lanes resolve with heroes actually standing there
+  LANES.forEach(l=>resolveLane(l,L));
+  // 2. jungle / base actions (only heroes present, not traveling)
+  S.heroes.filter(h=>!h.dead && h.travel===0).forEach(h=>{
+    if(h.loc==='jungle'){ h.gold += 220; gainXp(h,130);
+      if(h.team==='player') L.push(`🌲 ${h.icon} ${h.name} farms the jungle. <span class="gd">+220g</span>`);
+    } else if(h.loc==='base'){
+      if(h.hp < h.maxhp){
+        if(h.gold >= HEAL_COST){
+          h.gold -= HEAL_COST;
+          const heal = Math.round(h.maxhp*0.45);
+          h.hp = Math.min(h.maxhp, h.hp+heal);
+          if(h.team==='player') L.push(`⛲ ${h.icon} ${h.name} buys salves at the fountain (+${heal} HP, <span style="color:#f85149">-${HEAL_COST}g</span>).`);
+        } else {
+          const heal = Math.round(h.maxhp*0.15);
+          h.hp = Math.min(h.maxhp, h.hp+heal);
+          if(h.team==='player') L.push(`⛲ ${h.icon} ${h.name} can't afford salves — slow rest (+${heal} HP).`);
+        }
+      }
+    }
+  });
+  // 3. travelers walk
+  S.heroes.filter(h=>!h.dead && h.travel>0).forEach(h=>{
+    h.travel--;
+    if(h.travel<=0){
+      h.loc = h.dest;
+      if(h.team==='player') L.push(`<span class="mv">🚶 ${h.icon} ${h.name} arrives at ${ZONE_LBL[h.dest]}.</span>`);
+    } else if(h.team==='player'){
+      L.push(`<span class="mv">🚶 ${h.icon} ${h.name} is traveling to ${ZONE_LBL[h.dest]} (${h.travel} more turn${h.travel>1?'s':''}).</span>`);
+    }
+  });
+  // 4. respawns
+  S.heroes.filter(h=>h.dead).forEach(h=>{
+    h.respawn--;
+    if(h.respawn<=0){ h.dead=false; h.hp=h.maxhp; h.loc='base'; h.dest='base'; h.travel=0;
+      if(h.team==='player') L.push(`♻️ ${h.icon} ${h.name} has respawned at base.`);
+    }
+  });
+  // 5. intel
+  S.playerPrev = {top:0,mid:0,bot:0};
+  heroesOf('player').forEach(h=>{ if(!h.dead && h.travel===0 && LANES.includes(h.loc)) S.playerPrev[h.loc]++; });
+  S.enemyShown = {top:[],mid:[],bot:[],jungle:[],base:[]};
+  heroesOf('enemy').forEach(h=>{
+    if(h.dead){ S.enemyShown.base.push(h.uid); }
+    else S.enemyShown[h.loc].push(h.uid);
+  });
+  S.log = [...L.reverse(), ...S.log].slice(0,200);
+  S.turn++;
+  if(S.ancient.enemy<=0 && S.ancient.player<=0) S.over='draw';
+  else if(S.ancient.enemy<=0) S.over='win';
+  else if(S.ancient.player<=0) S.over='loss';
+  render();
+}
+
+/* ---------------- RENDER ---------------- */
+function hpBar(cur,max,color){
+  const pct = Math.max(0, Math.min(100, cur/max*100));
+  return `<div class="bar"><div style="width:${pct}%;background:${color}"></div></div>`;
+}
+
+function render(){
+  const app = document.getElementById('app');
+  if(S.phase==='draft'){ renderDraft(app); return; }
+  renderGame(app);
+}
+
+function renderDraft(app){
+  const pTeam = S.playerPicks.map(i=>POOL[i]);
+  const eTeam = S.enemyPicks.map(i=>POOL[i]);
+  app.innerHTML = `
+    <h1>⚔️ MACRO ARENA</h1>
+    <div class="sub">Turn-based MOBA · Draft 3 heroes, then out-rotate your opponent on the map</div>
+    <div class="pickturn">${S.pickTurn==='player' ? '👉 Your pick ('+(3-pTeam.length)+' left)' : '🤖 Enemy is picking...'}</div>
+    <div class="teams">
+      <div class="teambox"><h3 style="color:#58a6ff">Your Team</h3>${pTeam.map(p=>`<div>${p.icon} ${p.name} <span style="color:#d29922;font-size:11px">${p.role}</span></div>`).join('')||'<span style="color:#484f58">—</span>'}</div>
+      <div class="teambox"><h3 style="color:#f85149">Enemy Team</h3>${eTeam.map(p=>`<div>${p.icon} ${p.name} <span style="color:#d29922;font-size:11px">${p.role}</span></div>`).join('')||'<span style="color:#484f58">—</span>'}</div>
+    </div>
+    <div class="draft-grid">
+      ${POOL.map((p,i)=>`
+        <div class="dcard ${S.taken[i]?'taken':''}" onclick="pick(${i})">
+          <div class="ico">${p.icon}</div>
+          <div class="nm">${p.name}</div>
+          <div class="rl">${p.role}</div>
+          <div class="st">⚔ ${p.atk} &nbsp; ❤ ${p.hp}</div>
+          <div class="ds">${ROLEDESC[p.role]}</div>
+          ${S.taken[i]?`<div style="font-size:10px;color:${S.taken[i]==='player'?'#58a6ff':'#f85149'}">${S.taken[i]==='player'?'YOURS':'ENEMY'}</div>`:''}
+        </div>`).join('')}
+    </div>`;
+}
+
+/* ----- SVG MAP ----- */
+function towerSVG(team, lane, tier){
+  const [x,y] = TPOS[team][lane][tier];
+  const hp = S.towers[team][lane][tier];
+  const max = tier===0 ? 500 : 650;
+  const color = team==='player' ? '#58a6ff' : '#f85149';
+  if(hp<=0) return `<text x="${x}" y="${y+1.5}" font-size="4" text-anchor="middle" opacity="0.3">🗼</text>`;
+  const w = 6, pct = Math.max(0,hp/max);
+  return `
+    <text x="${x}" y="${y+1.5}" font-size="4.2" text-anchor="middle">🗼</text>
+    <rect x="${x-w/2}" y="${y+2.6}" width="${w}" height="1" rx="0.4" fill="#21262d"/>
+    <rect x="${x-w/2}" y="${y+2.6}" width="${w*pct}" height="1" rx="0.4" fill="${color}"/>`;
+}
+function ancientSVG(team){
+  const [x,y] = POS[team].base;
+  const hp = S.ancient[team], pct = Math.max(0, hp/900);
+  const color = team==='player' ? '#58a6ff' : '#f85149';
+  return `
+    <circle cx="${x}" cy="${y}" r="7" fill="${team==='player'?'rgba(88,166,255,.12)':'rgba(248,81,73,.12)'}" stroke="${color}" stroke-width="0.5" stroke-dasharray="1.5,1"/>
+    <text x="${x}" y="${y+2}" font-size="5.5" text-anchor="middle">🏛</text>
+    <rect x="${x-5}" y="${y+5}" width="10" height="1.3" rx="0.5" fill="#21262d"/>
+    <rect x="${x-5}" y="${y+5}" width="${10*pct}" height="1.3" rx="0.5" fill="${color}"/>`;
+}
+function heroTokSVG(h, x, y, ghost, traveling){
+  const sel = S.sel===h.uid;
+  const ringCol = h.team==='player' ? '#58a6ff' : '#f85149';
+  const hpPct = Math.max(0, h.hp/h.maxhp);
+  const click = h.team==='player' && !h.dead && !traveling ? `onclick="selectHero('${h.uid}');event.stopPropagation()"` : '';
+  return `<g class="htok ${sel?'sel':''}" ${click} opacity="${ghost?0.55:1}">
+    <circle class="ring" cx="${x}" cy="${y}" r="3.6" fill="#0d1117" stroke="${ringCol}" stroke-width="0.8" ${(ghost||traveling)?'stroke-dasharray="1,0.8"':''}/>
+    <text x="${x}" y="${y+1.6}" font-size="4.2" text-anchor="middle">${h.dead?'💀':h.icon}</text>
+    ${traveling? `<text x="${x+3.4}" y="${y-2.4}" font-size="3">🚶</text>`:''}
+    ${!h.dead && !ghost ? `
+      <rect x="${x-3.2}" y="${y+4.2}" width="6.4" height="0.9" rx="0.4" fill="#21262d"/>
+      <rect x="${x-3.2}" y="${y+4.2}" width="${6.4*hpPct}" height="0.9" rx="0.4" fill="${hpPct>0.5?'#3fb950':hpPct>0.25?'#d29922':'#f85149'}"/>`:''}
+  </g>`;
+}
+function mapSVG(){
+  const selH = S.sel ? byUid(S.sel) : null;
+  const selecting = !!selH;
+  let toks = '', travelLines = '';
+  // stationary tokens by zone
+  ZONES.forEach(zone=>{
+    const ph = S.heroes.filter(h=>h.team==='player' && (zone==='base'
+      ? ((h.loc==='base' && h.travel===0 && !h.dead) || h.dead)
+      : (!h.dead && h.travel===0 && h.loc===zone)));
+    ph.forEach((h,i)=>{
+      const [bx,by] = POS.player[zone];
+      toks += heroTokSVG(h, bx + (i - (ph.length-1)/2)*7.5, by, false, false);
+    });
+    const eh = (S.enemyShown[zone]||[]).map(uid=>byUid(uid));
+    eh.forEach((h,i)=>{
+      const [bx,by] = POS.enemy[zone];
+      toks += heroTokSVG(h, bx + (i - (eh.length-1)/2)*7.5, by, true, false);
+    });
+  });
+  // traveling player heroes: lerp along path with dashed route line
+  S.heroes.filter(h=>h.team==='player' && !h.dead && h.travel>0).forEach(h=>{
+    const [x1,y1] = POS.player[h.loc], [x2,y2] = POS.player[h.dest];
+    const prog = Math.min(0.8, Math.max(0.25, 1 - h.travel/(h.travelTotal||1) + 0.25));
+    const x = x1+(x2-x1)*prog, y = y1+(y2-y1)*prog;
+    travelLines += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#58a6ff" stroke-width="0.5" stroke-dasharray="1.5,1.2" opacity="0.6"/>
+      <text x="${(x+x2)/2}" y="${(y+y2)/2 - 1.5}" font-size="3" fill="#58a6ff" text-anchor="middle" font-weight="bold">${h.travel}⏳</text>`;
+    toks += heroTokSVG(h, x, y, false, true);
+  });
+  let trees = '';
+  const treeSpots = [[24,52],[30,60],[38,72],[26,70],[35,57],[46,76],[20,62],
+                     [52,24],[60,30],[72,38],[70,26],[57,35],[76,46],[62,20]];
+  treeSpots.forEach(([x,y])=>{ trees += `<text x="${x}" y="${y}" font-size="3.4" text-anchor="middle" opacity="0.8">🌲</text>`; });
+  // travel-cost labels when selecting
+  let costLabels = '';
+  if(selecting){
+    ZONES.forEach(z=>{
+      if(z===selH.loc) return;
+      const d = DIST[selH.loc][z];
+      const [x,y] = POS.player[z];
+      const tp = selH.tpArm && selH.scrolls>0;
+      costLabels += `<g pointer-events="none">
+        <rect x="${x-7}" y="${y-10.5}" width="14" height="4.4" rx="2" fill="#0d1117" stroke="${tp?'#d29922':'#ffd33d'}" stroke-width="0.4"/>
+        <text x="${x}" y="${y-7.3}" font-size="2.8" fill="${tp?'#d29922':'#ffd33d'}" text-anchor="middle" font-weight="bold">${tp?'📜 instant':'🚶 '+d+' turn'+(d>1?'s':'')}</text>
+      </g>`;
+    });
+  }
+  return `
+  <svg viewBox="0 0 100 100" class="${selecting?'selecting':''}">
+    <defs>
+      <linearGradient id="terr" x1="0" y1="1" x2="1" y2="0">
+        <stop offset="0%" stop-color="#1a2f1a"/><stop offset="50%" stop-color="#16271f"/><stop offset="100%" stop-color="#2b1a1a"/>
+      </linearGradient>
+    </defs>
+    <rect x="0" y="0" width="100" height="100" rx="3" fill="url(#terr)"/>
+    <path d="M -2,-6 L 106,98 L 98,106 L -6,2 Z" fill="rgba(70,130,180,0.25)"/>
+    <path d="M 0,-2 L 102,100" stroke="rgba(120,180,220,0.25)" stroke-width="1" fill="none"/>
+    <path d="M 11,89 L 10,11 L 89,11" stroke="rgba(180,160,110,0.22)" stroke-width="5" fill="none" stroke-linejoin="round"/>
+    <path d="M 11,89 L 89,11" stroke="rgba(180,160,110,0.22)" stroke-width="5" fill="none"/>
+    <path d="M 11,89 L 89,90 L 89,11" stroke="rgba(180,160,110,0.22)" stroke-width="5" fill="none" stroke-linejoin="round"/>
+    ${trees}
+    <text x="9" y="30" font-size="3.4" fill="#8b949e" font-weight="bold" transform="rotate(-90 9 30)" text-anchor="middle">TOP</text>
+    <text x="47" y="50" font-size="3.4" fill="#8b949e" font-weight="bold" transform="rotate(-45 47 50)" text-anchor="middle">MID</text>
+    <text x="70" y="93.5" font-size="3.4" fill="#8b949e" font-weight="bold" text-anchor="middle">BOT</text>
+    <text x="31" y="76.5" font-size="3" fill="#3fb950" font-weight="bold" text-anchor="middle">YOUR JUNGLE</text>
+    ${LANES.map(l=>[0,1].map(t=>towerSVG('player',l,t)+towerSVG('enemy',l,t)).join('')).join('')}
+    ${ancientSVG('player')}${ancientSVG('enemy')}
+    ${travelLines}
+    ${toks}
+    <path class="zoneHit lz" d="M 11,89 L 10,11 L 89,11" stroke-width="11" fill="none" stroke-linejoin="round" onclick="zoneClick('top')"/>
+    <path class="zoneHit lz" d="M 11,89 L 89,11" stroke-width="11" fill="none" onclick="zoneClick('mid')"/>
+    <path class="zoneHit lz" d="M 11,89 L 89,90 L 89,11" stroke-width="11" fill="none" stroke-linejoin="round" onclick="zoneClick('bot')"/>
+    <polygon class="zoneHit az" points="22,80 22,42 38,52 50,76 42,80" onclick="zoneClick('jungle')"/>
+    <circle class="zoneHit az" cx="11" cy="89" r="9" onclick="zoneClick('base')"/>
+    ${costLabels}
+  </svg>`;
+}
+
+function renderGame(app){
+  const pHeroes = heroesOf('player');
+  const eHeroes = heroesOf('enemy');
+  const selH = S.sel ? byUid(S.sel) : null;
+
+  const heroCard = (h)=>{
+    if(h.dead){
+      return `<div class="hcard dead-h"><div class="hrow">
+        <div class="hico">💀</div>
+        <div class="hinfo"><div class="hname">${h.icon} ${h.name}</div>
+        <div class="hstats">Respawns in ${h.respawn} turn${h.respawn>1?'s':''} · at base</div></div>
+        <div class="gold">💰${h.gold}</div></div></div>`;
+    }
+    const traveling = h.travel>0;
+    const tag = traveling
+      ? `<div class="assign-tag trav">🚶 → ${ZONE_LBL[h.dest]} (${h.travel}⏳)</div>`
+      : `<div class="assign-tag">📍 ${ZONE_LBL[h.loc]}</div>`;
+    return `<div class="hcard ${S.sel===h.uid?'sel':''} ${traveling?'trav-h':''}" ${traveling?'':`onclick="selectHero('${h.uid}')"`}>
+      <div class="hrow">
+        <div class="hico">${h.icon}</div>
+        <div class="hinfo">
+          <div class="hname">${h.name} <span style="color:#d29922;font-weight:normal;font-size:11px">Lv${h.lvl} ${h.role}</span></div>
+          <div class="hstats">⚔ ${h.atk} · ❤ ${h.hp}/${h.maxhp} · 🏆 ${h.kills}</div>
+          ${hpBar(h.hp,h.maxhp,'#3fb950')}
+        </div>
+        <div style="text-align:right">
+          <div class="gold">💰${h.gold}</div>
+          ${tag}
+        </div>
+      </div>
+      <div class="shoprow">
+        <span style="font-size:10px;color:#8b949e">Shop:</span>
+        ${ITEMS.map((it,i)=>`<button class="btn-sm" ${h.gold<it.cost?'disabled':''} onclick="buy(event,'${h.uid}',${i})" title="${it.n}: ${it.atk?'+'+it.atk+' atk':''}${it.hp?'+'+it.hp+' HP':''}">${it.i} ${it.cost}</button>`).join('')}
+        <button class="btn-sm" ${h.gold<TP_COST?'disabled':''} onclick="buyTp(event,'${h.uid}')" title="TP Scroll: next move is instant">📜 ${TP_COST}</button>
+        ${h.scrolls>0? `<button class="btn-sm ${h.tpArm?'tp-on':''}" onclick="toggleTp(event,'${h.uid}')" title="Arm a TP scroll — next move order becomes instant">📜x${h.scrolls} ${h.tpArm?'ARMED':'use TP'}</button>`:''}
+        <span style="font-size:13px">${h.items.map(i=>ITEMS[i].i).join('')}</span>
+      </div>
+    </div>`;
+  };
+
+  const eRow = (h)=>`<div class="erow">
+    <span style="font-size:18px">${h.dead?'💀':h.icon}</span>
+    <span style="min-width:90px">${h.name} <span style="color:#d29922;font-size:10px">Lv${h.lvl}</span></span>
+    ${h.dead? `<span style="color:#8b949e;font-size:11px">respawning (${h.respawn})</span>` : hpBar(h.hp,h.maxhp,'#f85149')}
+    <span style="font-size:13px">${h.items.map(i=>ITEMS[i].i).join('')}</span>
+  </div>`;
+
+  app.innerHTML = `
+    <h1>⚔️ MACRO ARENA</h1>
+    <div class="topbar">
+      <div class="ancbar"><span class="lbl" style="color:#58a6ff">🏛 Your Ancient ${Math.max(0,S.ancient.player)}</span>${hpBar(S.ancient.player,900,'#58a6ff')}</div>
+      <div style="font-weight:bold;padding:0 12px">TURN ${S.turn}</div>
+      <div class="ancbar"><span class="lbl" style="color:#f85149">🏛 Enemy Ancient ${Math.max(0,S.ancient.enemy)}</span>${hpBar(S.ancient.enemy,900,'#f85149')}</div>
+    </div>
+    <div class="gamewrap">
+      <div>
+        <div class="mapbox">
+          <div class="selbanner ${selH?'on':''}">
+            ${selH ? `🎯 ${selH.icon} ${selH.name} at ${ZONE_LBL[selH.loc]} — click a destination (travel costs shown on map)`
+                   : '👆 Click one of your heroes to give orders · rotating takes time!'}
+          </div>
+          ${mapSVG()}
+          <div class="legend">
+            <div><b>🚶 Travel costs turns</b><br>Rotating means walking: each ⏳ is a full turn with <b>no gold, no XP, no fighting</b>. Mid↔anywhere = 1 turn, but top↔bot = 3! Don't ping-pong across the map.</div>
+            <div><b>🌟 Why mid matters</b><br>Mid is the crossroads — a mid hero reaches <b>any</b> zone in 1 turn. Control mid and you rotate faster than the enemy can react.</div>
+            <div><b>📜 TP Scroll (${TP_COST}g)</b><br>Buy one, click "use TP" to arm it, and your next move is <b>instant</b>. The Dota answer to a 3-turn walk.</div>
+            <div><b>⛲ Base healing isn't free</b><br>Salves cost <b>${HEAL_COST}g</b> per turn for 45% HP. Broke? You only regen 15%. Plus the walk home — dying is still worse, but healing has a price.</div>
+            <div><b>⚔️ Lanes / 🌲 Jungle</b><br>Lane: fight & push towers, 160g+XP, risky. Jungle: safe 220g+XP, zero pressure. 👻 Faded icons = enemy positions <b>last turn</b>.</div>
+          </div>
+        </div>
+        <button class="btn endturn" onclick="endTurn()">▶ COMMIT MOVES — END TURN ${S.turn}</button>
+      </div>
+      <div>
+        ${pHeroes.map(heroCard).join('')}
+        <div class="panel"><h3>🤖 Enemy Team</h3>${eHeroes.map(eRow).join('')}</div>
+        <div class="panel logp"><h3>📜 Battle Log</h3><div class="logbox">${S.log.map(l=>`<div>${l}</div>`).join('')||'<span style="color:#484f58">Give orders and end the turn. Lanes resolve simultaneously: fights → pushes → farm → travel.</span>'}</div></div>
+      </div>
+    </div>
+    ${S.over? `<div class="overlay"><div class="obox">
+      <h2>${S.over==='win'?'🏆 VICTORY':S.over==='loss'?'💀 DEFEAT':'🤝 DRAW'}</h2>
+      <p style="color:#8b949e;margin-bottom:16px">${S.over==='win'?'The enemy Ancient has fallen on turn '+(S.turn-1)+'.':S.over==='loss'?'Your Ancient was destroyed on turn '+(S.turn-1)+'.':'Both Ancients fell at once!'}</p>
+      <button class="btn" onclick="newGame()">↺ New Draft</button>
+    </div></div>`:''}
+  `;
+}
+
+newGame();
+</script>
+</body>
+</html>

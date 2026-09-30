@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sky Dome: Sun Paths at 23.5° vs 90°</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#05070f;color:#e7ecf5;}
+  header{text-align:center;padding:16px 14px 6px;}
+  header h1{font-size:clamp(17px,4vw,25px);font-weight:700;}
+  header p{color:#93a0b8;font-size:clamp(12px,2.6vw,14px);margin-top:4px;max-width:680px;margin-left:auto;margin-right:auto;}
+  .controls{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px;padding:10px 14px;max-width:860px;margin:0 auto;}
+  .seg{display:flex;border:1px solid #243250;border-radius:9px;overflow:hidden;}
+  .seg button{background:#0d1424;color:#aeb9d2;border:none;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;transition:.15s;}
+  .seg button.active{background:#2563eb;color:#fff;}
+  .seg button:not(.active):hover{background:#16203a;}
+  .slider-wrap{flex:1 1 240px;min-width:200px;display:flex;align-items:center;gap:10px;}
+  .slider-wrap input{flex:1;cursor:pointer;accent-color:#2563eb;}
+  .badge{font-variant-numeric:tabular-nums;background:#111a2e;border:1px solid #243250;padding:6px 12px;border-radius:8px;font-size:13px;min-width:92px;text-align:center;}
+  .playbtn{background:#2563eb;color:#fff;border:none;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;}
+  .playbtn:hover{background:#1d4ed8;}
+  .resetbtn{background:#1a2742;color:#cdd7ea;border:1px solid #2c3c60;padding:8px 14px;border-radius:8px;font-size:13px;cursor:pointer;}
+  .resetbtn:hover{background:#223255;}
+  .jump{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;padding:0 14px 4px;}
+  .jump button{background:#101a30;border:1px solid #233150;color:#b9c5dd;border-radius:7px;padding:6px 12px;font-size:12px;cursor:pointer;}
+  .jump button:hover{background:#1a2742;}
+  .hint{text-align:center;color:#6f7ea0;font-size:12px;padding:2px 14px 4px;}
+  .stage{display:flex;flex-wrap:wrap;gap:14px;padding:8px 14px 24px;max-width:1100px;margin:0 auto;}
+  .panel{flex:1 1 320px;background:linear-gradient(#0a1326,#05070f);border:1px solid #1a2540;border-radius:14px;overflow:hidden;min-width:290px;}
+  .panel-head{display:flex;align-items:baseline;justify-content:space-between;padding:12px 16px 2px;}
+  .panel-head .tilt{font-size:21px;font-weight:700;}
+  .panel-head .tag{font-size:12px;color:#8b98b3;}
+  .panel.real .tilt{color:#4ade80;}
+  .panel.extreme .tilt{color:#f87171;}
+  canvas{display:block;width:100%;height:360px;cursor:grab;touch-action:none;}
+  canvas:active{cursor:grabbing;}
+  .info{padding:8px 16px 16px;font-size:13px;line-height:1.5;color:#c3cde0;min-height:92px;}
+  .info .stat{display:flex;justify-content:space-between;font-size:12px;color:#9fb0cc;padding:2px 0;border-bottom:1px solid #16203a;}
+  .info .stat b{color:#e7ecf5;font-variant-numeric:tabular-nums;}
+  .info .status{margin-top:8px;font-weight:600;}
+  .info .status.alert{color:#fca5a5;}
+  .info .status.ok{color:#86efac;}
+</style>
+</head>
+<body>
+  <header>
+    <h1>🌍 Sky Dome — Drag to Spin the Sky</h1>
+    <p>You are the little figure in the middle. The bowl is the sky, its rim is the horizon, the top is the zenith (straight overhead). The arc is the Sun's path for the day; the glowing dot is the Sun right now.</p>
+  </header>
+
+  <div class="controls">
+    <div class="seg" id="latSeg">
+      <button data-lat="90">❄️ Pole 90°</button>
+      <button data-lat="45" class="active">🏙 Mid 45°</button>
+      <button data-lat="0">🌴 Equator 0°</button>
+    </div>
+    <button class="playbtn" id="dayBtn">⏸ Day</button>
+    <div class="slider-wrap">
+      <input type="range" id="dateSlider" min="0" max="365" value="172">
+    </div>
+    <div class="badge" id="dateBadge">Jun 21</div>
+    <button class="resetbtn" id="resetView">↺ View</button>
+  </div>
+  <div class="jump">
+    <button data-d="80">🌸 Mar Equinox</button>
+    <button data-d="172">☀️ Jun Solstice</button>
+    <button data-d="266">🍂 Sep Equinox</button>
+    <button data-d="356">❄️ Dec Solstice</button>
+  </div>
+  <div class="hint">🖱 Drag a dome to rotate it • drag up/down to tilt • both spin together</div>
+
+  <div class="stage">
+    <div class="panel real">
+      <div class="panel-head"><span class="tilt">23.5°</span><span class="tag">Real Earth</span></div>
+      <canvas id="cvReal"></canvas>
+      <div class="info" id="infoReal"></div>
+    </div>
+    <div class="panel extreme">
+      <div class="panel-head"><span class="tilt">90°</span><span class="tag">Sideways Earth</span></div>
+      <canvas id="cvExt"></canvas>
+      <div class="info" id="infoExt"></div>
+    </div>
+  </div>
+
+<script>
+const DEG=Math.PI/180, RAD=180/Math.PI;
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+
+// ---- solar geometry (any axial tilt) ----
+function decl(eps,lam){ return Math.asin(clamp(Math.sin(eps)*Math.sin(lam),-1,1)); }
+function altAz(eps,phi,lam,H){
+  const d=decl(eps,lam);
+  const sinAlt=Math.sin(phi)*Math.sin(d)+Math.cos(phi)*Math.cos(d)*Math.cos(H);
+  const alt=Math.asin(clamp(sinAlt,-1,1));
+  let az;
+  if(Math.abs(Math.cos(phi))<1e-6){ az=H+Math.PI; }
+  else{
+    const ca=clamp((Math.sin(d)-Math.sin(alt)*Math.sin(phi))/(Math.cos(alt)*Math.cos(phi)||1e-6),-1,1);
+    const sa=-Math.sin(H)*Math.cos(d)/(Math.cos(alt)||1e-6);
+    az=Math.atan2(sa,ca);
+  }
+  return {alt,az};
+}
+function dayStats(eps,phi,lam){
+  let max=-Math.PI,min=Math.PI,lit=0,N=720;
+  for(let i=0;i<N;i++){ const H=-Math.PI+(i/N)*2*Math.PI; const a=altAz(eps,phi,lam,H).alt;
+    if(a>max)max=a; if(a<min)min=a; if(a>0)lit++; }
+  return {maxAlt:max*RAD,minAlt:min*RAD,daylight:lit/N*24};
+}
+
+// ---- dates ----
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const DIM=[31,28,31,30,31,30,31,31,30,31,30,31], CUM=[0,31,59,90,120,151,181,212,243,273,304,334];
+function dayToDate(d){ let m=11; for(let i=0;i<12;i++){ if(d<=CUM[i]+DIM[i]){m=i;break;} } return MON[m]+' '+clamp(Math.round(d-CUM[m]),1,31); }
+function dayToLambda(d){ return ((d-80)/365.25)*2*Math.PI; }
+
+// ---- shared camera (drag controlled) ----
+let yaw=0.5, pitch=1.05;            // pitch ~ looking down at the bowl from front
+const PITCH_MIN=0.25, PITCH_MAX=1.45;
+
+// ---- state ----
+let lat=45, day=172, tOfDay=12, playing=true;
+const dateSlider=document.getElementById('dateSlider'), dateBadge=document.getElementById('dateBadge');
+const dayBtn=document.getElementById('dayBtn');
+document.getElementById('latSeg').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b)return;
+  lat=+b.dataset.lat; [...e.currentTarget.children].forEach(x=>x.classList.toggle('active',x===b)); });
+document.querySelector('.jump').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b)return; day=+b.dataset.d; });
+dateSlider.addEventListener('input',()=>{ day=+dateSlider.value; });
+dayBtn.addEventListener('click',()=>{ playing=!playing; dayBtn.textContent=playing?'⏸ Day':'▶ Day'; });
+document.getElementById('resetView').addEventListener('click',()=>{ yaw=0.5; pitch=1.05; });
+
+// ---- canvas ----
+function ctxOf(id){ const cv=document.getElementById(id); return {cv,ctx:cv.getContext('2d')}; }
+const R={ ...ctxOf('cvReal'), eps:23.5*DEG, info:document.getElementById('infoReal') };
+const E={ ...ctxOf('cvExt'),  eps:90*DEG,   info:document.getElementById('infoExt')  };
+
+function fit(o){ const dpr=Math.min(window.devicePixelRatio||1,2); const w=o.cv.clientWidth,h=o.cv.clientHeight;
+  if(o.cv.width!==w*dpr||o.cv.height!==h*dpr){ o.cv.width=w*dpr; o.cv.height=h*dpr; }
+  o.ctx.setTransform(dpr,0,0,dpr,0,0); return {w,h}; }
+
+function sunColor(altDeg){ if(altDeg<=0)return '#3a4a66'; if(altDeg<8)return '#ff7a3c'; if(altDeg<20)return '#ffb24d'; return '#ffe066'; }
+
+// 3D project: sky unit vector -> screen, returns depth for ordering
+function proj(cx,cy,Rr,alt,az){
+  let x=Math.cos(alt)*Math.sin(az);   // east
+  let y=Math.cos(alt)*Math.cos(az);   // north
+  let z=Math.sin(alt);                // up
+  // yaw about vertical z
+  const cyaw=Math.cos(yaw), syaw=Math.sin(yaw);
+  let x1=x*cyaw - y*syaw, y1=x*syaw + y*cyaw, z1=z;
+  // pitch about east(x) axis
+  const cp=Math.cos(pitch), sp=Math.sin(pitch);
+  let y2=y1*cp - z1*sp, z2=y1*sp + z1*cp, x2=x1;
+  return { X:cx+x2*Rr, Y:cy-z2*Rr, depth:y2 };
+}
+
+function drawPerson(ctx,x,y,s){
+  ctx.strokeStyle='#eef3fb'; ctx.fillStyle='#eef3fb'; ctx.lineWidth=2; ctx.lineCap='round';
+  ctx.beginPath(); ctx.arc(x,y-s*2.6,s*0.7,0,7); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(x,y-s*1.9); ctx.lineTo(x,y-s*0.5); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x-s*0.9,y-s*1.5); ctx.lineTo(x+s*0.9,y-s*1.5); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x,y-s*0.5); ctx.lineTo(x-s*0.8,y+s*0.6); ctx.moveTo(x,y-s*0.5); ctx.lineTo(x+s*0.8,y+s*0.6); ctx.stroke();
+}
+
+function drawPanel(o,lam){
+  const {w,h}=fit(o); const ctx=o.ctx; ctx.clearRect(0,0,w,h);
+  const cx=w/2, cy=h*0.52, Rr=Math.min(w*0.40,h*0.42);
+
+  const phi=lat*DEG;
+  const cur=altAz(o.eps,phi,lam,(tOfDay-12)*15*DEG);
+  const isDay=cur.alt>0;
+
+  // ground disk (horizon plane), depth-shaded
+  const rimPts=[]; for(let a=0;a<=360;a+=3){ rimPts.push(proj(cx,cy,Rr,0,a*DEG)); }
+  const bg=ctx.createLinearGradient(0,cy-Rr,0,cy+Rr);
+  if(isDay){ bg.addColorStop(0,'#1d4170'); bg.addColorStop(1,'#0c1c38'); }
+  else { bg.addColorStop(0,'#0d1734'); bg.addColorStop(1,'#070c1c'); }
+  ctx.fillStyle='rgba(40,55,80,0.30)'; ctx.beginPath();
+  rimPts.forEach((p,i)=>i?ctx.lineTo(p.X,p.Y):ctx.moveTo(p.X,p.Y)); ctx.closePath(); ctx.fill();
+
+  // helper: draw a polyline split by depth (back dimmer)
+  function strokePath(samples, frontStyle, backStyle, dash){
+    let seg=[],pb=null;
+    const flush=(back)=>{ if(seg.length>1){ ctx.strokeStyle=back?backStyle:frontStyle;
+      ctx.setLineDash(dash&&!back?dash:[]); ctx.beginPath(); seg.forEach((p,i)=>i?ctx.lineTo(p.X,p.Y):ctx.moveTo(p.X,p.Y)); ctx.stroke(); ctx.setLineDash([]);} seg=[]; };
+    for(const p of samples){ const back=p.depth>0.02; if(pb!==null&&back!==pb) flush(pb); seg.push(p); pb=back; }
+    flush(pb);
+  }
+
+  // sky tint fill (use rim path, light)
+  ctx.fillStyle=bg; ctx.globalAlpha=0.45;
+  ctx.beginPath(); rimPts.forEach((p,i)=>i?ctx.lineTo(p.X,p.Y):ctx.moveTo(p.X,p.Y)); ctx.closePath(); ctx.fill();
+  ctx.globalAlpha=1;
+
+  // altitude rings
+  ctx.lineWidth=1;
+  [30,60].forEach(altd=>{ const pts=[]; for(let a=0;a<=360;a+=3) pts.push(proj(cx,cy,Rr,altd*DEG,a*DEG));
+    strokePath(pts,'rgba(255,255,255,0.14)','rgba(255,255,255,0.05)'); });
+  // meridians
+  for(let a=0;a<360;a+=45){ const pts=[]; for(let al=0;al<=90;al+=3) pts.push(proj(cx,cy,Rr,al*DEG,a*DEG));
+    strokePath(pts,'rgba(255,255,255,0.12)','rgba(255,255,255,0.045)'); }
+  // horizon rim
+  ctx.lineWidth=2;
+  strokePath(rimPts,'rgba(180,200,230,0.75)','rgba(120,140,175,0.35)');
+
+  // cardinal labels
+  ctx.font='12px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  [['N',0],['E',90],['S',180],['W',270]].forEach(([t,a])=>{ const p=proj(cx,cy,Rr,0,a*DEG);
+    ctx.fillStyle= p.depth>0.02?'#5b6883':'#9aa8c6'; ctx.fillText(t,p.X,p.Y); });
+  // zenith
+  const zen=proj(cx,cy,Rr,90*DEG,0);
+  ctx.fillStyle='rgba(255,255,255,0.4)'; ctx.beginPath(); ctx.arc(zen.X,zen.Y,2,0,7); ctx.fill();
+  ctx.fillStyle='#6f7ea0'; ctx.fillText('zenith',zen.X,zen.Y-12);
+
+  // sun daily track: split into above/below horizon AND front/back
+  {
+    let seg=[],pa=null,pb=null;
+    const flush=(above,back)=>{ if(seg.length>1){
+        if(above){ ctx.strokeStyle= back?'rgba(255,205,80,0.40)':'rgba(255,210,90,0.95)'; ctx.setLineDash([]); }
+        else { ctx.strokeStyle= back?'rgba(120,140,180,0.18)':'rgba(120,140,180,0.35)'; ctx.setLineDash([5,6]); }
+        ctx.lineWidth=3; ctx.beginPath(); seg.forEach((p,i)=>i?ctx.lineTo(p.X,p.Y):ctx.moveTo(p.X,p.Y)); ctx.stroke(); ctx.setLineDash([]);
+      } seg=[]; };
+    for(let i=0;i<=360;i++){ const H=-Math.PI+(i/360)*2*Math.PI; const s=altAz(o.eps,phi,lam,H);
+      const p=proj(cx,cy,Rr,s.alt,s.az); const above=s.alt>=0, back=p.depth>0.02;
+      if(pa!==null&&(above!==pa||back!==pb)) flush(pa,pb);
+      seg.push(p); pa=above; pb=back; }
+    flush(pa,pb);
+  }
+
+  // person in the middle
+  drawPerson(ctx,cx,cy,7);
+
+  // current sun
+  const sp=proj(cx,cy,Rr,cur.alt,cur.az); const col=sunColor(cur.alt*RAD);
+  const dim = sp.depth>0.02;
+  if(cur.alt>0){
+    const g=ctx.createRadialGradient(sp.X,sp.Y,1,sp.X,sp.Y,18);
+    g.addColorStop(0,col); g.addColorStop(1,'rgba(255,200,60,0)');
+    ctx.globalAlpha=dim?0.5:1; ctx.fillStyle=g; ctx.beginPath(); ctx.arc(sp.X,sp.Y,18,0,7); ctx.fill();
+    ctx.fillStyle=col; ctx.beginPath(); ctx.arc(sp.X,sp.Y,6,0,7); ctx.fill(); ctx.globalAlpha=1;
+  } else {
+    ctx.globalAlpha=dim?0.5:1; ctx.fillStyle='#566888'; ctx.beginPath(); ctx.arc(sp.X,sp.Y,5,0,7); ctx.fill(); ctx.globalAlpha=1;
+  }
+
+  // clock
+  const hh=Math.floor(tOfDay), mm=Math.floor((tOfDay-hh)*60);
+  ctx.fillStyle='#cdd7ea'; ctx.font='600 13px system-ui';
+  ctx.fillText(String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0'), cx, cy+Rr*0.85);
+
+  // info
+  const st=dayStats(o.eps,phi,lam); const dl=st.daylight;
+  const dlText = dl>=23.9?'24 h ☀️':(dl<=0.05?'0 h 🌑':dl.toFixed(1)+' h');
+  let status,cls;
+  if(dl>=23.9){ status='Midnight Sun — it never sets, just circles the sky.'; cls='ok'; }
+  else if(dl<=0.05){ status= st.maxAlt>-1.0 ? 'Sun only grazes the horizon — endless twilight, no real day.' : 'Polar Night — total darkness, the Sun never rises.'; cls='alert'; }
+  else if(o.eps>1.0 && (st.maxAlt>80||dl>20||dl<4)){ status='Extreme sky — sunlight is wildly lopsided this time of year.'; cls='alert'; }
+  else { status='Normal day — sunrise & sunset, '+dl.toFixed(1)+' h of light.'; cls='ok'; }
+  o.info.innerHTML =
+    `<div class="stat"><span>Daylight today</span><b>${dlText}</b></div>`+
+    `<div class="stat"><span>Highest Sun</span><b>${st.maxAlt>0?st.maxAlt.toFixed(0)+'° up':'never rises'}</b></div>`+
+    `<div class="stat"><span>Lowest Sun</span><b>${st.minAlt.toFixed(0)}°</b></div>`+
+    `<div class="status ${cls}">${status}</div>`;
+}
+
+// ---- drag to rotate (shared) ----
+function attachDrag(o){
+  let dragging=false, lx=0, ly=0;
+  const down=e=>{ dragging=true; const pt=e.touches?e.touches[0]:e; lx=pt.clientX; ly=pt.clientY; };
+  const move=e=>{ if(!dragging)return; const pt=e.touches?e.touches[0]:e;
+    const dx=pt.clientX-lx, dy=pt.clientY-ly; lx=pt.clientX; ly=pt.clientY;
+    yaw+=dx*0.01; pitch=clamp(pitch-dy*0.01,PITCH_MIN,PITCH_MAX); e.preventDefault(); };
+  const up=()=>{ dragging=false; };
+  o.cv.addEventListener('mousedown',down); window.addEventListener('mousemove',move); window.addEventListener('mouseup',up);
+  o.cv.addEventListener('touchstart',down,{passive:false}); o.cv.addEventListener('touchmove',move,{passive:false}); window.addEventListener('touchend',up);
+}
+attachDrag(R); attachDrag(E);
+
+let last=performance.now();
+function loop(now){
+  const dt=(now-last)/1000; last=now;
+  if(playing){ tOfDay+=dt*(24/6); if(tOfDay>=24) tOfDay-=24; }
+  dateSlider.value=Math.round(day); dateBadge.textContent=dayToDate(day);
+  const lam=dayToLambda(day);
+  drawPanel(R,lam); drawPanel(E,lam);
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

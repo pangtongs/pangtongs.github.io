@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Winston's Tools</title>
+    <meta name="description" content="Small single-file HTML tools and experiments that run entirely in the browser.">
+    <link rel="icon" type="image/x-icon" href="/images/avatar.png">
+    <style>
+        :root {
+            --bg: #0b0d12;
+            --panel: #13171f;
+            --line: rgba(255, 255, 255, 0.08);
+            --text: #eef1f6;
+            --muted: #8d96a7;
+            color-scheme: dark;
+        }
+
+        @media (prefers-color-scheme: light) {
+            :root {
+                --bg: #f6f7f9;
+                --panel: #ffffff;
+                --line: rgba(0, 0, 0, 0.1);
+                --text: #14171c;
+                --muted: #5d6675;
+                color-scheme: light;
+            }
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font: 15px/1.5 Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        main {
+            max-width: 920px;
+            margin: 0 auto;
+            padding: 40px 16px 56px;
+        }
+
+        .back {
+            color: var(--muted);
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .back:hover {
+            color: var(--text);
+        }
+
+        h1 {
+            font-size: 30px;
+            letter-spacing: -0.02em;
+            margin-top: 14px;
+        }
+
+        .lead {
+            color: var(--muted);
+            margin: 6px 0 26px;
+            max-width: 52ch;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 14px;
+        }
+
+        .card {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding: 18px;
+            border-radius: 18px;
+            border: 1px solid var(--line);
+            background: var(--panel);
+            color: inherit;
+            text-decoration: none;
+            transition: transform 0.18s, border-color 0.18s;
+        }
+
+        .card:hover,
+        .card:focus-visible {
+            transform: translateY(-3px);
+            border-color: var(--accent);
+            outline: none;
+        }
+
+        .ico {
+            display: grid;
+            place-items: center;
+            width: 52px;
+            height: 52px;
+            margin-bottom: 6px;
+            border-radius: 14px;
+            background: color-mix(in srgb, var(--accent) 18%, var(--panel));
+            font-size: 28px;
+        }
+
+        .card h2 {
+            font-size: 18px;
+        }
+
+        .card p {
+            color: var(--muted);
+            font-size: 14px;
+            flex: 1;
+        }
+
+        .go {
+            color: var(--accent);
+            font-weight: 700;
+            margin-top: 8px;
+        }
+
+        .note {
+            color: var(--muted);
+            font-size: 13px;
+            margin-top: 22px;
+        }
+    </style>
+</head>
+
+<body>
+    <main>
+        <a class="back" href="../index.html">← Winston Andersen</a>
+        <h1>Tools &amp; experiments</h1>
+        <p class="lead">Small single-file HTML pages. Each one runs entirely in your browser — no sign-up, no server.</p>
+
+        <section class="cards" aria-label="Tools">
+            <a class="card" href="diagram.html" style="--accent:#818cf8">
+                <span class="ico">🗂️</span>
+                <h2>Diagram Tool</h2>
+                <p>Draw boxes and connections, then attach a title, image and notes to every node.</p>
+                <span class="go">Open →</span>
+            </a>
+            <a class="card" href="sky-dome.html" style="--accent:#fbbf24">
+                <span class="ico">🌞</span>
+                <h2>Sky Dome</h2>
+                <p>Compare the Sun's path across the sky on Earth as it is (23.5° tilt) and on an Earth tipped 90°.</p>
+                <span class="go">Open →</span>
+            </a>
+            <a class="card" href="macro-arena.html" style="--accent:#f87171">
+                <span class="ico">⚔️</span>
+                <h2>Macro Arena</h2>
+                <p>A turn-based MOBA: draft three heroes, then out-rotate your opponent on the map.</p>
+                <span class="go">Open →</span>
+            </a>
+        </section>
+
+        <p class="note">Looking for games? Try the <a href="../site/index.html" style="color:inherit">arcade</a>.</p>
+    </main>
+</body>
+
+</html>
