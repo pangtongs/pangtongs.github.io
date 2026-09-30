@@ -4,414 +4,413 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2048 - My Games</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>Pet 2048 · Winston's Arcade</title>
+    <link rel="stylesheet" href="../styles.css">
     <style>
-        .game-2048-wrapper {
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            max-width: 550px;
-            margin: 0 auto;
+        .board {
+            --gap: 10px;
+            position: relative;
+            width: var(--board);
+            aspect-ratio: 1;
+            padding: var(--gap);
+            border-radius: 18px;
+            background: var(--panel-2);
+            container-type: inline-size;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
         }
 
-        .grid {
+        .cells {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 10px;
-            background-color: #bbada0;
-            padding: 10px;
-            border-radius: 6px;
-        }
-
-        .cell {
-            background-color: rgba(238, 228, 218, 0.35);
-            aspect-ratio: 1;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 40px;
-            border-radius: 3px;
-            transition: all 0.15s ease;
-        }
-
-        .number {
-            border-radius: 3px;
+            gap: var(--gap);
             width: 100%;
             height: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
         }
 
-        .n2 {
-            background: #eee4da;
+        .cells div {
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.04);
         }
 
-        .n4 {
-            background: #ede0c8;
+        .tiles {
+            position: absolute;
+            inset: var(--gap);
         }
 
-        .n8 {
-            background: #f2b179;
+        .tile {
+            position: absolute;
+            width: calc((100% - 3 * var(--gap)) / 4);
+            height: calc((100% - 3 * var(--gap)) / 4);
+            transform: translate(calc(var(--c) * (100% + var(--gap))), calc(var(--r) * (100% + var(--gap))));
+            transition: transform 0.12s ease-out;
+            z-index: 2;
         }
 
-        .n16 {
-            background: #f59563;
+        .tile.dying {
+            z-index: 1;
         }
 
-        .n32 {
-            background: #f67c5f;
-        }
-
-        .n64 {
-            background: #f65e3b;
-        }
-
-        .n128 {
-            background: #edcf72;
-        }
-
-        .n256 {
-            background: #edcc61;
-        }
-
-        .n512 {
-            background: #edc850;
-        }
-
-        .n1024 {
-            background: #edc53f;
-        }
-
-        .n2048 {
-            background: #edc22e;
-        }
-
-        .controls {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 20px;
+        .face {
+            position: relative;
+            display: grid;
+            place-items: center;
             width: 100%;
+            height: 100%;
+            border-radius: 12px;
+            background: var(--tile);
+            font-size: 11cqw;
+            line-height: 1;
+            box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.18);
         }
 
-        .score {
-            font-size: 24px;
-            color: #ffffff;
+        .face small {
+            position: absolute;
+            right: 7%;
+            bottom: 6%;
+            font-size: 3.2cqw;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.85);
+            font-variant-numeric: tabular-nums;
         }
 
-        .undo-btn {
-            padding: 10px 20px;
-            font-size: 18px;
-            background-color: #8f7a66;
-            color: white;
-            border: none;
-            border-radius: 3px;
-            cursor: pointer;
-            transition: background-color 0.3s;
+        .tile.fresh .face {
+            animation: appear 0.18s ease-out 0.08s backwards;
         }
 
-        .undo-btn:hover {
-            background-color: #7f6a56;
+        .tile.pop .face {
+            animation: pop 0.18s ease-out;
         }
 
-        .undo-btn:disabled {
-            background-color: #ccc;
-            cursor: not-allowed;
+        @keyframes appear {
+            from {
+                transform: scale(0.2);
+                opacity: 0;
+            }
+        }
+
+        @keyframes pop {
+            50% {
+                transform: scale(1.16);
+            }
+        }
+
+        .chain {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 4px;
+            font-size: 20px;
+        }
+
+        .chain span {
+            display: grid;
+            place-items: center;
+            width: 34px;
+            height: 34px;
+            border-radius: 9px;
+            filter: grayscale(1);
+            opacity: 0.35;
+            transition: all 0.2s;
+        }
+
+        .chain span.got {
+            filter: none;
+            opacity: 1;
+            background: var(--panel-2);
+        }
+
+        @media (max-width: 480px) {
+            .board {
+                --gap: 7px;
+            }
         }
     </style>
 </head>
 
-<body>
-    <div class="sidebar">
-        <!-- Sidebar content will be inserted here by JavaScript -->
-    </div>
+<body data-game="2048">
+    <main>
+        <div class="hud">
+            <div class="stat hot"><span>Score</span><b id="score">0</b></div>
+            <div class="stat"><span>Best</span><b id="best">0</b></div>
+            <span class="spacer"></span>
+            <button class="btn" id="undo" disabled>↩ Undo</button>
+            <button class="btn primary" id="new">New game</button>
+        </div>
 
-    <main class="main-content">
-        <div class="game-container">
-            <div class="game-2048-wrapper">
-                <h2>Pet 2048</h2>
-                <div class="controls">
-                    <div class="score">Score: <span id="score">0</span></div>
-                    <button class="undo-btn" id="undoBtn" disabled>Undo</button>
-                </div>
-                <div class="grid" id="grid"></div>
+        <div class="stage">
+            <div class="board" id="board" aria-label="2048 board">
+                <div class="cells" id="cells"></div>
+                <div class="tiles" id="tiles"></div>
             </div>
+            <div class="chain" id="chain" aria-label="Pets unlocked so far"></div>
         </div>
     </main>
 
-    <script src="sidebar.js"></script>
+    <script src="../arcade.js"></script>
     <script>
-        class Game2048 {
-            constructor() {
-                this.grid = Array(4).fill().map(() => Array(4).fill(0));
-                this.score = 0;
-                this.history = [];
-                this.petEmojis = {
-                    2: '🐁',
-                    4: '🐹',
-                    8: '🐰',
-                    16: '🐱',
-                    32: '🦊',
-                    64: '🐶',
-                    128: '🦁',
-                    256: '🐯',
-                    512: '🐘',
-                    1024: '🦕',
-                    2048: '🐋'
-                };
-                this.undoBtn = document.getElementById('undoBtn');
-                this.init();
-            }
+        const A = Arcade;
+        const SIZE = 4;
+        const GOAL = 2048;
+        const MAX_UNDO = 30;
 
-            saveState() {
-                this.history.push({
-                    grid: JSON.parse(JSON.stringify(this.grid)),
-                    score: this.score
-                });
-                this.undoBtn.disabled = false;
-            }
+        // value -> [pet, tile colour]
+        const PETS = {
+            2: ['🐁', '#2f3646'], 4: ['🐹', '#3d4a63'], 8: ['🐰', '#8a5a2b'], 16: ['🐱', '#a8662a'],
+            32: ['🦊', '#c2582f'], 64: ['🐶', '#d64a35'], 128: ['🦁', '#b98a22'], 256: ['🐯', '#c99a1f'],
+            512: ['🐘', '#d8aa1c'], 1024: ['🦕', '#e6b919'], 2048: ['🐋', '#2f8fd6'], 4096: ['🐉', '#7c5cff'],
+            8192: ['🦄', '#e85cc0']
+        };
 
-            undo() {
-                if (this.history.length > 0) {
-                    const previousState = this.history.pop();
-                    this.grid = previousState.grid;
-                    this.score = previousState.score;
-                    this.updateDisplay();
+        const boardEl = document.getElementById('board');
+        const tilesEl = document.getElementById('tiles');
+        const scoreEl = document.getElementById('score');
+        const bestEl = document.getElementById('best');
+        const undoBtn = document.getElementById('undo');
+        const chainEl = document.getElementById('chain');
 
-                    if (this.history.length === 0) {
-                        this.undoBtn.disabled = true;
-                    }
+        document.getElementById('cells').innerHTML = '<div></div>'.repeat(SIZE * SIZE);
+
+        let tiles = [];          // live tiles: { id, v, r, c }
+        let score = 0;
+        let history = [];        // snapshots for undo
+        let keepGoing = false;   // player chose to continue past 2048
+        let nextId = 1;
+        const els = new Map();   // tile id -> element
+
+        function snapshot() {
+            const cells = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
+            tiles.forEach(t => cells[t.r][t.c] = t.v);
+            return { cells, score, keepGoing };
+        }
+
+        function restore(snap) {
+            tilesEl.innerHTML = '';
+            els.clear();
+            tiles = [];
+            snap.cells.forEach((row, r) => row.forEach((v, c) => {
+                if (v) tiles.push({ id: nextId++, v, r, c });
+            }));
+            score = snap.score;
+            keepGoing = !!snap.keepGoing;
+            render();
+        }
+
+        function paint(el, value) {
+            const [pet, colour] = PETS[value] || ['👑', '#e85cc0'];
+            el.style.setProperty('--tile', colour);
+            el.firstChild.innerHTML = pet + '<small>' + value + '</small>';
+        }
+
+        function render() {
+            tiles.forEach(t => {
+                let el = els.get(t.id);
+                if (!el) {
+                    el = document.createElement('div');
+                    el.className = 'tile' + (t.fresh ? ' fresh' : '');
+                    el.appendChild(document.createElement('div')).className = 'face';
+                    paint(el, t.v);
+                    tilesEl.append(el);
+                    els.set(t.id, el);
+                    t.fresh = false;
+                }
+                el.style.setProperty('--r', t.r);
+                el.style.setProperty('--c', t.c);
+            });
+
+            scoreEl.textContent = A.fmt(score);
+            bestEl.textContent = A.fmt(Math.max(A.stat('2048'), score));
+            undoBtn.disabled = history.length === 0;
+
+            const top = Math.max(0, ...tiles.map(t => t.v));
+            chainEl.innerHTML = Object.keys(PETS).filter(v => v <= Math.max(GOAL, top)).map(v =>
+                `<span class="${v <= top ? 'got' : ''}" title="${v}">${PETS[v][0]}</span>`).join('');
+        }
+
+        function spawn() {
+            const taken = new Set(tiles.map(t => t.r * SIZE + t.c));
+            const free = [];
+            for (let i = 0; i < SIZE * SIZE; i++) if (!taken.has(i)) free.push(i);
+            if (!free.length) return;
+            const spot = free[Math.floor(Math.random() * free.length)];
+            tiles.push({
+                id: nextId++, v: Math.random() < 0.9 ? 2 : 4,
+                r: Math.floor(spot / SIZE), c: spot % SIZE, fresh: true
+            });
+        }
+
+        function canMove() {
+            if (tiles.length < SIZE * SIZE) return true;
+            const g = snapshot().cells;
+            for (let r = 0; r < SIZE; r++) {
+                for (let c = 0; c < SIZE; c++) {
+                    if (c < SIZE - 1 && g[r][c] === g[r][c + 1]) return true;
+                    if (r < SIZE - 1 && g[r][c] === g[r + 1][c]) return true;
                 }
             }
+            return false;
+        }
 
-            init() {
-                this.addNewNumber();
-                this.addNewNumber();
-                this.updateDisplay();
-                this.setupInputs();
+        function move(dir) {
+            if (A.modalOpen()) return;
+            const before = snapshot();
+            const grid = Array.from({ length: SIZE }, () => Array(SIZE).fill(null));
+            tiles.forEach(t => grid[t.r][t.c] = t);
 
-                // Setup undo button
-                this.undoBtn.addEventListener('click', () => this.undo());
-            }
+            let moved = false;
+            let gained = 0;
+            const merged = [];
+            const dead = [];
 
-            addNewNumber() {
-                const emptyCells = [];
-                for (let i = 0; i < 4; i++) {
-                    for (let j = 0; j < 4; j++) {
-                        if (this.grid[i][j] === 0) {
-                            emptyCells.push({ x: i, y: j });
-                        }
-                    }
-                }
-                if (emptyCells.length > 0) {
-                    const randomCell = emptyCells[Math.floor(Math.random() * emptyCells.length)];
-                    this.grid[randomCell.x][randomCell.y] = Math.random() < 0.9 ? 2 : 4;
-                }
-            }
-
-            updateDisplay() {
-                const gridElement = document.getElementById('grid');
-                gridElement.innerHTML = '';
-
-                for (let i = 0; i < 4; i++) {
-                    for (let j = 0; j < 4; j++) {
-                        const cell = document.createElement('div');
-                        cell.className = 'cell';
-                        if (this.grid[i][j] !== 0) {
-                            const number = document.createElement('div');
-                            number.className = `number n${this.grid[i][j]}`;
-                            number.textContent = this.petEmojis[this.grid[i][j]];
-                            cell.appendChild(number);
-                        }
-                        gridElement.appendChild(cell);
-                    }
+            for (let i = 0; i < SIZE; i++) {
+                // Cells of this row/column, ordered from the edge tiles slide towards.
+                const line = [];
+                for (let j = 0; j < SIZE; j++) {
+                    if (dir === 'left') line.push([i, j]);
+                    else if (dir === 'right') line.push([i, SIZE - 1 - j]);
+                    else if (dir === 'up') line.push([j, i]);
+                    else line.push([SIZE - 1 - j, i]);
                 }
 
-                document.getElementById('score').textContent = this.score;
-            }
-
-            move(direction) {
-                const prevGrid = JSON.parse(JSON.stringify(this.grid));
-                const prevScore = this.score;
-                let moved = false;
-
-                switch (direction) {
-                    case 'up':
-                        moved = this.moveUp();
-                        break;
-                    case 'down':
-                        moved = this.moveDown();
-                        break;
-                    case 'left':
-                        moved = this.moveLeft();
-                        break;
-                    case 'right':
-                        moved = this.moveRight();
-                        break;
-                }
-
-                if (moved) {
-                    this.saveState();
-                    this.addNewNumber();
-                    this.updateDisplay();
-
-                    if (this.isGameOver()) {
-                        alert('Game Over! Your score: ' + this.score);
-                    }
-                }
-            }
-
-            moveLeft() {
-                let moved = false;
-                for (let i = 0; i < 4; i++) {
-                    let row = this.grid[i].filter(x => x !== 0);
-                    for (let j = 0; j < row.length - 1; j++) {
-                        if (row[j] === row[j + 1]) {
-                            row[j] *= 2;
-                            this.score += row[j];
-                            row.splice(j + 1, 1);
-                            moved = true;
-                        }
-                    }
-                    const newRow = row.concat(Array(4 - row.length).fill(0));
-                    if (JSON.stringify(this.grid[i]) !== JSON.stringify(newRow)) moved = true;
-                    this.grid[i] = newRow;
-                }
-                return moved;
-            }
-
-            moveRight() {
-                let moved = false;
-                for (let i = 0; i < 4; i++) {
-                    let row = this.grid[i].filter(x => x !== 0);
-                    for (let j = row.length - 1; j > 0; j--) {
-                        if (row[j] === row[j - 1]) {
-                            row[j] *= 2;
-                            this.score += row[j];
-                            row.splice(j - 1, 1);
-                            moved = true;
-                        }
-                    }
-                    const newRow = Array(4 - row.length).fill(0).concat(row);
-                    if (JSON.stringify(this.grid[i]) !== JSON.stringify(newRow)) moved = true;
-                    this.grid[i] = newRow;
-                }
-                return moved;
-            }
-
-            moveUp() {
-                let moved = false;
-                for (let j = 0; j < 4; j++) {
-                    let column = this.grid.map(row => row[j]).filter(x => x !== 0);
-                    for (let i = 0; i < column.length - 1; i++) {
-                        if (column[i] === column[i + 1]) {
-                            column[i] *= 2;
-                            this.score += column[i];
-                            column.splice(i + 1, 1);
-                            moved = true;
-                        }
-                    }
-                    const newColumn = column.concat(Array(4 - column.length).fill(0));
-                    if (JSON.stringify(this.grid.map(row => row[j])) !== JSON.stringify(newColumn)) moved = true;
-                    for (let i = 0; i < 4; i++) {
-                        this.grid[i][j] = newColumn[i];
-                    }
-                }
-                return moved;
-            }
-
-            moveDown() {
-                let moved = false;
-                for (let j = 0; j < 4; j++) {
-                    let column = this.grid.map(row => row[j]).filter(x => x !== 0);
-                    for (let i = column.length - 1; i > 0; i--) {
-                        if (column[i] === column[i - 1]) {
-                            column[i] *= 2;
-                            this.score += column[i];
-                            column.splice(i - 1, 1);
-                            moved = true;
-                        }
-                    }
-                    const newColumn = Array(4 - column.length).fill(0).concat(column);
-                    if (JSON.stringify(this.grid.map(row => row[j])) !== JSON.stringify(newColumn)) moved = true;
-                    for (let i = 0; i < 4; i++) {
-                        this.grid[i][j] = newColumn[i];
-                    }
-                }
-                return moved;
-            }
-
-            isGameOver() {
-                for (let i = 0; i < 4; i++) {
-                    for (let j = 0; j < 4; j++) {
-                        if (this.grid[i][j] === 0) return false;
-                    }
-                }
-
-                for (let i = 0; i < 4; i++) {
-                    for (let j = 0; j < 4; j++) {
-                        if (j < 3 && this.grid[i][j] === this.grid[i][j + 1]) return false;
-                        if (i < 3 && this.grid[i][j] === this.grid[i + 1][j]) return false;
-                    }
-                }
-
-                return true;
-            }
-
-            setupInputs() {
-                document.addEventListener('keydown', (e) => {
-                    switch (e.key) {
-                        case 'ArrowUp':
-                            e.preventDefault();
-                            this.move('up');
-                            break;
-                        case 'ArrowDown':
-                            e.preventDefault();
-                            this.move('down');
-                            break;
-                        case 'ArrowLeft':
-                            e.preventDefault();
-                            this.move('left');
-                            break;
-                        case 'ArrowRight':
-                            e.preventDefault();
-                            this.move('right');
-                            break;
-                    }
-                });
-
-                let touchStartX, touchStartY;
-                document.addEventListener('touchstart', (e) => {
-                    touchStartX = e.touches[0].clientX;
-                    touchStartY = e.touches[0].clientY;
-                }, false);
-
-                document.addEventListener('touchend', (e) => {
-                    if (!touchStartX || !touchStartY) return;
-
-                    let touchEndX = e.changedTouches[0].clientX;
-                    let touchEndY = e.changedTouches[0].clientY;
-
-                    let dx = touchEndX - touchStartX;
-                    let dy = touchEndY - touchStartY;
-
-                    if (Math.abs(dx) > Math.abs(dy)) {
-                        if (dx > 0) this.move('right');
-                        else this.move('left');
+                let slot = 0;
+                let last = null;
+                for (const [r, c] of line) {
+                    const t = grid[r][c];
+                    if (!t) continue;
+                    if (last && last.v === t.v && !merged.includes(last)) {
+                        t.r = last.r;
+                        t.c = last.c;
+                        dead.push(t);
+                        merged.push(last);
+                        last.v *= 2;
+                        gained += last.v;
+                        moved = true;
                     } else {
-                        if (dy > 0) this.move('down');
-                        else this.move('up');
+                        const [tr, tc] = line[slot++];
+                        if (t.r !== tr || t.c !== tc) moved = true;
+                        t.r = tr;
+                        t.c = tc;
+                        last = t;
                     }
+                }
+            }
 
-                    touchStartX = touchStartY = null;
-                }, false);
+            if (!moved) return;
+
+            history.push(before);
+            if (history.length > MAX_UNDO) history.shift();
+            score += gained;
+
+            // Absorbed tiles slide into place, then disappear under the merged one.
+            dead.forEach(t => {
+                const el = els.get(t.id);
+                els.delete(t.id);
+                el.classList.add('dying');
+                el.style.setProperty('--r', t.r);
+                el.style.setProperty('--c', t.c);
+                setTimeout(() => el.remove(), 120);
+            });
+            merged.forEach(t => {
+                const el = els.get(t.id);
+                setTimeout(() => {
+                    paint(el, t.v);
+                    el.classList.remove('pop');
+                    void el.offsetWidth;
+                    el.classList.add('pop');
+                }, 110);
+            });
+
+            tiles = tiles.filter(t => !dead.includes(t));
+            spawn();
+            render();
+            A.sfx(gained ? 'good' : 'move');
+            A.bump('2048', score);
+            persist();
+
+            if (!keepGoing && merged.some(t => t.v === GOAL)) {
+                A.confetti();
+                A.sfx('win');
+                A.modal({
+                    emoji: '🐋', title: 'You made the whale!',
+                    text: 'That is 2048. Keep going to find what comes next.',
+                    stats: [['Score', A.fmt(score)], ['Best', A.fmt(A.stat('2048'))]],
+                    actions: [
+                        { label: 'Keep going', primary: true, run: () => { keepGoing = true; persist(); } },
+                        { label: 'New game', run: newGame }
+                    ]
+                });
+            } else if (!canMove()) {
+                A.sfx('lose');
+                A.modal({
+                    emoji: '🙈', title: 'No moves left',
+                    stats: [['Score', A.fmt(score)], ['Best', A.fmt(A.stat('2048'))]],
+                    actions: [
+                        { label: 'Play again', primary: true, run: newGame },
+                        { label: 'Undo last move', run: undo }
+                    ]
+                });
             }
         }
 
-        // Start the game
-        new Game2048();
+        function undo() {
+            if (!history.length) return;
+            restore(history.pop());
+            persist();
+        }
+
+        function newGame() {
+            history = [];
+            restore({ cells: Array.from({ length: SIZE }, () => Array(SIZE).fill(0)), score: 0 });
+            spawn();
+            spawn();
+            render();
+            persist();
+        }
+
+        function persist() {
+            A.saveData('2048', snapshot());
+        }
+
+        // ---------- Input ----------
+
+        const KEYS = {
+            ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right',
+            w: 'up', s: 'down', a: 'left', d: 'right'
+        };
+        document.addEventListener('keydown', e => {
+            if (e.metaKey || e.ctrlKey || e.altKey) return;
+            const dir = KEYS[e.key.length === 1 ? e.key.toLowerCase() : e.key];
+            if (!dir) return;
+            e.preventDefault();
+            move(dir);
+        });
+
+        let start = null;
+        boardEl.addEventListener('pointerdown', e => {
+            start = { x: e.clientX, y: e.clientY };
+        });
+        window.addEventListener('pointerup', e => {
+            if (!start) return;
+            const dx = e.clientX - start.x;
+            const dy = e.clientY - start.y;
+            start = null;
+            if (Math.max(Math.abs(dx), Math.abs(dy)) < 24) return;
+            if (Math.abs(dx) > Math.abs(dy)) move(dx > 0 ? 'right' : 'left');
+            else move(dy > 0 ? 'down' : 'up');
+        });
+
+        undoBtn.addEventListener('click', undo);
+        document.getElementById('new').addEventListener('click', newGame);
+
+        // Resume the saved board if there is one that can still be played.
+        const saved = A.data('2048');
+        if (saved.cells) {
+            restore(saved);
+            if (!canMove()) newGame();
+        } else {
+            newGame();
+        }
     </script>
 </body>
 

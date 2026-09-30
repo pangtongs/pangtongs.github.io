@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minesweeper · Winston's Arcade</title>
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .wrap {
+            width: 100%;
+            overflow: auto;
+            display: flex;
+            justify-content: safe center;
+        }
+
+        .field {
+            display: grid;
+            grid-template-columns: repeat(var(--cols), var(--cell));
+            gap: 2px;
+            padding: 6px;
+            border-radius: 14px;
+            background: var(--panel-2);
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+        }
+
+        .field button {
+            width: var(--cell);
+            height: var(--cell);
+            padding: 0;
+            border: 0;
+            border-radius: calc(var(--cell) * 0.18);
+            background: linear-gradient(160deg, #394257, #2b3242);
+            box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.25);
+            font-size: calc(var(--cell) * 0.52);
+            font-weight: 800;
+            line-height: 1;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+
+        .field button:hover:not(.open) {
+            background: linear-gradient(160deg, #46506a, #343c50);
+        }
+
+        .field button.open {
+            background: #141820;
+            box-shadow: none;
+            cursor: default;
+        }
+
+        .field button.open.n {
+            cursor: pointer;
+        }
+
+        .field button.boom {
+            background: var(--bad);
+        }
+
+        .field button.wrong {
+            background: color-mix(in srgb, var(--bad) 35%, #141820);
+        }
+
+        .n1 { color: #60a5fa; }
+        .n2 { color: #4ade80; }
+        .n3 { color: #f87171; }
+        .n4 { color: #a78bfa; }
+        .n5 { color: #fb923c; }
+        .n6 { color: #2dd4bf; }
+        .n7 { color: #f472b6; }
+        .n8 { color: #e5e7eb; }
+
+        .field.lost button:not(.open):not(.boom) {
+            opacity: 0.55;
+        }
+
+        @media (max-width: 560px) {
+            .stage {
+                padding: 6px;
+            }
+
+            .field {
+                gap: 1px;
+                padding: 4px;
+            }
+        }
+    </style>
+</head>
+
+<body data-game="mines">
+    <main>
+        <div class="hud">
+            <div class="stat hot"><span>Mines left</span><b id="left">0</b></div>
+            <div class="stat"><span>Time</span><b id="time">0:00</b></div>
+            <div class="stat"><span>Best</span><b id="best">—</b></div>
+            <span class="spacer"></span>
+            <div class="seg" id="levels" role="group" aria-label="Difficulty">
+                <button data-level="easy">Easy</button>
+                <button data-level="medium">Medium</button>
+                <button data-level="hard">Expert</button>
+            </div>
+            <button class="btn" id="flagMode" title="When on, taps place flags instead of digging">🚩 Flag mode</button>
+            <button class="btn primary" id="new">New game</button>
+        </div>
+
+        <div class="stage">
+            <div class="wrap" id="wrap">
+                <div class="field" id="field" aria-label="Minefield"></div>
+            </div>
+        </div>
+    </main>
+
+    <script src="../arcade.js"></script>
+    <script>
+        const A = Arcade;
+        const LEVELS = {
+            easy: { rows: 9, cols: 9, mines: 10 },
+            medium: { rows: 16, cols: 16, mines: 40 },
+            hard: { rows: 16, cols: 30, mines: 99 }
+        };
+        const MIN_CELL = 18;
+        const MAX_CELL = 38;
+        const LONG_PRESS_MS = 380;
+
+        const fieldEl = document.getElementById('field');
+        const wrapEl = document.getElementById('wrap');
+        const flagBtn = document.getElementById('flagMode');
+        const store = Object.assign({ level: 'easy', best: {} }, A.data('mines'));
+
+        let R, C, M, cells, buttons, started, over, opened, seconds, timer;
+        let flagMode = false;
+
+        // The wide Expert board is turned on its side when the screen is too narrow for it.
+        function shape() {
+            const L = LEVELS[store.level];
+            const narrow = wrapEl.clientWidth < L.cols * (MIN_CELL + 2) + 12;
+            return narrow && L.cols > L.rows ? [L.cols, L.rows] : [L.rows, L.cols];
+        }
+
+        function newGame() {
+            clearInterval(timer);
+            [R, C] = shape();
+            M = LEVELS[store.level].mines;
+            cells = Array.from({ length: R * C }, () => ({ mine: false, n: 0, open: false, flag: false }));
+            started = over = false;
+            opened = seconds = 0;
+
+            fieldEl.className = 'field';
+            fieldEl.style.setProperty('--cols', C);
+            fieldEl.innerHTML = '<button></button>'.repeat(R * C);
+            buttons = [...fieldEl.children];
+            buttons.forEach((b, i) => {
+                b.dataset.i = i;
+                b.setAttribute('aria-label', `Row ${Math.floor(i / C) + 1}, column ${i % C + 1}, hidden`);
+            });
+            size();
+            paintHud();
+        }
+
+        function size() {
+            const style = getComputedStyle(fieldEl);
+            const gap = parseFloat(style.columnGap) || 0;
+            const pad = parseFloat(style.paddingLeft) * 2;
+            const top = fieldEl.getBoundingClientRect().top;
+            const byWidth = (wrapEl.clientWidth - pad) / C - gap;
+            const byHeight = (window.innerHeight - top - 70) / R - gap;
+            const cell = Math.max(MIN_CELL, Math.min(MAX_CELL, Math.floor(Math.min(byWidth, byHeight))));
+            fieldEl.style.setProperty('--cell', cell + 'px');
+        }
+
+        function neighbours(i) {
+            const r = Math.floor(i / C), c = i % C;
+            const out = [];
+            for (let dr = -1; dr <= 1; dr++) {
+                for (let dc = -1; dc <= 1; dc++) {
+                    const rr = r + dr, cc = c + dc;
+                    if ((dr || dc) && rr >= 0 && rr < R && cc >= 0 && cc < C) out.push(rr * C + cc);
+                }
+            }
+            return out;
+        }
+
+        // Mines are placed after the first click, never on or next to it.
+        function layMines(safe) {
+            const banned = new Set([safe, ...neighbours(safe)]);
+            const spots = [...cells.keys()].filter(i => !banned.has(i));
+            for (let k = 0; k < M; k++) {
+                const j = k + Math.floor(Math.random() * (spots.length - k));
+                [spots[k], spots[j]] = [spots[j], spots[k]];
+                cells[spots[k]].mine = true;
+            }
+            cells.forEach((cell, i) => cell.n = neighbours(i).filter(j => cells[j].mine).length);
+        }
+
+        function paint(i) {
+            const cell = cells[i];
+            const b = buttons[i];
+            b.className = cell.open ? 'open' + (cell.n && !cell.mine ? ' n n' + cell.n : '') : '';
+            if (cell.open) b.textContent = cell.mine ? '💣' : (cell.n || '');
+            else b.textContent = cell.flag ? '🚩' : '';
+            const r = Math.floor(i / C) + 1, c = i % C + 1;
+            b.setAttribute('aria-label', `Row ${r}, column ${c}, ` +
+                (cell.open ? (cell.n ? cell.n + ' mines near' : 'empty') : cell.flag ? 'flagged' : 'hidden'));
+        }
+
+        function paintHud() {
+            const flags = cells.filter(c => c.flag).length;
+            document.getElementById('left').textContent = M - flags;
+            document.getElementById('time').textContent = A.time(seconds);
+            const best = store.best[store.level];
+            document.getElementById('best').textContent = best != null ? A.time(best) : '—';
+            document.querySelectorAll('#levels button').forEach(b =>
+                b.setAttribute('aria-pressed', b.dataset.level === store.level));
+            flagBtn.classList.toggle('on', flagMode);
+        }
+
+        function open(start) {
+            // Flood-fill outward from empty cells.
+            const stack = [start];
+            while (stack.length) {
+                const i = stack.pop();
+                const cell = cells[i];
+                if (cell.open || cell.flag) continue;
+                cell.open = true;
+                opened++;
+                paint(i);
+                if (cell.n === 0) neighbours(i).forEach(j => !cells[j].open && stack.push(j));
+            }
+        }
+
+        function dig(i) {
+            const cell = cells[i];
+            if (over || cell.flag) return;
+
+            if (!started) {
+                started = true;
+                layMines(i);
+                timer = setInterval(() => {
+                    seconds++;
+                    paintHud();
+                }, 1000);
+            }
+
+            if (cell.open) {
+                // Chord: a number whose mines are all flagged clears its other neighbours.
+                const around = neighbours(i);
+                if (!cell.n || around.filter(j => cells[j].flag).length !== cell.n) return;
+                const targets = around.filter(j => !cells[j].open && !cells[j].flag);
+                const hit = targets.find(j => cells[j].mine);
+                if (hit != null) return lose(hit);
+                targets.forEach(open);
+            } else if (cell.mine) {
+                return lose(i);
+            } else {
+                open(i);
+            }
+            A.sfx('tap');
+            if (opened === R * C - M) win();
+        }
+
+        function flag(i) {
+            const cell = cells[i];
+            if (over || cell.open) return;
+            cell.flag = !cell.flag;
+            paint(i);
+            paintHud();
+            A.sfx('move');
+        }
+
+        function lose(hit) {
+            over = true;
+            clearInterval(timer);
+            cells.forEach((cell, i) => {
+                if (cell.mine && !cell.flag) {
+                    cell.open = true;
+                    paint(i);
+                } else if (cell.flag && !cell.mine) {
+                    buttons[i].classList.add('wrong');
+                }
+            });
+            buttons[hit].classList.add('boom');
+            fieldEl.classList.add('lost');
+            A.sfx('lose');
+            A.modal({
+                emoji: '💥', title: 'Boom!',
+                text: `You cleared ${Math.round(opened / (R * C - M) * 100)}% of the safe squares.`,
+                actions: [{ label: 'Try again', primary: true, run: newGame }]
+            });
+        }
+
+        function win() {
+            over = true;
+            clearInterval(timer);
+            cells.forEach((cell, i) => {
+                if (cell.mine) {
+                    cell.flag = true;
+                    paint(i);
+                }
+            });
+            const best = store.best[store.level];
+            const record = best == null || seconds < best;
+            if (record) store.best[store.level] = seconds;
+            A.saveData('mines', store);
+            A.add('mines', 1);
+            paintHud();
+            A.confetti();
+            A.sfx('win');
+            A.modal({
+                emoji: '🏁', title: record ? 'Cleared — new best time!' : 'Field cleared!',
+                stats: [['Time', A.time(seconds)], ['Best', A.time(store.best[store.level])]],
+                actions: [{ label: 'Play again', primary: true, run: newGame }]
+            });
+        }
+
+        // ---------- Input ----------
+
+        let press = null;   // pending long-press on touch screens
+
+        fieldEl.addEventListener('pointerdown', e => {
+            const b = e.target.closest('button');
+            if (!b || e.pointerType === 'mouse') return;
+            const i = +b.dataset.i;
+            press = {
+                i, fired: false, timer: setTimeout(() => {
+                    press.fired = true;
+                    flag(i);
+                    if (navigator.vibrate) navigator.vibrate(15);
+                }, LONG_PRESS_MS)
+            };
+        });
+        ['pointerup', 'pointercancel', 'pointerleave'].forEach(type =>
+            fieldEl.addEventListener(type, () => press && clearTimeout(press.timer)));
+
+        fieldEl.addEventListener('click', e => {
+            const b = e.target.closest('button');
+            if (!b) return;
+            const i = +b.dataset.i;
+            if (press && press.i === i && press.fired) {
+                press = null;
+                return;
+            }
+            press = null;
+            if (flagMode && !cells[i].open) flag(i);
+            else dig(i);
+        });
+        fieldEl.addEventListener('contextmenu', e => {
+            const b = e.target.closest('button');
+            e.preventDefault();
+            if (b && !(press && press.fired)) flag(+b.dataset.i);
+        });
+
+        flagBtn.addEventListener('click', () => {
+            flagMode = !flagMode;
+            paintHud();
+        });
+        document.getElementById('levels').addEventListener('click', e => {
+            const b = e.target.closest('button');
+            if (!b) return;
+            store.level = b.dataset.level;
+            A.saveData('mines', store);
+            newGame();
+        });
+        document.getElementById('new').addEventListener('click', newGame);
+        document.addEventListener('keydown', e => {
+            if (e.key.toLowerCase() === 'f' && !e.metaKey && !e.ctrlKey) {
+                flagMode = !flagMode;
+                paintHud();
+            }
+        });
+        window.addEventListener('resize', () => {
+            if (!started) newGame();
+            else size();
+        });
+
+        newGame();
+    </script>
+</body>
+
+</html>

@@ -4,243 +4,318 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hangman - My Games</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>Hangman · Winston's Arcade</title>
+    <link rel="stylesheet" href="../styles.css">
     <style>
-        .hangman-container {
-            font-family: Arial, sans-serif;
+        .stage {
+            flex-direction: row;
+            flex-wrap: wrap;
+            gap: 26px;
+        }
+
+        .figure {
+            width: 190px;
+            flex: none;
+        }
+
+        .figure svg {
+            display: block;
+            width: 100%;
+            fill: none;
+            stroke: var(--muted);
+            stroke-width: 5;
+            stroke-linecap: round;
+        }
+
+        .figure .part {
+            stroke: var(--text);
+            stroke-dasharray: 1;
+            stroke-dashoffset: 1;
+            transition: stroke-dashoffset 0.35s ease;
+        }
+
+        .figure .part.on {
+            stroke-dashoffset: 0;
+        }
+
+        .figure.lost .part {
+            stroke: var(--bad);
+        }
+
+        .play {
+            flex: 1;
+            min-width: 280px;
             display: flex;
             flex-direction: column;
             align-items: center;
-            max-width: 600px;
-            margin: 0 auto;
+            gap: 16px;
         }
 
-        #hangman-drawing {
-            font-family: monospace;
-            white-space: pre;
-            margin: 20px;
-            font-size: 1.2em;
-            color: #ffffff;
+        .chip {
+            padding: 4px 12px;
+            border-radius: 999px;
+            background: color-mix(in srgb, var(--accent) 18%, transparent);
+            color: var(--accent);
+            font-size: 13px;
+            font-weight: 600;
         }
 
-        #word-display {
-            font-size: 2em;
-            letter-spacing: 0.2em;
-            margin: 20px;
-            color: #ffffff;
+        .word {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 6px;
         }
 
-        #guesses {
-            margin: 20px;
+        .word span {
+            display: grid;
+            place-items: center;
+            width: 30px;
+            height: 42px;
+            border-bottom: 3px solid var(--line-2);
+            font-size: 26px;
+            font-weight: 700;
         }
 
-        #guess-input {
-            font-size: 1.2em;
-            width: 50px;
-            text-align: center;
-            margin-right: 10px;
-            padding: 5px;
-            border: 2px solid #4CAF50;
-            border-radius: 5px;
+        .word span.missed {
+            color: var(--bad);
         }
 
-        .hangman-container button {
-            font-size: 1.2em;
-            padding: 8px 20px;
+        .word span.shown {
+            animation: drop 0.2s ease;
+        }
+
+        @keyframes drop {
+            from {
+                transform: translateY(-8px);
+                opacity: 0;
+            }
+        }
+
+        .keys {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            width: 100%;
+        }
+
+        .keys div {
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+            width: 100%;
+        }
+
+        .keys button {
+            flex: 1;
+            max-width: 40px;
+            height: 44px;
+            border-radius: 9px;
+            border: 1px solid var(--line-2);
+            background: var(--panel-2);
+            font-weight: 700;
             cursor: pointer;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            transition: background-color 0.3s;
+            touch-action: manipulation;
         }
 
-        .hangman-container button:hover {
-            background-color: #45a049;
+        .keys button:hover:not(:disabled) {
+            background: var(--panel-3);
         }
 
-        #message {
-            margin: 20px;
-            font-size: 1.2em;
-            font-weight: bold;
-            color: #ffd700;
+        .keys button.hit {
+            background: color-mix(in srgb, var(--good) 28%, transparent);
+            border-color: var(--good);
         }
 
-        #used-letters {
-            margin: 10px;
-            color: #cccccc;
+        .keys button.miss {
+            opacity: 0.3;
         }
 
-        .used-letter {
-            text-decoration: line-through;
-            color: #ff6b6b;
+        .keys button:disabled {
+            cursor: default;
+        }
+
+        .result {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            min-height: 44px;
+            font-weight: 600;
         }
     </style>
 </head>
 
-<body>
-    <div class="sidebar">
-        <!-- Sidebar content will be inserted here by JavaScript -->
-    </div>
+<body data-game="hangman">
+    <main>
+        <div class="hud">
+            <div class="stat hot"><span>Streak</span><b id="streak">0</b></div>
+            <div class="stat"><span>Best</span><b id="best">0</b></div>
+            <div class="stat"><span>Lives</span><b id="lives"></b></div>
+            <span class="spacer"></span>
+            <button class="btn" id="hint" title="Reveals a letter and costs one life">💡 Hint</button>
+            <button class="btn" id="skip">Skip word</button>
+        </div>
 
-    <main class="main-content">
-        <div class="game-container">
-            <div class="hangman-container">
-                <h1>Hangman Game</h1>
-                <div id="hangman-drawing"></div>
-                <div id="word-display"></div>
-                <div id="guesses">
-                    <input type="text" id="guess-input" maxlength="1">
-                    <button onclick="makeGuess()">Guess</button>
-                </div>
-                <div id="message"></div>
-                <div id="used-letters"></div>
+        <div class="stage">
+            <div class="figure" id="figure">
+                <svg viewBox="0 0 200 215" aria-hidden="true">
+                    <path d="M20 200h130M50 200V20h80v24" />
+                    <circle class="part" cx="130" cy="61" r="17" pathLength="1" />
+                    <path class="part" d="M130 78v54" pathLength="1" />
+                    <path class="part" d="M130 92l-24 24" pathLength="1" />
+                    <path class="part" d="M130 92l24 24" pathLength="1" />
+                    <path class="part" d="M130 132l-20 36" pathLength="1" />
+                    <path class="part" d="M130 132l20 36" pathLength="1" />
+                </svg>
+            </div>
+
+            <div class="play">
+                <span class="chip" id="category"></span>
+                <div class="word" id="word" aria-live="polite"></div>
+                <div class="keys" id="keys"></div>
+                <div class="result" id="result"></div>
             </div>
         </div>
     </main>
 
-    <script src="sidebar.js"></script>
+    <script src="../arcade.js"></script>
     <script>
-        const words = [
-            'JAVASCRIPT', 'HANGMAN', 'GAME', 'PROGRAMMING', 'COMPUTER', 'WEB', 'DEVELOPMENT',
-            'ALGORITHM', 'DATABASE', 'NETWORK', 'SECURITY', 'INTERFACE', 'FUNCTION', 'VARIABLE',
-            'BROWSER', 'SERVER', 'CLOUD', 'FRAMEWORK', 'LIBRARY', 'OBJECT', 'METHOD', 'ARRAY',
-            'STRING', 'INTEGER', 'BOOLEAN', 'SYNTAX', 'DEBUGGING', 'FRONTEND', 'BACKEND',
-            'RESPONSIVE', 'MOBILE', 'DESKTOP', 'APPLICATION', 'SOFTWARE', 'HARDWARE', 'KEYBOARD',
-            'MONITOR', 'MOUSE', 'PROCESSOR', 'MEMORY', 'STORAGE', 'ENCRYPTION', 'AUTHENTICATION',
-            'AUTHORIZATION', 'COOKIE', 'SESSION', 'CACHE', 'PROTOCOL', 'DOMAIN', 'HOSTING'
-        ];
-        let word = '';
-        let guessedLetters = [];
-        let remainingGuesses = 6;
+        const A = Arcade;
+        const MAX_WRONG = 6;
 
-        const hangmanStages = [
-            `
-  +---+
-  |   |
-      |
-      |
-      |
-      |
-=========`,
-            `
-  +---+
-  |   |
-  O   |
-      |
-      |
-      |
-=========`,
-            `
-  +---+
-  |   |
-  O   |
-  |   |
-      |
-      |
-=========`,
-            `
-  +---+
-  |   |
-  O   |
- /|   |
-      |
-      |
-=========`,
-            `
-  +---+
-  |   |
-  O   |
- /|\\  |
-      |
-      |
-=========`,
-            `
-  +---+
-  |   |
-  O   |
- /|\\  |
- /    |
-      |
-=========`,
-            `
-  +---+
-  |   |
-  O   |
- /|\\  |
- / \\  |
-      |
-=========`
-        ];
+        const WORDS = {
+            Animals: ['GIRAFFE', 'PENGUIN', 'DOLPHIN', 'KANGAROO', 'OCTOPUS', 'HEDGEHOG', 'CHEETAH', 'FLAMINGO', 'RACCOON', 'BUFFALO', 'LOBSTER', 'PANTHER'],
+            Food: ['PANCAKE', 'AVOCADO', 'NOODLES', 'BURRITO', 'PRETZEL', 'DUMPLING', 'CROISSANT', 'MUSHROOM', 'LASAGNA', 'POPCORN', 'BROCCOLI', 'OMELETTE'],
+            Places: ['ICELAND', 'MOROCCO', 'VIETNAM', 'PORTUGAL', 'SINGAPORE', 'BRAZIL', 'NORWAY', 'ARGENTINA', 'THAILAND', 'DENMARK', 'JAMAICA', 'ZANZIBAR'],
+            Tech: ['ALGORITHM', 'DATABASE', 'KEYBOARD', 'BROWSER', 'ENCRYPTION', 'FRAMEWORK', 'VARIABLE', 'COMPILER', 'PROTOCOL', 'BLUETOOTH', 'FIREWALL', 'JAVASCRIPT'],
+            Space: ['GALAXY', 'ASTEROID', 'NEBULA', 'SATELLITE', 'JUPITER', 'ECLIPSE', 'ASTRONAUT', 'MERCURY', 'TELESCOPE', 'SUPERNOVA', 'ORBIT', 'METEOR'],
+            Sports: ['MARATHON', 'BADMINTON', 'ARCHERY', 'SNOWBOARD', 'HANDBALL', 'CRICKET', 'KAYAKING', 'FENCING', 'TRIATHLON', 'VOLLEYBALL', 'WRESTLING', 'SPRINT']
+        };
 
-        function initializeGame() {
-            word = words[Math.floor(Math.random() * words.length)];
-            guessedLetters = [];
-            remainingGuesses = 6;
-            updateDisplay();
-            document.getElementById('message').textContent = '';
-            document.getElementById('guess-input').value = '';
+        const figureEl = document.getElementById('figure');
+        const parts = figureEl.querySelectorAll('.part');
+        const wordEl = document.getElementById('word');
+        const keysEl = document.getElementById('keys');
+        const resultEl = document.getElementById('result');
+        const hintBtn = document.getElementById('hint');
+
+        let word, guessed, wrong, done;
+        let streak = A.data('hangman').streak || 0;
+        const recent = [];   // words used lately, so they don't repeat
+
+        keysEl.innerHTML = ['QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'].map(row =>
+            '<div>' + [...row].map(ch => `<button data-key="${ch}">${ch}</button>`).join('') + '</div>').join('');
+
+        function newWord() {
+            const categories = Object.keys(WORDS);
+            let category;
+            do {
+                category = categories[Math.floor(Math.random() * categories.length)];
+                word = WORDS[category][Math.floor(Math.random() * WORDS[category].length)];
+            } while (recent.includes(word));
+            recent.push(word);
+            if (recent.length > 30) recent.shift();
+
+            guessed = new Set();
+            wrong = 0;
+            done = false;
+            document.getElementById('category').textContent = category;
+            resultEl.innerHTML = '';
+            render();
         }
 
-        function updateDisplay() {
-            // Update word display
-            const wordDisplay = word
-                .split('')
-                .map(letter => guessedLetters.includes(letter) ? letter : '_')
-                .join(' ');
-            document.getElementById('word-display').textContent = wordDisplay;
+        function render(justGuessed) {
+            wordEl.innerHTML = [...word].map(ch => {
+                if (guessed.has(ch)) return `<span class="${ch === justGuessed ? 'shown' : ''}">${ch}</span>`;
+                return done ? `<span class="missed">${ch}</span>` : '<span></span>';
+            }).join('');
 
-            // Update hangman drawing
-            document.getElementById('hangman-drawing').textContent = hangmanStages[6 - remainingGuesses];
+            parts.forEach((part, i) => part.classList.toggle('on', i < wrong));
+            figureEl.classList.toggle('lost', wrong >= MAX_WRONG);
 
-            // Update used letters
-            document.getElementById('used-letters').textContent = 'Used letters: ' +
-                guessedLetters.join(', ');
+            keysEl.querySelectorAll('button').forEach(btn => {
+                const ch = btn.dataset.key;
+                btn.className = guessed.has(ch) ? (word.includes(ch) ? 'hit' : 'miss') : '';
+                btn.disabled = done || guessed.has(ch);
+            });
+
+            document.getElementById('streak').textContent = streak;
+            document.getElementById('best').textContent = A.stat('hangman');
+            document.getElementById('lives').textContent =
+                '❤️'.repeat(MAX_WRONG - wrong) + '🖤'.repeat(wrong);
+            hintBtn.disabled = done || wrong >= MAX_WRONG - 1;
         }
 
-        function makeGuess() {
-            const input = document.getElementById('guess-input');
-            const guess = input.value.toUpperCase();
-            input.value = '';
-
-            if (guess.length !== 1 || !/[A-Z]/.test(guess)) {
-                document.getElementById('message').textContent = 'Please enter a single letter.';
-                return;
+        function guess(ch) {
+            if (done || guessed.has(ch)) return;
+            guessed.add(ch);
+            if (word.includes(ch)) {
+                A.sfx('good');
+            } else {
+                wrong++;
+                A.sfx('bad');
             }
-
-            if (guessedLetters.includes(guess)) {
-                document.getElementById('message').textContent = 'You already guessed that letter.';
-                return;
-            }
-
-            guessedLetters.push(guess);
-
-            if (!word.includes(guess)) {
-                remainingGuesses--;
-            }
-
-            updateDisplay();
-
-            // Check win/lose conditions
-            if (remainingGuesses === 0) {
-                document.getElementById('message').textContent = `Game Over! The word was ${word}`;
-                setTimeout(initializeGame, 3000);
-            } else if (!word.split('').some(letter => !guessedLetters.includes(letter))) {
-                document.getElementById('message').textContent = 'Congratulations! You won!';
-                setTimeout(initializeGame, 3000);
-            }
+            settle(ch);
         }
 
-        // Handle Enter key
-        document.getElementById('guess-input').addEventListener('keyup', function (event) {
-            if (event.key === 'Enter') {
-                makeGuess();
+        function settle(ch) {
+            const solved = [...word].every(letter => guessed.has(letter));
+            if (solved || wrong >= MAX_WRONG) {
+                done = true;
+                streak = solved ? streak + 1 : 0;
+                A.saveData('hangman', { streak });
+                if (solved) {
+                    if (A.bump('hangman', streak)) A.confetti();
+                    A.sfx('win');
+                } else {
+                    A.sfx('lose');
+                }
+                resultEl.innerHTML = `<span>${solved ? '🎉 Got it!' : '💀 Out of lives'}</span>
+                    <button class="btn primary" id="next">Next word ↵</button>`;
+                document.getElementById('next').addEventListener('click', newWord);
+            }
+            render(ch);
+        }
+
+        function hint() {
+            if (done || wrong >= MAX_WRONG - 1) return;
+            const hidden = [...new Set(word)].filter(ch => !guessed.has(ch));
+            const ch = hidden[Math.floor(Math.random() * hidden.length)];
+            guessed.add(ch);
+            wrong++;
+            A.sfx('tap');
+            settle(ch);
+        }
+
+        function skip() {
+            // Walking away from an unfinished word ends the streak.
+            if (!done && streak) {
+                streak = 0;
+                A.saveData('hangman', { streak });
+                A.toast('Streak reset');
+            }
+            newWord();
+        }
+
+        keysEl.addEventListener('click', e => {
+            const btn = e.target.closest('button');
+            if (btn) guess(btn.dataset.key);
+        });
+        hintBtn.addEventListener('click', hint);
+        document.getElementById('skip').addEventListener('click', skip);
+
+        document.addEventListener('keydown', e => {
+            if (e.metaKey || e.ctrlKey || e.altKey || A.modalOpen()) return;
+            if (e.key === 'Enter' && done) {
+                e.preventDefault();
+                newWord();
+            } else if (/^[a-z]$/i.test(e.key)) {
+                guess(e.key.toUpperCase());
             }
         });
 
-        // Start the game
-        initializeGame();
+        newWord();
     </script>
 </body>
 

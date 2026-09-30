@@ -4,194 +4,257 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Memory Match - My Games</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>Memory Match · Winston's Arcade</title>
+    <link rel="stylesheet" href="../styles.css">
     <style>
-        .memory-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            font-family: Arial, sans-serif;
-            max-width: 600px;
-            margin: 0 auto;
-        }
-
-        .game-board {
+        .grid {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(var(--cols), 1fr);
             gap: 10px;
-            max-width: 500px;
-            margin: 20px auto;
+            width: min(100%, calc(var(--cols) * 100px));
+            perspective: 900px;
         }
 
         .card {
-            width: 80px;
-            height: 80px;
-            background-color: #2196F3;
-            border-radius: 8px;
+            aspect-ratio: 1;
+            border: 0;
+            background: none;
             cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2em;
-            color: transparent;
-            transition: all 0.3s ease;
+            touch-action: manipulation;
+        }
+
+        .inner {
             position: relative;
+            display: block;
+            width: 100%;
+            height: 100%;
+            transform-style: preserve-3d;
+            transition: transform 0.35s cubic-bezier(0.3, 0.8, 0.3, 1);
         }
 
-        .card.flipped {
-            background-color: #4CAF50;
-            color: white;
+        .card.up .inner {
+            transform: rotateY(180deg);
         }
 
-        .card.matched {
-            visibility: hidden;
-            opacity: 0;
-            transform: scale(0);
+        .back,
+        .front {
+            position: absolute;
+            inset: 0;
+            display: grid;
+            place-items: center;
+            border-radius: 14px;
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
         }
 
-        .stats {
-            margin-bottom: 20px;
-            font-size: 1.2em;
-            background-color: #3d3d3d;
-            padding: 10px 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-            color: #ffffff;
+        .back {
+            background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 70%, #000), color-mix(in srgb, var(--accent) 30%, #000));
+            border: 1px solid var(--line-2);
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 22px;
+            font-weight: 800;
         }
 
-        .memory-container button {
-            padding: 10px 20px;
-            font-size: 1em;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-            transition: all 0.3s ease;
+        .card:hover:not(.up) .back {
+            filter: brightness(1.15);
         }
 
-        .memory-container button:hover {
-            background-color: #45a049;
-            transform: translateY(-2px);
+        .front {
+            transform: rotateY(180deg);
+            background: var(--panel-2);
+            border: 1px solid var(--line-2);
+            font-size: clamp(22px, 7vw, 40px);
         }
 
-        @media (max-width: 500px) {
-            .card {
-                width: 60px;
-                height: 60px;
-                font-size: 1.5em;
+        .card.matched .front {
+            border-color: var(--good);
+            background: color-mix(in srgb, var(--good) 16%, var(--panel-2));
+            animation: matched 0.4s ease;
+        }
+
+        .card.wrong .front {
+            border-color: var(--bad);
+        }
+
+        @keyframes matched {
+            50% {
+                transform: rotateY(180deg) scale(1.1);
+            }
+        }
+
+        .bestline {
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        @media (max-width: 560px) {
+            .grid {
+                gap: 7px;
             }
 
-            .game-board {
-                gap: 5px;
+            .grid.hard {
+                --cols: 5 !important;
             }
         }
     </style>
 </head>
 
-<body>
-    <div class="sidebar">
-        <!-- Sidebar content will be inserted here by JavaScript -->
-    </div>
-
-    <main class="main-content">
-        <div class="game-container">
-            <div class="memory-container">
-                <h2>Disappearing Memory Match</h2>
-                <div class="stats">
-                    Moves: <span id="moves">0</span> |
-                    Pairs Found: <span id="pairs">0</span>
-                </div>
-                <div class="game-board" id="gameBoard"></div>
-                <button onclick="resetGame()">New Game</button>
+<body data-game="memory">
+    <main>
+        <div class="hud">
+            <div class="stat hot"><span>Moves</span><b id="moves">0</b></div>
+            <div class="stat"><span>Time</span><b id="time">0:00</b></div>
+            <div class="stat"><span>Pairs</span><b id="pairs">0/0</b></div>
+            <span class="spacer"></span>
+            <div class="seg" id="levels" role="group" aria-label="Board size">
+                <button data-level="easy">Easy</button>
+                <button data-level="classic">Classic</button>
+                <button data-level="hard">Hard</button>
             </div>
+            <button class="btn primary" id="new">New game</button>
+        </div>
+
+        <div class="stage">
+            <div class="grid" id="grid"></div>
+            <p class="bestline" id="bestline"></p>
         </div>
     </main>
 
-    <script src="sidebar.js"></script>
+    <script src="../arcade.js"></script>
     <script>
-        const symbols = ['🎨', '🎮', '🎲', '🎭', '🎪', '🎸', '🎯', '🎱'];
-        let cards = [];
-        let flippedCards = [];
-        let moves = 0;
-        let pairs = 0;
-        let canFlip = true;
+        const A = Arcade;
+        const LEVELS = {
+            easy: { pairs: 6, cols: 4 },
+            classic: { pairs: 8, cols: 4 },
+            hard: { pairs: 15, cols: 6 }
+        };
+        const FACES = ['🐶', '🦊', '🐼', '🐸', '🦁', '🐙', '🦄', '🐝', '🍉', '🍕', '🌵', '🚀', '⚽', '🎸', '🌈', '🍩', '🧊', '🔥'];
+        const FLIP_BACK_MS = 850;
 
-        function createBoard() {
-            const gameBoard = document.getElementById('gameBoard');
-            const doubledSymbols = [...symbols, ...symbols];
-            cards = doubledSymbols.sort(() => Math.random() - 0.5);
+        const gridEl = document.getElementById('grid');
+        const saved = Object.assign({ level: 'classic', best: {} }, A.data('memory'));
 
-            gameBoard.innerHTML = '';
-            cards.forEach((symbol, index) => {
-                const card = document.createElement('div');
-                card.className = 'card';
-                card.dataset.index = index;
-                card.dataset.symbol = symbol;
-                card.innerHTML = symbol;
-                card.addEventListener('click', flipCard);
-                gameBoard.appendChild(card);
+        let level, pairs, open, found, moves, seconds, timer, pending;
+
+        function shuffle(list) {
+            for (let i = list.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [list[i], list[j]] = [list[j], list[i]];
+            }
+            return list;
+        }
+
+        function newGame() {
+            clearInterval(timer);
+            clearTimeout(pending);
+            timer = pending = null;
+            level = saved.level;
+            pairs = LEVELS[level].pairs;
+            open = [];
+            found = 0;
+            moves = 0;
+            seconds = 0;
+
+            const faces = shuffle(FACES.slice()).slice(0, pairs);
+            gridEl.className = 'grid ' + level;
+            gridEl.style.setProperty('--cols', LEVELS[level].cols);
+            gridEl.innerHTML = shuffle([...faces, ...faces]).map(face => `
+                <button class="card" data-face="${face}" aria-label="Hidden card">
+                    <span class="inner"><span class="back">?</span><span class="front">${face}</span></span>
+                </button>`).join('');
+            paintHud();
+        }
+
+        function paintHud() {
+            document.getElementById('moves').textContent = moves;
+            document.getElementById('time').textContent = A.time(seconds);
+            document.getElementById('pairs').textContent = found + '/' + pairs;
+            document.querySelectorAll('#levels button').forEach(b =>
+                b.setAttribute('aria-pressed', b.dataset.level === level));
+            const best = saved.best[level];
+            document.getElementById('bestline').textContent = best
+                ? `Best on this board: ${best.moves} moves in ${A.time(best.time)}`
+                : 'No best on this board yet.';
+        }
+
+        function hideOpen() {
+            clearTimeout(pending);
+            pending = null;
+            open.forEach(card => {
+                card.classList.remove('up', 'wrong');
+                card.setAttribute('aria-label', 'Hidden card');
+            });
+            open = [];
+        }
+
+        function flip(card) {
+            if (card.classList.contains('up')) return;
+            // Tapping a new card while a mismatch is still showing skips the wait.
+            if (pending) hideOpen();
+            if (!timer) {
+                timer = setInterval(() => {
+                    seconds++;
+                    paintHud();
+                }, 1000);
+            }
+
+            card.classList.add('up');
+            card.setAttribute('aria-label', card.dataset.face);
+            open.push(card);
+            A.sfx('tap');
+            if (open.length < 2) return;
+
+            moves++;
+            const [a, b] = open;
+            if (a.dataset.face === b.dataset.face) {
+                a.classList.add('matched');
+                b.classList.add('matched');
+                a.disabled = b.disabled = true;
+                open = [];
+                found++;
+                A.sfx('good');
+                if (found === pairs) win();
+            } else {
+                a.classList.add('wrong');
+                b.classList.add('wrong');
+                pending = setTimeout(hideOpen, FLIP_BACK_MS);
+            }
+            paintHud();
+        }
+
+        function win() {
+            clearInterval(timer);
+            timer = null;
+            const stars = moves <= Math.ceil(pairs * 1.5) ? 3 : moves <= Math.ceil(pairs * 2.2) ? 2 : 1;
+            const best = saved.best[level];
+            const record = !best || moves < best.moves || (moves === best.moves && seconds < best.time);
+            if (record) saved.best[level] = { moves, time: seconds };
+            A.saveData('memory', saved);
+            A.add('memory', 1);
+            A.confetti();
+            A.sfx('win');
+            A.modal({
+                emoji: '⭐'.repeat(stars),
+                title: record ? 'New best!' : 'All pairs found',
+                stats: [['Moves', moves], ['Time', A.time(seconds)]],
+                actions: [{ label: 'Play again', primary: true, run: newGame }]
             });
         }
 
-        function flipCard() {
-            if (!canFlip) return;
-            if (flippedCards.length === 2) return;
-            if (flippedCards.includes(this)) return;
-            if (this.classList.contains('flipped')) return;
-            if (this.classList.contains('matched')) return;
+        gridEl.addEventListener('click', e => {
+            const card = e.target.closest('.card');
+            if (card) flip(card);
+        });
+        document.getElementById('levels').addEventListener('click', e => {
+            const btn = e.target.closest('button');
+            if (!btn) return;
+            saved.level = btn.dataset.level;
+            A.saveData('memory', saved);
+            newGame();
+        });
+        document.getElementById('new').addEventListener('click', newGame);
 
-            this.classList.add('flipped');
-            flippedCards.push(this);
-
-            if (flippedCards.length === 2) {
-                canFlip = false;
-                moves++;
-                document.getElementById('moves').textContent = moves;
-                checkMatch();
-            }
-        }
-
-        function checkMatch() {
-            const [card1, card2] = flippedCards;
-            const match = card1.dataset.symbol === card2.dataset.symbol;
-
-            if (match) {
-                pairs++;
-                document.getElementById('pairs').textContent = pairs;
-                setTimeout(() => {
-                    card1.classList.add('matched');
-                    card2.classList.add('matched');
-                    flippedCards = [];
-                    canFlip = true;
-                    if (pairs === symbols.length) {
-                        setTimeout(() => {
-                            alert(`Congratulations! You won in ${moves} moves!`);
-                        }, 500);
-                    }
-                }, 500);
-            } else {
-                setTimeout(() => {
-                    card1.classList.remove('flipped');
-                    card2.classList.remove('flipped');
-                    flippedCards = [];
-                    canFlip = true;
-                }, 1000);
-            }
-        }
-
-        function resetGame() {
-            moves = 0;
-            pairs = 0;
-            canFlip = true;
-            document.getElementById('moves').textContent = moves;
-            document.getElementById('pairs').textContent = pairs;
-            createBoard();
-        }
-
-        createBoard();
+        newGame();
     </script>
 </body>
 
