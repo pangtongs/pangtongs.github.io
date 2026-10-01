@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Biblical Support Finder</title>
+    <meta name="description" content="Find a Bible passage that can be read in support of any action. Runs a small AI model entirely in your browser.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap">
+    <style>
+        :root {
+            --bg: #ffffff;
+            --panel: #f6f6fb;
+            --line: rgba(0, 0, 0, 0.1);
+            --text: #222;
+            --muted: #666;
+            --primary: #5d5cde;
+            --accent: #3e9b42;
+            --bad: #c0392b;
+            color-scheme: light;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #181818;
+                --panel: #232323;
+                --line: rgba(255, 255, 255, 0.1);
+                --text: #f5f5f5;
+                --muted: #a3a3a3;
+                --primary: #8b8af0;
+                --accent: #6ecf72;
+                --bad: #f87171;
+                color-scheme: dark;
+            }
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font: 16px/1.6 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        main {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 32px 16px 56px;
+        }
+
+        .back {
+            color: var(--muted);
+            font-size: 14px;
+            text-decoration: none;
+        }
+
+        header {
+            text-align: center;
+            margin: 18px 0 28px;
+        }
+
+        h1 {
+            color: var(--primary);
+            font-size: clamp(26px, 6vw, 36px);
+            line-height: 1.2;
+        }
+
+        header p {
+            color: var(--muted);
+            margin-top: 8px;
+        }
+
+        .panel {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            padding: 20px;
+        }
+
+        label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .row {
+            display: flex;
+            gap: 8px;
+        }
+
+        input {
+            flex: 1;
+            min-width: 0;
+            padding: 12px 14px;
+            font: inherit;
+            color: inherit;
+            background: var(--bg);
+            border: 1px solid var(--line);
+            border-radius: 10px;
+        }
+
+        input:focus {
+            outline: 2px solid var(--accent);
+            outline-offset: 1px;
+        }
+
+        button {
+            padding: 0 20px;
+            font: inherit;
+            font-weight: 600;
+            color: #fff;
+            background: var(--accent);
+            border: 0;
+            border-radius: 10px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        button:disabled {
+            opacity: 0.55;
+            cursor: default;
+        }
+
+        .hint {
+            color: var(--muted);
+            font-size: 13px;
+            margin-top: 8px;
+        }
+
+        #status {
+            margin-top: 18px;
+            font-size: 14px;
+            color: var(--muted);
+        }
+
+        #status.error {
+            color: var(--bad);
+        }
+
+        progress {
+            width: 100%;
+            height: 8px;
+            margin-top: 8px;
+            accent-color: var(--accent);
+        }
+
+        #result {
+            margin-top: 22px;
+        }
+
+        #result p {
+            margin-bottom: 12px;
+        }
+
+        blockquote {
+            font-family: 'Source Serif 4', Georgia, serif;
+            font-size: 18px;
+            font-style: italic;
+            margin: 16px 0;
+            padding-left: 16px;
+            border-left: 3px solid var(--accent);
+        }
+
+        blockquote cite {
+            display: block;
+            margin-top: 6px;
+            font-size: 14px;
+            font-style: normal;
+            color: var(--muted);
+        }
+
+        footer {
+            color: var(--muted);
+            font-size: 13px;
+            text-align: center;
+            margin-top: 28px;
+        }
+
+        footer a {
+            color: inherit;
+        }
+    </style>
+</head>
+
+<body>
+    <main>
+        <a class="back" href="index.html">← All tools</a>
+        <header>
+            <h1>Biblical Support Finder</h1>
+            <p>Find a Bible passage that can be read in support of any action</p>
+        </header>
+
+        <section class="panel">
+            <form id="form">
+                <label for="action">Enter any action or behavior</label>
+                <div class="row">
+                    <input id="action" type="text" placeholder="e.g. wealth, enjoyment, self-care" maxlength="120" required autocomplete="off">
+                    <button id="go" type="submit">Find support</button>
+                </div>
+                <p class="hint">Runs a small AI model in your browser — nothing you type leaves your device except the verse lookup. The first search downloads the model (about 1 GB) and needs a browser with WebGPU.</p>
+            </form>
+
+            <div id="status" aria-live="polite"></div>
+            <div id="result"></div>
+        </section>
+
+        <footer>
+            Interpretations come from a small model and can be a stretch — read the passage in context.<br>
+            Model: Qwen2.5 1.5B via <a href="https://webllm.mlc.ai" target="_blank" rel="noopener">WebLLM</a> ·
+            Scripture: World English Bible via <a href="https://bible-api.com" target="_blank" rel="noopener">bible-api.com</a>
+        </footer>
+    </main>
+
+    <script type="module">
+        import { CreateMLCEngine } from 'https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.85/+esm';
+
+        const form = document.getElementById('form');
+        const input = document.getElementById('action');
+        const goBtn = document.getElementById('go');
+        const statusEl = document.getElementById('status');
+        const resultEl = document.getElementById('result');
+
+        let engine = null;
+
+        function setStatus(text, { error = false, progress = null } = {}) {
+            statusEl.className = error ? 'error' : '';
+            statusEl.replaceChildren(document.createTextNode(text));
+            if (progress != null) {
+                const bar = document.createElement('progress');
+                bar.max = 1;
+                bar.value = progress;
+                statusEl.append(bar);
+            }
+        }
+
+        async function getEngine() {
+            if (engine) return engine;
+            if (!navigator.gpu) throw new Error('This browser has no WebGPU support. Try a recent Chrome, Edge or Safari.');
+            const adapter = await navigator.gpu.requestAdapter();
+            if (!adapter) throw new Error('WebGPU is available but no GPU adapter was found.');
+            // 16-bit shaders are smaller and faster, but not every GPU supports them.
+            const model = adapter.features.has('shader-f16')
+                ? 'Qwen2.5-1.5B-Instruct-q4f16_1-MLC'
+                : 'Qwen2.5-1.5B-Instruct-q4f32_1-MLC';
+            engine = await CreateMLCEngine(model, {
+                initProgressCallback: p => setStatus(p.text, { progress: p.progress })
+            });
+            return engine;
+        }
+
+        // Step 1: ask the model for candidate references only. Small models often misquote
+        // scripture, so the verse text itself always comes from bible-api.com.
+        async function suggestReferences(llm, action) {
+            const reply = await llm.chat.completions.create({
+                messages: [
+                    {
+                        role: 'system',
+                        content: 'You are a Bible scholar. Reply with Bible references only, one per line, nothing else.'
+                    },
+                    {
+                        role: 'user',
+                        content: `List 3 Bible passages (1 to 4 verses each) that could be interpreted to support or justify "${action}". ` +
+                            'Do not pick passages that condemn it. Use full book names, e.g. "Ecclesiastes 5:18-19".'
+                    }
+                ],
+                temperature: 0.7,
+                max_tokens: 80
+            });
+            // Pull out anything shaped like "1 John 3:16-18", ignoring numbering or commentary.
+            const refs = reply.choices[0].message.content.match(/(?:[1-3] ?)?[A-Z][a-z]+(?: of [A-Z][a-z]+| [A-Z][a-z]+)? \d+:\d+(?:-\d+)?/g) || [];
+            return [...new Set(refs)].slice(0, 3);
+        }
+
+        async function fetchPassage(reference) {
+            const res = await fetch(`https://bible-api.com/${encodeURIComponent(reference)}?translation=web`);
+            if (!res.ok) return null;
+            const data = await res.json();
+            if (!data.verses || !data.verses.length || data.verses.length > 6) return null;
+            return { reference: data.reference, text: data.text.replace(/\s+/g, ' ').trim() };
+        }
+
+        function renderPassage(passage) {
+            const quote = document.createElement('blockquote');
+            const cite = document.createElement('cite');
+            cite.textContent = `— ${passage.reference} (WEB)`;
+            quote.append(passage.text, cite);
+            return quote;
+        }
+
+        async function run(action) {
+            resultEl.replaceChildren();
+            const llm = await getEngine();
+
+            setStatus('Looking for a passage…');
+            let passage = null;
+            for (let attempt = 0; attempt < 2 && !passage; attempt++) {
+                for (const ref of await suggestReferences(llm, action)) {
+                    passage = await fetchPassage(ref);
+                    if (passage) break;
+                }
+            }
+            if (!passage) throw new Error('Could not find a passage for that. Try rephrasing it.');
+
+            setStatus('Writing the interpretation…');
+            const framing = document.createElement('p');
+            const quote = renderPassage(passage);
+            const body = document.createElement('div');
+            resultEl.append(framing, quote, body);
+
+            // Step 2: interpret the real verse text, streamed as plain text.
+            const stream = await llm.chat.completions.create({
+                messages: [
+                    {
+                        role: 'system',
+                        content: 'You write short, warm, supportive Bible reflections in plain text. No markdown, no headings.'
+                    },
+                    {
+                        role: 'user',
+                        content: `Action: "${action}"\nPassage (${passage.reference}): "${passage.text}"\n\n` +
+                            'Write one sentence framing the action positively. Then a blank line. Then 2 short paragraphs ' +
+                            'explaining how this passage can be read to support the action and in what contexts that reading applies. ' +
+                            'Do not quote the passage again.'
+                    }
+                ],
+                stream: true,
+                temperature: 0.7,
+                max_tokens: 350
+            });
+
+            let text = '';
+            for await (const chunk of stream) {
+                text += chunk.choices[0]?.delta?.content || '';
+                const [first, ...rest] = text.trim().split(/\n\s*\n/);
+                framing.textContent = first || '';
+                body.replaceChildren(...rest.map(para => {
+                    const p = document.createElement('p');
+                    p.textContent = para;
+                    return p;
+                }));
+            }
+            setStatus('');
+        }
+
+        form.addEventListener('submit', async e => {
+            e.preventDefault();
+            const action = input.value.trim();
+            if (!action) return;
+            goBtn.disabled = true;
+            try {
+                await run(action);
+            } catch (err) {
+                console.error(err);
+                setStatus(err.message || 'Something went wrong. Please try again.', { error: true });
+            } finally {
+                goBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+
+</html>
