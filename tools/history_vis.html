@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nusantara & Philippine Polities — Historical Atlas</title>
+<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+<style>
+:root {
+  color-scheme: dark;
+  --bg:#0a1420; --panel:#111f2e; --line:#293c50;
+  --text:#e7eef6; --muted:#a3b4c6; --accent:#5ee0ba;
+}
+* { box-sizing:border-box }
+body {
+  margin:0; background:var(--bg); color:var(--text);
+  font:15px/1.55 system-ui,sans-serif;
+}
+header { padding:24px 28px 15px; max-width:1550px; margin:auto }
+.eyebrow {
+  color:var(--accent); text-transform:uppercase;
+  letter-spacing:.15em; font-size:11px; font-weight:750;
+}
+h1 { font-size:clamp(23px,3.4vw,38px); margin:6px 0 }
+h2 { margin:0 0 8px; font-size:21px }
+p { margin:8px 0 }
+.sub,.muted { color:var(--muted) }
+main { max-width:1550px; margin:auto; padding:0 22px 25px }
+.layout { display:grid; grid-template-columns:minmax(0,1fr) 330px; gap:15px }
+.mapbox {
+  position:relative; background:#0c1b2a; border:1px solid var(--line);
+  border-radius:16px; overflow:hidden;
+}
+svg { display:block; width:100%; height:auto; min-height:340px }
+.maphead {
+  position:absolute; top:16px; left:20px; z-index:1; pointer-events:none;
+}
+#bigyear { font-size:44px; font-weight:800; line-height:1.1 }
+#mapcaption { color:var(--muted); font-size:12px; max-width:260px }
+.mapfoot {
+  padding:10px 17px; font-size:11px; color:var(--muted);
+  border-top:1px solid var(--line);
+}
+aside {
+  padding:19px; background:var(--panel);
+  border:1px solid var(--line); border-radius:16px;
+}
+.controls {
+  padding:18px; margin-top:15px; background:var(--panel);
+  border:1px solid var(--line); border-radius:16px;
+}
+.row { display:flex; gap:12px; align-items:center; flex-wrap:wrap }
+button,select {
+  font:inherit; color:var(--text); background:#203246;
+  border:1px solid #3b526b; border-radius:8px; padding:8px 12px;
+}
+button { cursor:pointer }
+button:hover { background:#304a64 }
+button:focus-visible,select:focus-visible,input:focus-visible {
+  outline:3px solid var(--accent); outline-offset:3px;
+}
+button:disabled { opacity:.4; cursor:default }
+#slider { width:100%; accent-color:var(--accent); margin:19px 0 8px }
+#ticks { display:flex; flex-wrap:wrap; gap:6px }
+#ticks button { font-size:11px; padding:4px 8px }
+#ticks button.active { background:#245448; border-color:var(--accent) }
+.options { margin-top:17px; font-size:12px; color:var(--muted) }
+.options label { display:flex; align-items:center; gap:5px }
+input[type=checkbox] { accent-color:var(--accent) }
+.legend { display:flex; flex-wrap:wrap; gap:13px; margin:12px 0; font-size:11px }
+.key { display:inline-block; width:18px; height:10px; margin-right:5px }
+.corekey { background:#ddbb6d88; border:1px dashed #ddbb6d }
+.modernkey { background:#61dcb688; border:1px solid #61dcb6 }
+.linkkey { height:0; border-top:2px dashed #cfb0ff; vertical-align:middle }
+.dotkey { border-radius:50%; width:8px; height:8px; background:white }
+.notice {
+  padding:12px; background:#302918; border-left:3px solid #d8b65a;
+  color:#ebd9ab; font-size:12px; margin:14px 0;
+}
+#entities { display:grid; gap:7px; margin:15px 0 }
+.entity { text-align:left; font-size:13px; border-left:4px solid var(--c) }
+#detail {
+  padding:12px; background:#0b1724; border-radius:9px;
+  font-size:13px; margin-top:10px;
+}
+#detail strong { display:block; margin-bottom:5px }
+a { color:#91d8ff }
+details { margin-top:14px; font-size:12px; color:var(--muted) }
+summary { cursor:pointer; color:var(--text) }
+li { margin:6px 0 }
+.label {
+  font:600 12px system-ui; fill:#eef5fa;
+  paint-order:stroke; stroke:#0b1724; stroke-width:3.5px;
+  stroke-linejoin:round; pointer-events:none;
+}
+.geolabel {
+  font:11px system-ui; fill:#7890a5; letter-spacing:1.6px;
+  pointer-events:none;
+}
+.hit { cursor:pointer }
+#status { color:#f0ce87; font-size:12px }
+.small { font-size:11px }
+@media(max-width:950px) {
+  .layout { grid-template-columns:1fr }
+  aside { display:block }
+  header { padding:19px }
+  main { padding:0 12px 18px }
+  svg { min-height:280px }
+  #bigyear { font-size:31px }
+  .maphead { top:12px; left:14px }
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="eyebrow">An evidence-aware historical atlas</div>
+  <h1>Nusantara & Philippine Polities</h1>
+  <div class="sub">
+    Selected kingdoms, maritime networks, colonial territories and modern states.
+    c.400 CE–2026.
+  </div>
+</header>
+
+<main>
+<div class="layout">
+  <section class="mapbox" aria-label="Historical map">
+    <div class="maphead">
+      <div id="bigyear"></div>
+      <div id="mapcaption"></div>
+    </div>
+    <svg id="map" viewBox="0 0 1100 690"
+         role="img" aria-labelledby="svgtitle svgdesc">
+      <title id="svgtitle">Historical Nusantara map</title>
+      <desc id="svgdesc">
+        Use the year controls and the polity buttons to explore the map.
+      </desc>
+    </svg>
+    <div class="mapfoot">
+      Equal-area projection · Fixed geographic scale · Present-day coastlines
+      · No maritime borders or EEZs · Small islands generalized
+    </div>
+  </section>
+
+  <aside>
+    <div class="eyebrow" id="period"></div>
+    <h2 id="title"></h2>
+    <p id="story"></p>
+    <div class="notice" id="caution"></div>
+    <div id="entities" aria-label="Polities shown"></div>
+    <div id="detail" aria-live="polite">
+      Choose a polity to inspect its evidence and mapping method.
+    </div>
+    <details>
+      <summary>Sources for this snapshot</summary>
+      <ul id="sources"></ul>
+    </details>
+  </aside>
+</div>
+
+<section class="controls" aria-label="Timeline controls">
+  <div class="row">
+    <button id="prev" aria-label="Previous snapshot">←</button>
+    <button id="play">▶ Play</button>
+    <button id="next" aria-label="Next snapshot">→</button>
+    <label for="yearSelect">Jump to</label>
+    <select id="yearSelect"></select>
+    <span class="muted small">Key-year steps, not continuous reconstruction</span>
+  </div>
+  <label for="slider" class="small muted">Select a historical snapshot</label>
+  <input id="slider" type="range" min="0" value="3" step="1">
+  <div id="ticks"></div>
+  <div class="row options">
+    <label><input id="cores" type="checkbox" checked> Schematic core regions</label>
+    <label><input id="links" type="checkbox" checked> Claims / network links</label>
+    <label><input id="compare" type="checkbox"> Modern Indonesia outline</label>
+    <label><input id="labels" type="checkbox" checked> Labels</label>
+  </div>
+  <div class="legend">
+    <span><i class="key dotkey"></i>Documented center / evidence site</span>
+    <span><i class="key corekey"></i>Schematic core, not a known border</span>
+    <span><i class="key linkkey"></i>Claim / connection, not continuous control</span>
+    <span><i class="key modernkey"></i>Generalized territorial footprint</span>
+  </div>
+  <div id="status" role="status">Loading geographical data…</div>
+</section>
+
+<details>
+  <summary>Read this map correctly: scope, accuracy and area</summary>
+  <p>
+    “Nusantara” is used here as a geographic organizing term, not as a claim
+    that the region was one country or that all Philippine polities were
+    Indonesian dependencies. Only selected polities are included.
+  </p>
+  <p>
+    Historical core polygons are hand-drawn illustrations around documented
+    regions. Their vertices are NOT taken from historical boundary surveys.
+    They are not full imperial extents, minimum-area estimates, or statistical
+    confidence intervals. No historical square-kilometer totals are calculated.
+    Uncolored land does not mean uninhabited or politically unorganized.
+  </p>
+  <p>
+    Dashed connections show selected relationships or textual claims.
+    They are not reconstructed sailing routes. A place named in a court poem
+    is not automatically an administered province.
+  </p>
+  <p>
+    Modern and colonial polygons use generalized Natural Earth country
+    geometry. Colonial outlines are geographic proxies, not reconstructions
+    of local administration or military control. Present coastlines are used
+    throughout. The 2026 endpoint is a reference view, not a live border service.
+  </p>
+  <p>
+    The same equal-area projection and geographic frame are retained at every
+    date. This supports visual comparison of mapped land, but does not turn
+    uncertain historical regions into measured territorial sizes.
+  </p>
+</details>
+</main>
+
+<script>
+/* Sources support historical interpretation, not hand-drawn polygon vertices. */
+const S = {
+  kutai: [
+    "ANU Press — The Earliest Indic State: Kutai",
+    "https://press.anu.edu.au/downloads/press/p69411/mobile/ch15s02.html"
+  ],
+  sri: [
+    "ANU Press — Srivijaya: A Centre of Learning?",
+    "https://press.anu.edu.au/downloads/press/p69411/mobile/ch15s05.html"
+  ],
+  metEarly: [
+    "Metropolitan Museum — Lost Kingdoms",
+    "https://resources.metmuseum.org/resources/metpublications/pdf/Lost_Kingdoms_Hindu_Buddhist_Sculpture_of_Early_Southeast_Asia.pdf"
+  ],
+  java: [
+    "ANU Press — Temples of Language in Ancient Java",
+    "https://press.anu.edu.au/downloads/press/p69411/mobile/ch15s06.html"
+  ],
+  laguna: [
+    "National Museum of the Philippines — 9th–10th century maritime evidence",
+    "https://www.nationalmuseum.gov.ph/2022/09/20/the-9th-to-10th-century-archaeological-evidence-of-maritime-relations-between-the-philippines-and-the-islands-of-southeast-asia/"
+  ],
+  maja: [
+    "Metropolitan Museum — Southeast Asia, 1000–1400",
+    "https://82nd-and-fifth.metmuseum.org/toah/ht/07/sse.html"
+  ],
+  claims: [
+    "Territories of Majapahit — overview and textual references",
+    "https://en.wikipedia.org/wiki/Territories_of_Majapahit"
+  ],
+  earlyModern: [
+    "Metropolitan Museum — Southeast Asia, 1400–1600",
+    "https://www.metmuseum.org/toah/ht/08/sse.html"
+  ],
+  voc: [
+    "Metropolitan Museum — Southeast Asia, 1600–1800",
+    "https://www.metmuseum.org/toah/ht/09/sse.html"
+  ],
+  cebu: [
+    "National Museum of the Philippines — Cebu exhibition documentation",
+    "https://weblinks.nationalmuseum.gov.ph/wp-content/uploads/2023/07/31111950/Exhibition-Image-list-_NMP-CEBU.pdf"
+  ],
+  brunei: [
+    "Universiti Brunei Darussalam — Brunei's economy before oil",
+    "https://fass.ubd.edu.bn/SEA/vol7/7-bn-economyb4oil-nsab.pdf"
+  ],
+  sulu: [
+    "Journal of Maritime Archaeology — Sea Nomads, Sultans, and Raiders",
+    "https://link.springer.com/article/10.1007/s11457-025-09481-3"
+  ],
+  mag: [
+    "NCCA Philippines — Magindanao",
+    "https://ncca.gov.ph/about-culture-and-arts/culture-profile/glimpses-peoples-of-the-philippines/magindanao/"
+  ],
+  aceh: [
+    "National Archives of Indonesia — Aceh in the seventeenth century",
+    "https://sejarah-nusantara.anri.go.id/hartakarun/item/05/introduction"
+  ],
+  gowa: [
+    "Gowa Regency — Historical background",
+    "https://gowakab.go.id/site/tentang-gowa/"
+  ],
+  indo: [
+    "Canon of the Netherlands — Indonesia",
+    "https://www.canonvannederland.nl/en/indonesie"
+  ],
+  ph: [
+    "US Office of the Historian — Philippine independence, 1946",
+    "https://history.state.gov/historicaldocuments/frus1946v08/d686"
+  ],
+  papua: [
+    "United Nations — Transfer of administration, 1 May 1963",
+    "https://peacekeeping.un.org/sites/default/files/past/unsfbackgr.html"
+  ],
+  timor: [
+    "United Nations — East Timor chronology",
+    "https://peacekeeping.un.org/en/mission/past/etimor/Untaetchrono.html"
+  ],
+  independence: [
+    "United Nations — East Timor independence, 20 May 2002",
+    "https://press.un.org/en/2002/sc7403.doc.htm"
+  ],
+  geography: [
+    "Natural Earth — Boundary policy and limitations",
+    "https://www.naturalearthdata.com/about/disputed-boundaries-policy/"
+  ]
+};
+
+const C = {
+  gold:"#efc568", purple:"#c5a0ff", blue:"#67bdf4",
+  green:"#59d7ad", red:"#f28b82", orange:"#f1a766",
+  pink:"#e5a5d4", gray:"#b9c8d7"
+};
+const P = {
+  kutai:[116.72,-0.36], palembang:[104.76,-2.99],
+  jambi:[103.61,-1.61], bangka:[105.8,-2.4], lampung:[105.25,-5.3],
+  java:[110.49,-7.75], maja:[112.38,-7.55],
+  laguna:[121.45,14.33], butuan:[125.54,8.95],
+  kedah:[100.42,5.69], thai:[99.96,8.43],
+  brunei:[114.97,4.89], manila:[120.98,14.60],
+  cebu:[123.90,10.30], sulu:[121.0,6.05],
+  mag:[124.25,7.20], aceh:[95.32,5.55],
+  demak:[110.64,-6.90], mataram:[110.40,-7.83],
+  gowa:[119.45,-5.20], batavia:[106.83,-6.13],
+  malacca:[102.25,2.20], ternate:[127.37,0.79],
+  bali:[115.2,-8.4], papua:[132.3,-2.9],
+  jakarta:[106.83,-6.18]
+};
+
+/* Schematic regional shapes: illustrative, not archival boundaries. */
+const R = {
+  sri:[[102.2,-1.1],[104,-0.8],[106.8,-1.7],[106.9,-3.3],
+       [105.9,-5.9],[104.4,-5.8],[102.2,-3.1]],
+  java:[[109.6,-6.5],[112,-6.7],[112.2,-8.2],[110,-8.3],[109.5,-7.4]],
+  maja:[[110.3,-6.5],[114.7,-6.8],[115.7,-8.1],[115.4,-8.8],
+        [112,-8.5],[110.4,-8.1]],
+  mataram:[[108.5,-6.7],[112.8,-6.5],[114,-7.2],
+           [114,-8.7],[109,-8.0]],
+  aceh:[[95.1,5.8],[97.4,5.5],[98.0,4.3],[96.9,3.4],[95.1,4.6]],
+  brunei:[[113.9,4.1],[115.7,5.4],[116.2,4.5],[115.3,3.8]],
+  sulu:[[119.5,4.6],[122.5,6.4],[122.1,6.9],[120.2,5.9]],
+  mag:[[123.7,6.1],[125.4,6.2],[125.3,7.7],[124.2,7.8],[123.7,7]],
+  gowa:[[119.2,-4.4],[120.4,-4.5],[120.5,-5.7],[119.4,-5.8]]
+};
+
+const H = (name,color,point,region,note,sources,links=[]) =>
+  ({name,color,point,region,note,sources,links,type:"historical"});
+const T = (name,color,code,note,sources,extra={}) =>
+  ({name,color,code,note,sources,type:"territory",...extra});
+const link = (point,label) => ({point,label});
+
+const srivijaya = () => H(
+  "Srivijaya",C.gold,P.palembang,R.sri,
+  "Palembang and southern Sumatran inscription sites anchor this illustration. "+
+  "The shaded patch is a schematic heartland, not a measured kingdom boundary.",
+  ["sri","metEarly"]
+);
+const brunei = () => H(
+  "Brunei",C.blue,P.brunei,R.brunei,
+  "Brunei Bay is shown as a core region, not the full sultanate. "+
+  "Influence beyond it varied over time; this is not a map of all Borneo as Bruneian land.",
+  ["brunei"]
+);
+const sulu = () => H(
+  "Sulu",C.purple,P.sulu,R.sulu,
+  "The Jolo–Sulu island chain is a schematic core. Mainland dependencies, "+
+  "changing alliances and later North Borneo claims are not converted into a fixed border.",
+  ["sulu"]
+);
+const mag = () => H(
+  "Maguindanao",C.pink,P.mag,R.mag,
+  "A schematic lower Pulangi/Cotabato core. Wider ritual authority and "+
+  "alliances are not the same thing as uniform territorial administration.",
+  ["mag","sulu"]
+);
+const philippines = () => T(
+  "Philippines",C.blue,"PHL",
+  "Generalized modern land outline; independent from the United States on "+
+  "4 July 1946. Maritime claims and small boundary details are not represented.",
+  ["ph","geography"]
+);
+const indonesia = (mode="all") => T(
+  "Indonesia",C.green,"IDN",
+  mode==="prePapua"
+    ? "Late-1949 reconstruction excluding western New Guinea. Modern coastlines "+
+      "are reused; the separation of offshore Papuan islands is approximate."
+    : "Generalized land footprint. This depicts administration at regional scale, "+
+      "not maritime territory, EEZs, or an adjudication of disputed political status.",
+  ["indo","papua","geography"],{mode}
+);
+const timor = (name,color,note,sources,occupation=false) =>
+  T(name,color,"TLS",note,sources,{occupation});
+
+const frames = [
+{
+  year:400, label:"c.400", period:"Early inscriptional evidence",
+  title:"Kutai: evidence before borders",
+  story:"The yupa inscriptions attest a royal center in eastern Borneo. "+
+        "Their dating is approximate; they do not supply a territorial perimeter.",
+  caution:"Point-only snapshot. No defensible kingdom area can be derived from these inscriptions.",
+  entities:[
+    H("Kutai / Mulawarman",C.gold,P.kutai,null,
+      "Approximate Muara Kaman location. The date represents an early inscriptional "+
+      "horizon, not a securely known founding year.",["kutai"])
+  ]
+},
+{
+  year:686,label:"686",period:"Inscription-anchored maritime polity",
+  title:"Srivijaya in southern Sumatra",
+  story:"Late-seventh-century inscriptions locate royal activity around "+
+        "Palembang, Jambi, Bangka and Lampung.",
+  caution:"The core shading is hand-drawn. Its edges are not recovered historical borders.",
+  entities:[{
+    ...srivijaya(),
+    links:[
+      link(P.jambi,"Jambi-area inscription evidence"),
+      link(P.bangka,"Bangka inscription evidence"),
+      link(P.lampung,"Lampung inscription evidence")
+    ]
+  }]
+},
+{
+  year:900,label:"900",period:"Multiple centers, connected seas",
+  title:"Srivijaya, Java and Philippine evidence",
+  story:"Srivijaya and central Javanese courts coexist. In the Philippines, "+
+        "the Laguna Copperplate and Butuan boats provide a separate window "+
+        "onto the region's connected societies.",
+  caution:"The Laguna inscription is not proof that Luzon belonged to Srivijaya or Java.",
+  entities:[
+    {...srivijaya(),links:[
+      link(P.kedah,"Malay Peninsula network: schematic"),
+      link(P.thai,"Peninsular Buddhist connections: schematic")
+    ]},
+    H("Central Javanese Mataram",C.red,P.java,R.java,
+      "Central Java's temple and inscriptional landscape. This is a regional "+
+      "illustration, not the dynasty's complete territorial extent.",["java"]),
+    H("Laguna inscription site",C.blue,P.laguna,null,
+      "Find region of the inscription dated 900 CE. A document/evidence marker, "+
+      "not a polygon for a unified Philippine kingdom.",["laguna"]),
+    H("Butuan maritime evidence",C.purple,P.butuan,null,
+      "Archaeological boat evidence spans the late eighth to early tenth centuries. "+
+      "It does not establish an exact royal boundary in the year 900.",["laguna"])
+  ]
+},
+{
+  year:1365,label:"1365",period:"Court text and claimed reach",
+  title:"Majapahit: core versus claims",
+  story:"The Nagarakretagama celebrates Majapahit and names distant places. "+
+        "The Javanese core and the poem's wider political geography are shown separately.",
+  caution:"Dashed links are selected textual claims, not proof of direct rule. "+
+          "Sulu is not shorthand for the whole Philippines.",
+  entities:[
+    H("Majapahit",C.gold,P.maja,R.maja,
+      "Shading illustrates a Java–Bali core region. Dashed endpoints select "+
+      "places associated with the poem's claims; identifications and the degree "+
+      "of subordination are debated. Neither layer is a measured imperial perimeter.",
+      ["maja","claims"],[
+        link(P.palembang,"Palembang: textual claim"),
+        link(P.jambi,"Jambi/Malayu: textual claim"),
+        link(P.brunei,"Borneo: selected claimed place"),
+        link(P.gowa,"South Sulawesi: selected claimed region"),
+        link(P.ternate,"Maluku: selected claimed region"),
+        link(P.sulu,"Sulu: claimed relationship, not all Philippines"),
+        link(P.papua,"Western New Guinea: place identification approximate")
+      ])
+  ]
+},
+{
+  year:1521,label:"1521",period:"Courts and ports",
+  title:"Brunei and Philippine polities",
+  story:"Brunei and Cebu illustrate the diversity of political centers. "+
+        "Demak and Portuguese Malacca mark changes farther west.",
+  caution:"Selected centers only. Brunei's Manila connection is shown as influence, "+
+          "not a solid territorial corridor.",
+  entities:[
+    {...brunei(),links:[link(P.manila,"Manila: Bruneian influence / elite connections")]},
+    H("Cebu — Rajah Humabon",C.green,P.cebu,null,
+      "A documented ruler and port in 1521. No full rajahnate boundary is asserted.",
+      ["cebu"]),
+    sulu(),
+    H("Demak",C.red,P.demak,null,
+      "A north-coast Javanese political center. Its changing territorial reach "+
+      "is not reconstructed in this snapshot.",["earlyModern"]),
+    H("Portuguese Malacca",C.gray,P.malacca,null,
+      "Port held by Portugal after 1511; not the whole Malay Peninsula.",
+      ["earlyModern"])
+  ]
+},
+{
+  year:1650,label:"c.1650",period:"Sultanates and company enclaves",
+  title:"No single archipelago-wide kingdom",
+  story:"Selected sultanates coexist with European-controlled ports. "+
+        "The VOC is not shown as already ruling all of modern Indonesia.",
+  caution:"Core regions are schematic and incomplete. Small port markers do not "+
+          "mean their wider commercial influence was small.",
+  entities:[
+    H("Aceh",C.gold,P.aceh,R.aceh,
+      "Northern Sumatran core under the seventeenth-century sultanate. "+
+      "Wider coastal influence is omitted.",["aceh"]),
+    H("Mataram Sultanate",C.red,P.mataram,R.mataram,
+      "Central/eastern Javanese core illustration; not a survey of all dependencies.",
+      ["earlyModern","voc"]),
+    H("Gowa–Talloq",C.green,P.gowa,R.gowa,
+      "South Sulawesi core before the late-1660s defeat by the VOC and its allies.",
+      ["gowa"]),
+    brunei(),sulu(),mag(),
+    H("VOC — Batavia",C.orange,P.batavia,null,
+      "Selected company headquarters, not the entire VOC network or a colony-wide border.",
+      ["voc"]),
+    H("Spanish Manila",C.gray,P.manila,null,
+      "Selected colonial center. This marker does not imply Spanish control over "+
+      "all Mindanao or Sulu.",["earlyModern","sulu"])
+  ]
+},
+{
+  year:1930,label:"1930",period:"Colonial territorial framework",
+  title:"The Dutch East Indies and US Philippines",
+  story:"The map now switches from court-centered regional illustrations "+
+        "to generalized colonial territorial footprints.",
+  caution:"Present-day country polygons are used as colonial geographic proxies. "+
+          "They do not reconstruct every local border or degree of control.",
+  entities:[
+    T("Dutch East Indies",C.orange,"IDN",
+      "Broad geographic proxy based on today's Indonesian land outline. "+
+      "Local administration and resistance are not mapped.",["indo","geography"]),
+    T("US-administered Philippines",C.blue,"PHL",
+      "Generalized Philippine land footprint, not a detailed 1930 cadastral map.",
+      ["ph","geography"]),
+    timor("Portuguese Timor",C.pink,
+      "Modern Timor-Leste geometry used as a geographic proxy for Portuguese Timor.",
+      ["timor","geography"])
+  ]
+},
+{
+  year:1945,label:"1945",period:"Independence and contested control",
+  title:"Indonesia proclaims independence",
+  story:"Indonesia's proclamation on 17 August begins a revolutionary period "+
+        "in which political claims and effective military control do not coincide.",
+  caution:"No solid Republic-wide territorial fill is drawn. This snapshot does "+
+          "not pretend to reconstruct the shifting 1945 front lines.",
+  entities:[
+    H("Indonesian proclamation — Jakarta",C.green,P.jakarta,null,
+      "Event marker for the independence proclamation. Not a claim that every "+
+      "island was under effective Republican control on that date.",["indo"]),
+    H("Philippines — Manila",C.blue,P.manila,null,
+      "Postwar transition marker. Independence from the United States followed "+
+      "on 4 July 1946.",["ph"])
+  ]
+},
+{
+  year:1949,label:"1949",period:"Snapshot: after 27 December",
+  title:"Sovereignty transfer; New Guinea excluded",
+  story:"The Netherlands transfers sovereignty to the federal United States "+
+        "of Indonesia. Western New Guinea remains outside the transfer.",
+  caution:"Generalized late-December footprint. Offshore Papua separation is "+
+          "approximate; this is not the unitary-state arrangement established in 1950.",
+  entities:[indonesia("prePapua"),philippines()]
+},
+{
+  year:1963,label:"1963",period:"Snapshot: after 1 May",
+  title:"Western New Guinea administration changes",
+  story:"The UN transfers administration of western New Guinea to Indonesia "+
+        "on 1 May 1963.",
+  caution:"The fill represents administration. It does not resolve controversies "+
+          "over Papuan self-determination or represent a new 1963 boundary survey.",
+  entities:[indonesia(),philippines(),
+    timor("Portuguese Timor",C.pink,"Still outside Indonesian administration.",
+      ["timor"])]
+},
+{
+  year:1976,label:"1976",period:"Occupation is not consensual union",
+  title:"East Timor under Indonesian occupation",
+  story:"After the 1975 invasion, Indonesia annexes East Timor in 1976. "+
+        "The UN does not recognize the annexation.",
+  caution:"East Timor is a separate hatched layer: occupation/annexation, "+
+          "not internationally recognized Indonesian sovereignty.",
+  entities:[indonesia(),philippines(),
+    timor("Occupied East Timor",C.red,
+      "Separate territory under Indonesian occupation. Hatching denotes the "+
+      "non-recognized annexation; no claim of uniform military control is made.",
+      ["timor"],true)]
+},
+{
+  year:1999,label:"1999",period:"Snapshot: after 25 October",
+  title:"East Timor's UN transition",
+  story:"Following the referendum and the end of Indonesian administration, "+
+        "UNTAET administers East Timor.",
+  caution:"This represents late 1999, not the situation at the start of the year.",
+  entities:[indonesia(),philippines(),
+    timor("East Timor — UNTAET",C.purple,
+      "UN transitional administration, before independence in 2002.",["timor"])]
+},
+{
+  year:2002,label:"2002",period:"Snapshot: after 20 May",
+  title:"Timor-Leste becomes independent",
+  story:"Timor-Leste becomes an independent state on 20 May 2002.",
+  caution:"Generalized land outlines. Maritime delimitations are excluded.",
+  entities:[indonesia(),philippines(),
+    timor("Timor-Leste",C.purple,"Independent state from 20 May 2002.",
+      ["independence"])]
+},
+{
+  year:2026,label:"2026",period:"Present-day reference • 4 September",
+  title:"Modern states, historical connections",
+  story:"Indonesia, the Philippines, Brunei, Malaysia and Timor-Leste are "+
+        "displayed as separate states, not as the continuation of one ancient empire.",
+  caution:"Generalized reference geography, not a live border feed. "+
+          "Historical dynasties are not mapped as present-day sovereign territories.",
+  entities:[indonesia(),philippines(),
+    T("Malaysia",C.gold,"MYS","Modern reference footprint.",["geography"]),
+    T("Brunei",C.orange,"BRN","Modern reference footprint, not the historical sultanate's reach.",
+      ["geography"]),
+    timor("Timor-Leste",C.purple,"Modern reference footprint.",
+      ["independence","geography"])]
+}
+];
+
+const $ = id => document.getElementById(id);
+let index = 3, timer = null, countries = null;
+const W=1100,Ht=690;
+let projection,path,land,overlay,comparison,labels;
+
+function sourceList(keys) {
+  return [...new Set(keys)].map(k => {
+    const s=S[k];
+    return `<li><a href="${s[1]}" target="_blank" rel="noopener noreferrer">${s[0]}</a></li>`;
+  }).join("");
+}
+
+/* Normalize polygon winding for D3's spherical geometry convention. */
+function normalizeGeometry(g) {
+  function rings(poly) {
+    return poly.map((ring,i) => {
+      const area=d3.geoArea({type:"Polygon",coordinates:[ring]});
+      const reverse=i===0 ? area>2*Math.PI : area<2*Math.PI;
+      return reverse ? [...ring].reverse() : ring;
+    });
+  }
+  if(g.type==="Polygon") return {...g,coordinates:rings(g.coordinates)};
+  if(g.type==="MultiPolygon")
+    return {...g,coordinates:g.coordinates.map(rings)};
+  return g;
+}
+function polygon(coords) {
+  return normalizeGeometry({
+    type:"Polygon",coordinates:[[...coords,coords[0]]]
+  });
+}
+function getCountry(code) {
+  return countries.features.find(f =>
+    f.properties.ADM0_A3===code || f.properties.ISO_A3===code);
+}
+function territoryGeometry(e) {
+  const f=getCountry(e.code);
+  if(!f) return null;
+  if(e.mode!=="prePapua") return f.geometry;
+  const polys=f.geometry.type==="Polygon"
+    ? [f.geometry.coordinates] : f.geometry.coordinates;
+  return {
+    type:"MultiPolygon",
+    coordinates:polys.filter(poly=>{
+      const c=d3.geoCentroid({type:"Polygon",coordinates:poly});
+      // Coarse island-level split; explicitly described as approximate.
+      return !(c[0]>130 && c[1]>-5.5);
+    })
+  };
+}
+function inspect(e) {
+  $("detail").innerHTML=
+    `<strong style="color:${e.color}">${e.name}</strong>`+
+    `<p>${e.note}</p>`+
+    (e.type==="historical"
+      ? `<p class="muted small">Area: not defensibly quantified in this dataset.</p>`
+      : `<p class="muted small">Generalized land footprint; no sea-area total.</p>`)+
+    `<ul>${sourceList(e.sources)}</ul>`;
+}
+function drawShape(g,color,dashed=false) {
+  return overlay.append("path").attr("d",path(g))
+    .attr("fill",color).attr("fill-opacity",dashed?.34:.57)
+    .attr("stroke",color).attr("stroke-width",dashed?1.5:.9)
+    .attr("stroke-dasharray",dashed?"5 4":null);
+}
+function drawEntity(e) {
+  if(e.type==="territory") {
+    const g=territoryGeometry(e);
+    if(!g) return;
+    drawShape(g,e.color).attr("class","hit")
+      .attr("tabindex",0).attr("role","button")
+      .attr("aria-label",e.name)
+      .on("click",()=>inspect(e))
+      .on("keydown",ev=>{
+        if(ev.key==="Enter"||ev.key===" ") {ev.preventDefault();inspect(e);}
+      }).append("title").text(e.name);
+    if(e.occupation) overlay.append("path")
+      .attr("d",path(g)).attr("fill","url(#occupation)")
+      .attr("pointer-events","none");
+
+    if($("labels").checked) {
+      const anchors={
+        IDN:[118,-4],PHL:[123,15.8],TLS:[127,-10.5],
+        MYS:[103,5.8],BRN:[116,6.4]
+      };
+      const p=projection(anchors[e.code] || d3.geoCentroid(g));
+      labels.append("text").attr("class","label")
+        .attr("x",p[0]).attr("y",p[1]).attr("text-anchor","middle")
+        .text(e.name);
+    }
+    return;
+  }
+
+  if(e.region && $("cores").checked) {
+    drawShape(polygon(e.region),e.color,true)
+      .attr("clip-path","url(#landclip)")
+      .attr("class","hit").on("click",()=>inspect(e))
+      .append("title").text(e.name+" — schematic core, not known borders");
+  }
+  if($("links").checked) e.links.forEach(l=>{
+    overlay.append("path")
+      .attr("d",path({type:"LineString",coordinates:[e.point,l.point]}))
+      .attr("fill","none").attr("stroke",e.color)
+      .attr("stroke-width",1.6).attr("stroke-dasharray","6 5")
+      .attr("opacity",.8)
+      .append("title").text(l.label+"; schematic link, not a sailing route");
+    const p=projection(l.point);
+    overlay.append("circle").attr("cx",p[0]).attr("cy",p[1])
+      .attr("r",4).attr("fill","#0b1724").attr("stroke",e.color)
+      .attr("stroke-width",1.8).append("title").text(l.label);
+  });
+
+  const p=projection(e.point);
+  overlay.append("circle").attr("cx",p[0]).attr("cy",p[1])
+    .attr("r",6).attr("fill",e.color)
+    .attr("stroke","#fff").attr("stroke-width",1.2)
+    .attr("class","hit").on("click",()=>inspect(e))
+    .append("title").text(e.name);
+  if($("labels").checked)
+    labels.append("text").attr("class","label")
+      .attr("x",p[0]+9).attr("y",p[1]-9).text(e.name);
+}
+
+function render() {
+  const f=frames[index];
+  $("slider").value=index;
+  $("slider").setAttribute("aria-valuetext",`${f.label}: ${f.title}`);
+  $("yearSelect").value=index;
+  $("bigyear").textContent=f.label;
+  $("period").textContent=f.period;
+  $("mapcaption").textContent=f.year<1930
+    ? "Historical centers and schematic regions" : "Generalized territorial reference";
+  $("title").textContent=f.title;
+  $("story").textContent=f.story;
+  $("caution").textContent=f.caution;
+  $("svgtitle").textContent=`${f.label}: ${f.title}`;
+  $("svgdesc").textContent=f.story+" "+f.caution;
+  $("prev").disabled=index===0;
+  $("next").disabled=index===frames.length-1;
+  $("sources").innerHTML=sourceList(f.entities.flatMap(e=>e.sources));
+  $("entities").replaceChildren();
+  f.entities.forEach(e=>{
+    const b=document.createElement("button");
+    b.className="entity";b.style.setProperty("--c",e.color);
+    b.textContent=e.name;b.onclick=()=>inspect(e);
+    $("entities").append(b);
+  });
+  document.querySelectorAll("#ticks button").forEach((b,i)=>{
+    b.classList.toggle("active",i===index);
+    b.setAttribute("aria-pressed",String(i===index));
+  });
+  $("detail").textContent="Choose a polity to inspect its evidence and mapping method.";
+  if(!countries) return;
+  overlay.selectAll("*").remove();
+  labels.selectAll("*").remove();
+  comparison.selectAll("*").remove();
+  f.entities.forEach(drawEntity);
+  if($("compare").checked) comparison.append("path")
+    .attr("d",path(getCountry("IDN")))
+    .attr("fill","none").attr("stroke","#f5fafc")
+    .attr("stroke-width",1.4).attr("stroke-dasharray","3 3")
+    .attr("pointer-events","none");
+}
+
+function stop() {
+  clearInterval(timer);timer=null;$("play").textContent="▶ Play";
+}
+function go(i,user=true) {
+  if(user) stop();
+  index=Math.max(0,Math.min(frames.length-1,i));render();
+}
+$("slider").max=frames.length-1;
+frames.forEach((f,i)=>{
+  const o=document.createElement("option");
+  o.value=i;o.textContent=`${f.label} — ${f.title}`;
+  $("yearSelect").append(o);
+  const b=document.createElement("button");
+  b.textContent=f.label;b.onclick=()=>go(i);
+  $("ticks").append(b);
+});
+$("slider").oninput=e=>go(+e.target.value);
+$("yearSelect").onchange=e=>go(+e.target.value);
+$("prev").onclick=()=>go(index-1);
+$("next").onclick=()=>go(index+1);
+$("play").onclick=()=>{
+  if(timer) return stop();
+  if(index===frames.length-1) go(0,false);
+  $("play").textContent="❚❚ Pause";
+  timer=setInterval(()=>{
+    if(index===frames.length-1) return stop();
+    go(index+1,false);
+  },2600);
+};
+["cores","links","compare","labels"].forEach(id=>$(id).onchange=render);
+
+async function init() {
+  render();
+  if(!window.d3) {
+    $("status").textContent="Map library could not load. Check your internet connection and reload.";
+    return;
+  }
+  const svg=d3.select("#map");
+  projection=d3.geoEqualEarth().rotate([-118,0]).fitExtent(
+    [[30,95],[1070,650]],
+    {type:"MultiPoint",coordinates:[[92,-13],[143,-13],[92,22],[143,22]]}
+  );
+  path=d3.geoPath(projection);
+  svg.append("path").datum(d3.geoGraticule().step([5,5])())
+    .attr("d",path).attr("fill","none")
+    .attr("stroke","#1c3144").attr("stroke-width",.7);
+  land=svg.append("g");
+  overlay=svg.append("g");
+  comparison=svg.append("g");
+  labels=svg.append("g");
+  const defs=svg.append("defs");
+  defs.append("pattern").attr("id","occupation")
+    .attr("patternUnits","userSpaceOnUse")
+    .attr("width",7).attr("height",7)
+    .append("path").attr("d","M-2,2L2,-2M0,7L7,0M5,9L9,5")
+    .attr("stroke","#ffe2d5").attr("stroke-width",1.5);
+
+  try {
+    const controller=new AbortController();
+    const timeout=setTimeout(()=>controller.abort(),25000);
+    let response;
+    try {
+      response=await fetch(
+        "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_50m_admin_0_countries.geojson",
+        {signal:controller.signal}
+      );
+    } finally { clearTimeout(timeout); }
+    if(!response.ok) throw new Error("Geography download failed");
+    countries=await response.json();
+    countries.features=countries.features.map(f=>({
+      ...f,geometry:normalizeGeometry(f.geometry)
+    }));
+    land.selectAll("path").data(countries.features).join("path")
+      .attr("d",path).attr("fill","#263b4d")
+      .attr("stroke","#263b4d").attr("stroke-width",.3);
+    defs.append("clipPath").attr("id","landclip")
+      .append("path").attr("d",path(countries));
+    const geoLabels=[
+      ["SUMATRA",[100,-1]],["JAVA",[110,-10.2]],
+      ["BORNEO",[114,.2]],["SULAWESI",[122,-2.7]],
+      ["NEW GUINEA",[137,-5]],["PHILIPPINE ISLANDS",[126.8,19]],
+      ["INDIAN OCEAN",[99,-10]],["PACIFIC OCEAN",[137,15]]
+    ];
+    const bglabels=land.append("g");
+    geoLabels.forEach(([name,coord])=>{
+      const p=projection(coord);
+      bglabels.append("text").attr("class","geolabel")
+        .attr("x",p[0]).attr("y",p[1])
+        .attr("text-anchor","middle").text(name);
+    });
+    $("status").textContent=
+      "Ready · Select a year or polity. Historical shading is schematic; "+
+      "no historical area totals are asserted.";
+    render();
+  } catch(err) {
+    $("status").textContent=
+      "Coastline data could not load. Check your connection and reload. "+
+      "The timeline notes and source lists remain available.";
+    console.error(err);
+  }
+}
+init();
+</script>
+
+<!-- Site navigation back to pangtongs.github.io -->
+<style>body{padding-bottom:56px}</style>
+<nav aria-label="Site" style="position:fixed;left:12px;bottom:12px;z-index:9999;display:flex;gap:6px;font:600 13px/1 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif">
+  <a href="index.html" style="padding:8px 12px;border-radius:999px;background:rgba(20,23,30,.85);color:#eef1f6;text-decoration:none;border:1px solid rgba(255,255,255,.15);backdrop-filter:blur(8px)">← All tools</a>
+  <a href="../index.html" style="padding:8px 12px;border-radius:999px;background:rgba(20,23,30,.85);color:#eef1f6;text-decoration:none;border:1px solid rgba(255,255,255,.15);backdrop-filter:blur(8px)">Home</a>
+</nav>
+</body>
+</html>

@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Campus Run</title>
+<style>
+* { box-sizing:border-box; }
+body {
+  margin:0; background:#101124; color:white;
+  font-family:system-ui,sans-serif;
+  min-height:100dvh; display:grid; place-content:center;
+  overflow:hidden; user-select:none;
+}
+#game {
+  position:relative;
+  width:min(100vw,480px,calc((100dvh - 78px)*.625));
+  aspect-ratio:480/768;
+  overflow:hidden; border-radius:18px;
+  box-shadow:0 15px 70px #0009;
+}
+canvas { width:100%; height:100%; display:block; touch-action:none; }
+#hud {
+  position:absolute; top:12px; left:12px; right:12px;
+  display:flex; justify-content:space-between;
+  gap:8px; pointer-events:none;
+}
+.badge {
+  padding:9px 12px; border-radius:12px;
+  background:#13182bdc; font-size:13px; font-weight:800;
+}
+#status {
+  position:absolute; top:57px; width:100%; text-align:center;
+  font-size:12px; font-weight:800; color:#fff2ad;
+  pointer-events:none;
+}
+#overlay {
+  position:absolute; inset:0; padding:26px;
+  background:#111326eF;
+  display:flex; justify-content:center; align-items:center;
+  text-align:center;
+}
+#overlay.hidden { display:none; }
+.panel { max-width:350px; }
+h1 {
+  font-size:43px; line-height:1; margin:14px 0;
+  color:#ffdf78; letter-spacing:-2px;
+}
+h2 { color:#ff8cbc; margin:12px 0; }
+p { line-height:1.6; color:#d6def4; font-size:14px; }
+button {
+  border:0; cursor:pointer; font:inherit; font-weight:850;
+  border-radius:12px; touch-action:manipulation;
+}
+#start { padding:15px 35px; background:#ffdf78; color:#242238; }
+#controls {
+  display:flex; justify-content:center;
+  gap:8px; height:72px; align-items:center;
+}
+#controls button {
+  width:72px; height:53px; background:#303855; color:white;
+  box-shadow:0 4px #070b18;
+}
+#controls button:active { transform:translateY(3px); box-shadow:none; }
+.small { font-size:12px; color:#aab6d4; }
+</style>
+</head>
+<body>
+
+<div id="game">
+  <canvas id="canvas" width="480" height="768"></canvas>
+
+  <div id="hud">
+    <div class="badge" id="score">0 m · ★ 0</div>
+    <div class="badge" id="best">Best: 0</div>
+  </div>
+  <div id="status">NO ONE IS CHASING YOU… YET</div>
+
+  <div id="overlay">
+    <div class="panel">
+      <div style="font-size:40px">🏫 💃 💨</div>
+      <h1>CAMPUS RUN</h1>
+      <h2 id="title">Wrong Hallway. Wrong Ex.</h2>
+      <p id="description">
+        Race through the college campus.<br>
+        First mistake: your ex starts chasing.<br>
+        Second mistake: he catches you!
+      </p>
+      <p>
+        <b>← → / A D</b> Move or turn at a corner<br>
+        <b>↑ / W / Space</b> Jump over desks<br>
+        <b>↓ / S</b> Slide under banners<br>
+        Dodge lockers and collect stars.
+      </p>
+      <button id="start">LET’S RUN</button>
+      <p class="small">
+        Swipe or use the buttons on mobile.<br>
+        Both characters are adults.
+      </p>
+    </div>
+  </div>
+</div>
+
+<div id="controls">
+  <button data-action="left" aria-label="Left">←</button>
+  <button data-action="jump">↑ Jump</button>
+  <button data-action="slide">↓ Slide</button>
+  <button data-action="right" aria-label="Right">→</button>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const canvas = $("canvas"), c = canvas.getContext("2d");
+const W = 480, H = 768, HY = 175, GROUND = 648, VIEW = 105;
+const zones = ["MAIN HALL", "ARTS BUILDING", "SCIENCE WING", "STUDENT CENTER"];
+const colors = ["#739ab6", "#9b85b7", "#6fada5", "#b49279"];
+
+let mode = "intro", last = 0, clock = 0;
+let lane = 0, visualLane = 0, jump = 0, slide = 0;
+let meters = 0, stars = 0, speed = 25, mistakes = 0;
+let objects = [], spawnTime = 1, corner = null, zone = 0;
+let invincible = 0, shake = 0, toast = "", toastTime = 0;
+let turnTime = 0, turnDirection = 1, changedZone = false;
+let catchTime = 0, catchX = 240, exX = 240;
+let best = 0;
+
+try { best = Number(localStorage.getItem("campusRunBest")) || 0; }
+catch(e) {}
+$("best").textContent = "Best: " + best;
+
+function say(message, duration = 2) {
+  toast = message;
+  toastTime = duration;
+}
+
+function nextCorner() {
+  corner = {
+    z: 260 + Math.random() * 65,
+    direction: Math.random() < .5 ? -1 : 1
+  };
+}
+
+function startGame() {
+  lane = visualLane = jump = slide = 0;
+  meters = stars = mistakes = zone = 0;
+  speed = 25;
+  objects = [];
+  spawnTime = .7;
+  invincible = shake = turnTime = catchTime = 0;
+  exX = 240;
+  nextCorner();
+  mode = "run";
+  $("overlay").classList.add("hidden");
+  say("FIRST MISTAKE SUMMONS YOUR EX", 2.5);
+  updateHUD();
+}
+
+function updateHUD() {
+  $("score").textContent = `${Math.floor(meters)} m · ★ ${stars}`;
+  $("status").textContent = mistakes
+    ? "⚠ EX CHASING — ONE MORE MISTAKE = CAUGHT"
+    : "NO ONE IS CHASING YOU… YET";
+  $("status").style.color = mistakes ? "#ff9faf" : "#fff2ad";
+}
+
+function jumpHeight() {
+  return jump > 0 ? Math.sin((1 - jump / .9) * Math.PI) * 112 : 0;
+}
+
+function startTurn(direction) {
+  turnDirection = direction;
+  turnTime = .72;
+  changedZone = false;
+  corner = null;
+  objects = [];
+  jump = slide = 0;
+  mode = "turn";
+}
+
+function fail() {
+  if (mode !== "run" || invincible > 0) return;
+  mistakes++;
+  shake = 13;
+  updateHUD();
+
+  if (mistakes === 1) {
+    invincible = 1.8;
+    objects = objects.filter(o => o.z > 32);
+    exX = 240 + visualLane * 130;
+    say("OH NO — YOUR EX SPOTTED YOU!", 2.7);
+  } else {
+    mode = "caught";
+    catchTime = 0;
+    catchX = 240 + visualLane * 130;
+    jump = slide = 0;
+    toastTime = 0;
+    $("status").textContent = "CAUGHT!";
+  }
+}
+
+function action(a) {
+  if (mode !== "run") return;
+
+  // Near a corner, left/right becomes a true hallway turn.
+  if ((a === "left" || a === "right") && corner && corner.z < 27) {
+    const direction = a === "left" ? -1 : 1;
+    const required = corner.direction;
+    if (direction !== required) fail();
+    else say(required < 0 ? "NICE LEFT TURN!" : "NICE RIGHT TURN!", 1);
+
+    // First failure gets a recovery turn; second triggers capture.
+    if (mode === "run") startTurn(required);
+    return;
+  }
+
+  if (a === "left") lane = Math.max(-1, lane - 1);
+  if (a === "right") lane = Math.min(1, lane + 1);
+  if (a === "jump" && jump <= 0 && slide <= 0) jump = .9;
+  if (a === "slide" && jump <= 0) slide = .8;
+}
+
+$("start").onclick = startGame;
+
+const keys = {
+  ArrowLeft:"left", a:"left", A:"left",
+  ArrowRight:"right", d:"right", D:"right",
+  ArrowUp:"jump", w:"jump", W:"jump", " ":"jump",
+  ArrowDown:"slide", s:"slide", S:"slide"
+};
+
+document.addEventListener("keydown", e => {
+  if (keys[e.key]) {
+    e.preventDefault();
+    if (!e.repeat) action(keys[e.key]);
+  }
+  if (e.key === "Enter" && (mode === "intro" || mode === "over")) startGame();
+});
+
+document.querySelectorAll("[data-action]").forEach(b => {
+  b.addEventListener("pointerdown", e => {
+    e.preventDefault();
+    action(b.dataset.action);
+  });
+});
+
+let touch = null;
+canvas.addEventListener("pointerdown", e => {
+  touch = { x:e.clientX, y:e.clientY };
+  canvas.setPointerCapture(e.pointerId);
+});
+canvas.addEventListener("pointerup", e => {
+  if (!touch) return;
+  const dx = e.clientX - touch.x, dy = e.clientY - touch.y;
+  touch = null;
+  if (Math.max(Math.abs(dx), Math.abs(dy)) < 18) return;
+  action(Math.abs(dx) > Math.abs(dy)
+    ? (dx < 0 ? "left" : "right")
+    : (dy < 0 ? "jump" : "slide"));
+});
+canvas.addEventListener("pointercancel", () => touch = null);
+
+function spawn() {
+  const l = Math.floor(Math.random() * 3) - 1;
+  const type = ["desk","banner","locker"][Math.floor(Math.random() * 3)];
+  objects.push({ lane:l, z:VIEW, type, checked:false });
+
+  const safe = [-1,0,1].filter(n => n !== l);
+  const starLane = safe[Math.floor(Math.random() * 2)];
+  for (let i = 0; i < 3; i++) {
+    objects.push({ lane:starLane, z:VIEW + i*5, type:"star", checked:false });
+  }
+}
+
+function finish() {
+  mode = "over";
+  const total = Math.floor(meters) + stars * 25;
+  best = Math.max(best, total);
+  try { localStorage.setItem("campusRunBest", best); } catch(e) {}
+  $("best").textContent = "Best: " + best;
+  $("title").textContent = "YOUR EX CAUGHT YOU!";
+  $("description").innerHTML =
+    `Two mistakes. One very awkward reunion.<br><br>` +
+    `<b>${Math.floor(meters)} meters · ${stars} stars</b><br>` +
+    `Score: <b>${total}</b><br>` +
+    `<span class="small">“Wait! I just wanted my hoodie back!”</span>`;
+  $("start").textContent = "RUN AGAIN";
+  $("overlay").classList.remove("hidden");
+}
+
+function update(dt) {
+  clock += dt;
+  shake = Math.max(0, shake - dt*28);
+  toastTime = Math.max(0, toastTime - dt);
+
+  if (mode === "caught") {
+    catchTime += dt;
+    if (catchTime > 2.25) finish();
+    return;
+  }
+
+  if (mode === "turn") {
+    turnTime -= dt;
+    if (turnTime < .36 && !changedZone) {
+      changedZone = true;
+      zone = (zone + 1) % zones.length;
+      lane = visualLane = 0;
+      exX = 240;
+    }
+    if (turnTime <= 0) {
+      mode = "run";
+      nextCorner();
+      spawnTime = .5;
+    }
+    return;
+  }
+
+  if (mode !== "run") return;
+
+  speed = Math.min(44, 25 + meters * .008);
+  meters += speed * dt;
+  jump = Math.max(0, jump - dt);
+  slide = Math.max(0, slide - dt);
+  invincible = Math.max(0, invincible - dt);
+  visualLane += (lane - visualLane) * Math.min(1, dt * 17);
+  exX += (240 + visualLane * 130 - exX) * dt * 4;
+
+  corner.z -= speed * dt;
+  if (corner.z <= 0) {
+    const required = corner.direction;
+    fail();
+    if (mode === "run") {
+      say("MISSED TURN! KEEP RUNNING!", 2);
+      startTurn(required);
+    }
+    return;
+  }
+
+  spawnTime -= dt;
+  if (spawnTime <= 0) {
+    // Keep the approach to a junction clear.
+    if (corner.z > 135) spawn();
+    spawnTime = Math.max(1.05, 1.65 - meters * .0008);
+  }
+
+  for (const o of objects) {
+    o.z -= speed * dt;
+    if (o.z <= 2 && !o.checked) {
+      o.checked = true;
+      if (Math.abs(o.lane - visualLane) > .48) continue;
+
+      if (o.type === "star") {
+        stars++;
+        o.collected = true;
+      } else {
+        const safe = (o.type === "desk" && jumpHeight() > 48)
+          || (o.type === "banner" && slide > 0);
+        if (!safe && invincible <= 0) {
+          fail();
+          break;
+        }
+      }
+    }
+  }
+
+  objects = objects.filter(o => o.z > -12 && !o.collected);
+  updateHUD();
+}
+
+function project(l, z) {
+  const s = Math.pow(Math.max(0, 1 - z/VIEW), 1.55);
+  return { x:240 + l*135*s, y:HY + (GROUND-HY)*s, s };
+}
+
+function poly(points, color) {
+  c.fillStyle = color;
+  c.beginPath();
+  points.forEach(([x,y],i) => i ? c.lineTo(x,y) : c.moveTo(x,y));
+  c.closePath();
+  c.fill();
+}
+
+function label(t,x,y,size,color="white") {
+  c.fillStyle=color;
+  c.font=`850 ${size}px system-ui`;
+  c.textAlign="center";
+  c.fillText(t,x,y);
+}
+
+function box(x,y,w,h,color,r=0) {
+  c.fillStyle=color;
+  c.beginPath();
+  c.roundRect(x,y,w,h,r);
+  c.fill();
+}
+
+function hall() {
+  box(0,0,W,H,"#e3e9f5");
+  poly([[0,0],[205,HY],[205,H],[0,H]],colors[zone]);
+  poly([[W,0],[275,HY],[275,H],[W,H]],colors[zone]);
+  poly([[205,HY],[275,HY],[W,H],[0,H]],"#c4ccdc");
+
+  box(210,HY-66,60,66,"#4b5e7d");
+  label(zones[zone],240,HY-79,12,"#263453");
+
+  for (let i=0;i<14;i++) {
+    const z = (i*8 - meters%8 + VIEW)%VIEW;
+    const p = project(0,z), half=235*p.s;
+    c.strokeStyle="#9caec6"; c.lineWidth=1+p.s;
+    c.beginPath();
+    c.moveTo(240-half,p.y); c.lineTo(240+half,p.y); c.stroke();
+
+    for (const side of [-1,1]) {
+      const x=240+side*(half+15*p.s);
+      box(x-24*p.s,p.y-170*p.s,48*p.s,170*p.s,"#466c98");
+      box(x-20*p.s,p.y-165*p.s,40*p.s,158*p.s,"#7ca7ca");
+      box(x+10*p.s,p.y-78*p.s,4*p.s,16*p.s,"#ffdd89");
+      for (let k=0;k<3;k++)
+        box(x-12*p.s,p.y-(145-k*9)*p.s,24*p.s,3*p.s,"#466c98");
+    }
+  }
+
+  for (const l of [-.5,.5]) {
+    const p=project(l,-25);
+    c.strokeStyle="#f1e6b1"; c.lineWidth=3;
+    c.beginPath(); c.moveTo(240,HY); c.lineTo(p.x,p.y); c.stroke();
+  }
+  box(182,58,116,15,"#fffdf3");
+  box(214,118,52,7,"#fffdf3");
+}
+
+function drawCorner() {
+  if (!corner || corner.z > VIEW) return;
+  const p=project(0,corner.z), s=p.s;
+  const half=240*s, height=235*s;
+
+  // A wall closes the straight corridor; the side doorway is the route.
+  box(240-half,p.y-height,half*2,height,"#8498b5");
+  box(240-half,p.y-height,half*2,10*s,"#e9eefa");
+
+  const openingX=corner.direction < 0 ? 240-half : 240+half-112*s;
+  box(openingX,p.y-180*s,112*s,180*s,"#293c59");
+  box(openingX+8*s,p.y-171*s,96*s,171*s,"#4d708b");
+
+  label(corner.direction<0 ? "←" : "→",240,p.y-85*s,70*s,"#ffe27b");
+  label("TURN",240,p.y-44*s,22*s,"#ffffff");
+}
+
+function star(x,y,r) {
+  c.beginPath();
+  for(let i=0;i<10;i++){
+    const a=-Math.PI/2+i*Math.PI/5;
+    const rad=i%2?r*.45:r;
+    const px=x+Math.cos(a)*rad, py=y+Math.sin(a)*rad;
+    if(i)c.lineTo(px,py); else c.moveTo(px,py);
+  }
+  c.closePath(); c.fillStyle="#ffda49"; c.fill();
+  c.strokeStyle="#b47c22"; c.lineWidth=2; c.stroke();
+}
+
+function drawObject(o) {
+  if(o.z>VIEW || o.collected)return;
+  const p=project(o.lane,o.z);
+  if(p.s<.015)return;
+  c.save(); c.translate(p.x,p.y); c.scale(p.s,p.s);
+
+  if(o.type==="star"){
+    star(0,-53+Math.sin(clock*7+o.z)*4,20);
+  } else if(o.type==="desk"){
+    box(-46,-46,9,46,"#4b465a");
+    box(37,-46,9,46,"#4b465a");
+    box(-56,-64,112,20,"#b76e41");
+    box(-56,-70,112,9,"#efb97c");
+    box(-16,-77,33,7,"#f5f4ff");
+    label("JUMP",0,-89,14,"#342b47");
+  } else if(o.type==="banner"){
+    box(-62,-157,7,157,"#555773");
+    box(55,-157,7,157,"#555773");
+    box(-62,-154,124,99,"#d85891");
+    label("DANCE",0,-113,22);
+    label("↓ SLIDE ↓",0,-78,16,"#fff2b5");
+  } else {
+    box(-45,-141,90,141,"#3d6597");
+    box(-39,-135,78,128,"#80a9d0");
+    for(let i=0;i<3;i++)box(-25,-120+i*10,50,4,"#3d6597");
+    box(24,-77,5,21,"#ffe29b");
+    label("DODGE",0,-153,14,"#342b47");
+  }
+  c.restore();
+}
+
+function limb(x1,y1,x2,y2,color,width){
+  c.strokeStyle=color; c.lineWidth=width; c.lineCap="round";
+  c.beginPath();c.moveTo(x1,y1);c.lineTo(x2,y2);c.stroke();
+}
+
+// Adult female runner: ponytail, fitted magenta athletic top,
+// high-waisted running shorts, and sneakers.
+function woman(x,y,s=1,captured=false){
+  c.save(); c.translate(x,y); c.scale(s,s);
+  if(slide>0 && mode==="run"){ c.rotate(-.95); c.scale(1,.68); }
+
+  const running=(mode==="run"||mode==="turn"||
+    (mode==="caught"&&catchTime<1.15));
+  const stride=running&&jump<=0?Math.sin(clock*17)*12:4;
+  const bob=running?Math.sin(clock*17)*2:0;
+  const skin="#c98e70";
+
+  limb(-8,-39,-12-stride,-9,skin,11);
+  limb(8,-39,12+stride,-9,skin,11);
+  limb(-12-stride,-7,-20-stride,-7,"#f4efff",9);
+  limb(12+stride,-7,20+stride,-7,"#f4efff",9);
+
+  poly([[-17,-62],[-20,-35],[-2,-32],[0,-46],
+    [3,-32],[20,-35],[17,-62]],"#302745");
+
+  poly([[-20,-94+bob],[20,-94+bob],[13,-70],
+    [17,-57],[-17,-57],[-13,-70]],"#ec438c");
+  limb(-18,-88+bob,-29,-61-stride,skin,9);
+  limb(18,-88+bob,29,-61+stride,skin,9);
+
+  box(-6,-105+bob,12,15,skin,3);
+  c.fillStyle=skin;c.beginPath();
+  c.ellipse(0,-116+bob,16,20,0,0,Math.PI*2);c.fill();
+
+  c.fillStyle="#352332";c.beginPath();
+  c.ellipse(0,-125+bob,18,15,0,0,Math.PI*2);c.fill();
+
+  const swish=Math.sin(clock*12)*8;
+  limb(12,-131,25+swish,-96,"#352332",13);
+  box(8,-133,10,5,"#ffdc75",2);
+  limb(-13,-91,13,-91,"#ffb0d0",2);
+
+  if(captured)label("!",0,-157,30,"#ffe17e");
+  c.restore();
+}
+
+function boyfriend(x,y,s=1,reaching=false){
+  c.save();c.translate(x,y);c.scale(s,s);
+  const stride=Math.sin(clock*18)*13;
+  limb(-10,-39,-14-stride,-7,"#293149",13);
+  limb(10,-39,14+stride,-7,"#293149",13);
+  box(-23,-93,46,57,"#5578ac",7);
+  box(-14,-89,28,18,"#405c89",5);
+
+  if(reaching){
+    limb(-21,-83,-28,-123,"#5578ac",12);
+    limb(21,-83,28,-123,"#5578ac",12);
+    limb(-28,-123,-21,-142,"#d2a082",9);
+    limb(28,-123,21,-142,"#d2a082",9);
+  }else{
+    limb(-22,-84,-34,-58-stride,"#5578ac",12);
+    limb(22,-84,34,-58+stride,"#5578ac",12);
+  }
+
+  c.fillStyle="#d2a082";c.beginPath();
+  c.arc(0,-114,19,0,Math.PI*2);c.fill();
+  c.fillStyle="#302936";c.beginPath();
+  c.arc(0,-120,20,Math.PI,Math.PI*2);c.fill();
+  label("EX",0,-57,16,"#eff5ff");
+  c.restore();
+}
+
+function drawCharacters(){
+  const x=240+visualLane*130;
+  if(mode==="caught" || mode==="over"){
+    // The ex runs forward, reaches her shoulders, then both stop.
+    const t=Math.min(1,catchTime/1.35);
+    const eased=t*t*(3-2*t);
+    const ey=758+(GROUND+29-758)*eased;
+    const ex=exX+(catchX-exX)*eased;
+    boyfriend(ex,ey,.8+.2*eased,t>.6);
+    woman(catchX,GROUND,1,t>.9);
+
+    if(t>.9){
+      label("CAUGHT!",240,365,42,"#ffe286");
+      label("“Wait! My hoodie!”",240,399,18);
+    }
+    return;
+  }
+
+  // The boyfriend is not drawn at all before the first failure.
+  if(mistakes>0) boyfriend(exX,753,.8);
+
+  c.fillStyle="#27304735";c.beginPath();
+  c.ellipse(x,GROUND,27,8,0,0,Math.PI*2);c.fill();
+
+  c.save();
+  if(invincible>0 && Math.floor(clock*12)%2===0)c.globalAlpha=.5;
+  woman(x,GROUND-jumpHeight());
+  c.restore();
+}
+
+function draw(){
+  c.save();
+  if(shake)c.translate((Math.random()-.5)*shake,0);
+
+  // Brief camera pan/roll through each 90-degree hallway turn.
+  c.save();
+  if(mode==="turn"){
+    const progress=1-turnTime/.72;
+    const wave=Math.sin(progress*Math.PI);
+    c.translate(240,380);
+    c.rotate(-turnDirection*wave*.13);
+    c.scale(1+wave*.15,1+wave*.15);
+    c.translate(-240+turnDirection*wave*68,-380);
+  }
+
+  hall();
+  drawCorner();
+  const sorted=[...objects].sort((a,b)=>b.z-a.z);
+  sorted.filter(o=>o.z>=0).forEach(drawObject);
+  c.restore();
+
+  drawCharacters();
+  sorted.filter(o=>o.z<0).forEach(drawObject);
+
+  if(mode==="run" && corner && corner.z<75){
+    const urgent=corner.z<27;
+    const dir=corner.direction<0?"← LEFT":"RIGHT →";
+    box(90,105,300,urgent?77:60,urgent?"#ffe081":"#182942ee",14);
+    label(urgent?"TURN NOW!":"CORNER AHEAD",240,128,14,
+      urgent?"#4b3040":"#a9c5e8");
+    label(dir,240,urgent?163:153,urgent?30:23,
+      urgent?"#302238":"#ffffff");
+  }
+
+  if(mode==="turn"){
+    box(107,110,266,53,"#182942e8",12);
+    label(turnDirection<0?"TURNING LEFT ↶":"TURNING RIGHT ↷",
+      240,145,22,"#ffe081");
+
+    // Speed lines reinforce the change of direction.
+    c.strokeStyle="#ffffff88";c.lineWidth=3;
+    for(let i=0;i<7;i++){
+      const y=230+i*53;
+      const x=turnDirection<0?20:380;
+      c.beginPath();c.moveTo(x,y);c.lineTo(x+80,y-15);c.stroke();
+    }
+  }
+
+  if(toastTime>0 && mode!=="caught" && mode!=="over"){
+    box(24,675,432,38,"#17233bea",10);
+    label(toast,240,700,13,"#fff0bd");
+  }
+  c.restore();
+}
+
+function frame(now){
+  const dt=Math.min((now-last)/1000||0,.033);
+  last=now;
+  update(dt);
+  draw();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+
+<!-- Site navigation back to pangtongs.github.io -->
+<style>body{padding-bottom:56px}</style>
+<nav aria-label="Site" style="position:fixed;left:12px;bottom:12px;z-index:9999;display:flex;gap:6px;font:600 13px/1 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif">
+  <a href="index.html" style="padding:8px 12px;border-radius:999px;background:rgba(20,23,30,.85);color:#eef1f6;text-decoration:none;border:1px solid rgba(255,255,255,.15);backdrop-filter:blur(8px)">← All tools</a>
+  <a href="../index.html" style="padding:8px 12px;border-radius:999px;background:rgba(20,23,30,.85);color:#eef1f6;text-decoration:none;border:1px solid rgba(255,255,255,.15);backdrop-filter:blur(8px)">Home</a>
+</nav>
+</body>
+</html>

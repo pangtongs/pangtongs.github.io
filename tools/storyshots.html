@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Little Chapters — Listen & Learn</title>
+<style>
+  :root {
+    --bg:#faf9f6; --ink:#222b28; --muted:#727b74;
+    --green:#244f40; --lime:#d8edaa; --line:#e5e7df;
+  }
+  * { box-sizing:border-box }
+  body {
+    margin:0; background:var(--bg); color:var(--ink);
+    font:15px/1.6 system-ui,sans-serif; padding-bottom:260px;
+  }
+  button,input,select { font:inherit }
+  button,a,input,select { -webkit-tap-highlight-color:transparent }
+  button { cursor:pointer }
+  button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible {
+    outline:3px solid #93b86b; outline-offset:4px;
+  }
+  button {
+    border:1px solid var(--line); border-radius:12px;
+    background:white; color:var(--ink); padding:10px 16px;
+  }
+  button:hover { border-color:var(--green) }
+  .primary { background:var(--green); color:white; border-color:var(--green) }
+  .shell { max-width:1120px; margin:auto; padding:0 28px }
+  header {
+    display:flex; align-items:center; justify-content:space-between;
+    gap:20px; padding-top:25px!important; padding-bottom:25px!important;
+  }
+  .brand { font-size:21px; font-weight:800; letter-spacing:-1px }
+  .brand span {
+    display:inline-grid; place-items:center; background:var(--green);
+    color:var(--lime); border-radius:12px; width:38px; height:38px;
+    margin-right:9px;
+  }
+  nav { display:flex; gap:8px }
+  nav button { background:transparent; border-color:transparent }
+  nav button.active { background:#e9eee4; color:var(--green) }
+  .hero {
+    background:#eaf0e1; border-radius:28px; padding:40px;
+    display:grid; grid-template-columns:1fr 200px; gap:24px;
+    align-items:center; margin:12px 0 34px;
+  }
+  .eyebrow {
+    text-transform:uppercase; letter-spacing:2px;
+    font-size:11px; font-weight:750; color:var(--green);
+  }
+  h1 {
+    font:clamp(34px,5vw,56px)/1.08 Georgia,serif;
+    letter-spacing:-2px; max-width:580px; margin:15px 0;
+  }
+  .hero p { color:#596653; max-width:480px }
+  .hero-art {
+    height:220px; display:grid; place-items:center;
+    background:#244f40; color:#e8d4a7; border-radius:6px 18px 18px 6px;
+    transform:rotate(8deg); box-shadow:12px 14px 0 #d5ddc8;
+    border-left:8px solid #173c2e; text-align:center;
+    font:30px/1.2 Georgia,serif; padding:20px;
+  }
+  .toolbar { display:flex; gap:15px; justify-content:space-between; align-items:center }
+  h2 { font:30px Georgia,serif; margin:12px 0 }
+  input[type=search] {
+    width:320px; max-width:100%; border:1px solid var(--line);
+    background:white; border-radius:14px; padding:12px 16px;
+  }
+  .filters { display:flex; gap:9px; flex-wrap:wrap; margin:22px 0 }
+  .filters button { border-radius:30px; padding:7px 17px }
+  .filters .active { background:var(--ink); color:white; border-color:var(--ink) }
+  .grid { display:grid; grid-template-columns:repeat(3,1fr); gap:24px }
+  .card { min-width:0; background:white; border:1px solid var(--line); border-radius:20px; overflow:hidden }
+  .cover {
+    height:220px; margin:14px; padding:27px;
+    display:flex; flex-direction:column; justify-content:space-between;
+    border-radius:12px; position:relative; overflow:hidden;
+  }
+  .cover:after {
+    content:""; position:absolute; width:200px; height:200px;
+    border:1px solid currentColor; opacity:.16; border-radius:50%;
+    right:-60px; bottom:-100px;
+  }
+  .cover small { text-transform:uppercase; letter-spacing:2px; font-size:10px }
+  .cover strong { font:32px/1.05 Georgia,serif; max-width:240px; z-index:1 }
+  .cover span { font-size:12px }
+  .card-body { padding:5px 22px 22px }
+  .card h3 { margin:8px 0 3px; font-size:18px; line-height:1.3 }
+  .muted { color:var(--muted) }
+  .meta { font-size:12px; margin:14px 0 }
+  .actions { display:flex; gap:8px }
+  .actions .primary { flex:1 }
+  .empty { padding:35px; border:1px dashed var(--line); border-radius:20px; grid-column:1/-1 }
+  .note { font-size:12px; color:var(--muted); margin:28px 0 }
+  #player {
+    position:fixed; bottom:0; left:0; right:0; z-index:20;
+    background:rgba(255,255,255,.98); border-top:1px solid var(--line);
+    box-shadow:0 -8px 40px #2233220a; padding:15px 0;
+  }
+  .player-inner { display:grid; grid-template-columns:250px 1fr; gap:22px; align-items:center }
+  #nowTitle { font-weight:750; line-height:1.3 }
+  #nowAuthor { font-size:12px; color:var(--muted) }
+  audio { width:100%; height:40px; margin-top:8px }
+  .controls { display:flex; align-items:center; gap:8px; flex-wrap:wrap }
+  .controls button { padding:5px 11px }
+  select { padding:7px; border:1px solid var(--line); border-radius:8px; background:white; min-width:0 }
+  #chapters { flex:1; width:150px }
+  #status { font-size:12px; color:var(--muted); min-height:20px }
+  #source { color:var(--green); font-size:12px }
+  dialog {
+    width:min(580px,92vw); border:0; border-radius:24px;
+    padding:30px; color:var(--ink); box-shadow:0 20px 100px #0003;
+  }
+  dialog::backdrop { background:#152b2266; backdrop-filter:blur(4px) }
+  dialog p { color:#5c675e }
+  .dialog-head { display:flex; align-items:center; justify-content:space-between; gap:12px }
+  @media(max-width:720px) {
+    .shell { padding:0 18px }
+    header { flex-wrap:wrap; gap:12px }
+    .hero { grid-template-columns:1fr; padding:28px }
+    .hero-art { display:none }
+    .toolbar { align-items:stretch; flex-direction:column; gap:8px }
+    input[type=search] { width:100% }
+    .grid { grid-template-columns:1fr 1fr; gap:12px }
+    .cover { height:195px; padding:18px; margin:9px }
+    .cover strong { font-size:25px }
+    .card-body { padding:5px 13px 16px }
+    .card h3 { font-size:15px }
+    .actions { flex-wrap:wrap }
+    .actions button { padding:8px 10px }
+    .player-inner { grid-template-columns:1fr; gap:9px }
+    .player-info { display:flex; justify-content:space-between; gap:12px }
+    #nowTitle { font-size:14px }
+    #source { white-space:nowrap }
+  }
+  @media(max-width:380px) { .grid { grid-template-columns:1fr } }
+</style>
+</head>
+<body>
+<header class="shell">
+  <div class="brand"><span>Ⅲ</span>little chapters</div>
+  <nav aria-label="Main navigation">
+    <button id="discover" class="active">Discover</button>
+    <button id="library">My library</button>
+  </nav>
+</header>
+
+<main class="shell">
+  <section class="hero">
+    <div>
+      <div class="eyebrow">A little listening. A bigger world.</div>
+      <h1>Great books.<br>Room to wander.</h1>
+      <p>Trade a little scrolling for a little discovery.
+        Explore timeless books, read a quick overview, and listen to the whole story.</p>
+      <button class="primary" id="featured">▶ Listen to The Art of War</button>
+    </div>
+    <div class="hero-art" aria-hidden="true">THE<br>ART OF<br>WAR</div>
+  </section>
+
+  <section aria-labelledby="sectionTitle">
+    <div class="toolbar">
+      <div>
+        <div class="eyebrow">Your next good listen</div>
+        <h2 id="sectionTitle">Explore the bookshelf</h2>
+      </div>
+      <input id="search" type="search" aria-label="Search books"
+        placeholder="Search titles, authors, topics…">
+    </div>
+    <div class="filters" id="filters" aria-label="Categories"></div>
+    <div class="grid" id="grid"></div>
+    <p class="note">
+      Full human-narrated recordings from LibriVox, hosted by Internet Archive.
+      Public domain in the United States; rights may differ elsewhere.
+      Overview text is original to this app, not copied from StoryShots.
+      Saved books and listening positions stay in this browser when storage is available.
+    </p>
+  </section>
+</main>
+
+<section id="player" aria-label="Audiobook player">
+  <div class="shell player-inner">
+    <div class="player-info">
+      <div>
+        <div class="eyebrow">Your listening corner</div>
+        <div id="nowTitle">Choose your first book</div>
+        <div id="nowAuthor">Full audiobooks · No account needed</div>
+      </div>
+      <a id="source" target="_blank" rel="noopener" hidden>Recording source ↗</a>
+    </div>
+    <div>
+      <div class="controls">
+        <button id="back" aria-label="Skip back 15 seconds" disabled>−15s</button>
+        <select id="chapters" aria-label="Select chapter" disabled>
+          <option>Select a book first</option>
+        </select>
+        <button id="forward" aria-label="Skip forward 15 seconds" disabled>+15s</button>
+        <select id="speed" aria-label="Playback speed">
+          <option value="0.75">0.75×</option>
+          <option value="1" selected>1×</option>
+          <option value="1.25">1.25×</option>
+          <option value="1.5">1.5×</option>
+          <option value="2">2×</option>
+        </select>
+      </div>
+      <audio id="audio" controls preload="none"></audio>
+      <div id="status" role="status" aria-live="polite">
+        Choose Listen on any book to start.
+      </div>
+    </div>
+  </div>
+</section>
+
+<dialog id="detail">
+  <div class="dialog-head">
+    <div class="eyebrow">The short version</div>
+    <button id="closeDetail" aria-label="Close overview">✕</button>
+  </div>
+  <h2 id="detailTitle"></h2>
+  <p id="detailAuthor"></p>
+  <p id="detailText"></p>
+  <p class="note">Brief editorial overview. The audio is the full book.</p>
+  <button class="primary" id="detailListen">▶ Listen to audiobook</button>
+</dialog>
+
+<script>
+const $ = id => document.getElementById(id);
+const pad = n => String(n).padStart(2,"0");
+
+const books = [
+  {
+    id:"art_of_war_librivox",
+    title:"The Art of War", author:"Sun Tzu",
+    narrator:"Moira Fogarty", category:"Strategy", duration:"1h 12m",
+    color:"#254e40", ink:"#eeddb7",
+    overview:"A compact study of strategy, preparation, and judgment. Sun Tzu argues that success starts before a confrontation: understand the situation, know your strengths and limitations, and adapt to changing conditions. The strongest victory is not necessarily the most dramatic battle, but the one achieved with the least unnecessary cost.",
+    tracks:[
+      ["01-02","Laying Plans / Waging War"],
+      ["03-04","Attack by Stratagem / Tactical Dispositions"],
+      ["05-06","Energy / Weak Points and Strong"],
+      ["07-08","Maneuvering / Variation in Tactics"],
+      ["09-10","The Army on the March / Terrain"],
+      ["11","The Nine Situations"],
+      ["12-13","The Attack by Fire / The Use of Spies"]
+    ].map(([n,title]) => ({title,file:`art_of_war_${n}_sun_tzu.mp3`}))
+  },
+  {
+    id:"pride_prejudice_krs_librivox",
+    title:"Pride and Prejudice", author:"Jane Austen",
+    narrator:"Karen Savage", category:"Fiction", duration:"10h 23m",
+    color:"#eedbd6", ink:"#6e3940",
+    overview:"Elizabeth Bennet and Mr. Darcy misread each other in a society shaped by money, manners, and marriage. Their relationship develops as both confront the limits of their first impressions. Austen combines romantic tension with a sharp examination of class, family expectations, and the difficulty of recognizing our own mistakes.",
+    tracks:Array.from({length:61},(_,i)=>({
+      title:`Chapter ${i+1}`,
+      file:`pride_and_prejudice_${pad(i+1)}_austen.mp3`
+    }))
+  },
+  {
+    id:"adventures_sherlock_holmes_rg_librivox",
+    title:"The Adventures of Sherlock Holmes", author:"Arthur Conan Doyle",
+    narrator:"Ruth Golding", category:"Mystery", duration:"13h 29m",
+    color:"#dfdfed", ink:"#414366",
+    overview:"Twelve mysteries follow Sherlock Holmes and Dr. Watson through puzzling encounters, hidden motives, and apparently impossible events. Holmes looks closely at details other people dismiss, tests explanations against evidence, and shows how misleading an obvious answer can be. The stories mix intellectual puzzles with memorable glimpses of human character.",
+    tracks:[
+      "A Scandal in Bohemia","The Red-Headed League","A Case of Identity",
+      "The Boscombe Valley Mystery","The Five Orange Pips",
+      "The Man with the Twisted Lip","The Adventure of the Blue Carbuncle",
+      "The Adventure of the Speckled Band","The Adventure of the Engineer's Thumb",
+      "The Adventure of the Noble Bachelor","The Adventure of the Beryl Coronet",
+      "The Adventure of the Copper Beeches"
+    ].flatMap((title,i)=>[0,1].map(part=>({
+      title:`${title} · Part ${part+1}`,
+      file:`adventuresholmes_${pad(i*2+part+1)}_doyle_64kb.mp3`
+    })))
+  }
+];
+
+function readStorage(key, fallback) {
+  try { return JSON.parse(localStorage.getItem(key)) ?? fallback }
+  catch { return fallback }
+}
+function writeStorage(key,value) {
+  try { localStorage.setItem(key,JSON.stringify(value)) } catch {}
+}
+const storedSaved = readStorage("lc-saved",[]);
+const saved = new Set(Array.isArray(storedSaved) ? storedSaved : []);
+let positions = readStorage("lc-progress",{});
+if (!positions || typeof positions !== "object" || Array.isArray(positions)) positions = {};
+
+let category="All", libraryOnly=false, current=null, trackIndex=0;
+let pendingSeek=null, ready=false, generation=0, lastSave=0, detailBook=null;
+const audio=$("audio");
+
+function button(text, action, className="") {
+  const el=document.createElement("button");
+  el.textContent=text;
+  el.className=className;
+  el.onclick=action;
+  return el;
+}
+
+function renderFilters() {
+  $("filters").replaceChildren();
+  ["All","Strategy","Fiction","Mystery"].forEach(name=>{
+    const el=button(name,()=>{category=name;renderFilters();render();},
+      name===category ? "active" : "");
+    el.setAttribute("aria-pressed",String(name===category));
+    $("filters").append(el);
+  });
+}
+
+function render() {
+  $("discover").classList.toggle("active",!libraryOnly);
+  $("library").classList.toggle("active",libraryOnly);
+  $("sectionTitle").textContent=libraryOnly ? "Your saved bookshelf" : "Explore the bookshelf";
+  const query=$("search").value.toLowerCase().trim();
+  const matches=books.filter(b=>
+    (!libraryOnly || saved.has(b.id)) &&
+    (category==="All" || b.category===category) &&
+    `${b.title} ${b.author} ${b.category}`.toLowerCase().includes(query)
+  );
+  $("grid").replaceChildren();
+  if (!matches.length) {
+    const empty=document.createElement("div");
+    empty.className="empty";
+    empty.textContent=libraryOnly
+      ? "No saved books match. Discover a book and tap Save to add it here."
+      : "No books match this search. Try another title or category.";
+    $("grid").append(empty);
+  }
+  matches.forEach(b=>{
+    const card=document.createElement("article");
+    card.className="card";
+    // All interpolated book fields below are app-owned constants.
+    card.innerHTML=`
+      <div class="cover" style="background:${b.color};color:${b.ink}">
+        <small>Little Chapters · ${b.category}</small>
+        <strong>${b.title}</strong><span>${b.author}</span>
+      </div>
+      <div class="card-body">
+        <h3>${b.title}</h3>
+        <div class="muted">${b.author}</div>
+        <div class="meta">${b.duration} · Full audiobook</div>
+        <div class="actions"></div>
+      </div>`;
+    const actions=card.querySelector(".actions");
+    actions.append(
+      button("▶ Listen",()=>listen(b),"primary"),
+      button("Overview",()=>showDetail(b)),
+      button(saved.has(b.id) ? "✓ Saved" : "+ Save",()=>{
+        saved.has(b.id) ? saved.delete(b.id) : saved.add(b.id);
+        writeStorage("lc-saved",[...saved]);
+        render();
+      })
+    );
+    $("grid").append(card);
+  });
+}
+
+function showDetail(b) {
+  detailBook=b;
+  $("detailTitle").textContent=b.title;
+  $("detailAuthor").textContent=`${b.author} · Narrated by ${b.narrator}`;
+  $("detailText").textContent=b.overview;
+  $("detail").showModal();
+}
+
+function persist() {
+  if (!current || !ready || !Number.isFinite(audio.currentTime)) return;
+  positions[current.id]={index:trackIndex,time:audio.currentTime};
+  writeStorage("lc-progress",positions);
+}
+
+function listen(b) {
+  if (current?.id===b.id) {
+    if (audio.error) loadTrack(trackIndex,audio.currentTime);
+    else tryPlay(generation);
+    return;
+  }
+  persist();
+  current=b;
+  $("nowTitle").textContent=b.title;
+  $("nowAuthor").textContent=`${b.author} · Read by ${b.narrator}`;
+  $("source").href=`https://archive.org/details/${b.id}`;
+  $("source").hidden=false;
+  $("chapters").replaceChildren();
+  b.tracks.forEach((track,i)=>{
+    $("chapters").add(new Option(`${i+1}. ${track.title}`,String(i)));
+  });
+  $("chapters").disabled=false;
+  $("back").disabled=false;
+  $("forward").disabled=false;
+
+  const p=positions[b.id];
+  const index=Number.isInteger(p?.index) &&
+    p.index>=0 && p.index<b.tracks.length ? p.index : 0;
+  const time=Number.isFinite(p?.time) && p.time>=0 ? p.time : 0;
+  loadTrack(index,time);
+}
+
+function loadTrack(index,time=0) {
+  if (!current || index<0 || index>=current.tracks.length) return;
+  ready=false;
+  audio.pause();
+  const token=++generation;
+  trackIndex=index;
+  pendingSeek=time;
+  $("chapters").value=String(index);
+  $("status").textContent="Loading recording…";
+  const file=current.tracks[index].file;
+  audio.src=`https://archive.org/download/${current.id}/${encodeURIComponent(file)}`;
+  audio.load();
+  audio.playbackRate=Number($("speed").value);
+  tryPlay(token);
+}
+
+async function tryPlay(token) {
+  try {
+    await audio.play();
+  } catch (error) {
+    if (token!==generation || error.name==="AbortError") return;
+    $("status").textContent=error.name==="NotAllowedError"
+      ? "Ready — press Play in the audio controls."
+      : "Couldn't start audio. Retry Listen, or open Recording source.";
+  }
+}
+
+audio.addEventListener("loadedmetadata",()=>{
+  if (pendingSeek!==null) {
+    const max=Number.isFinite(audio.duration) ? Math.max(0,audio.duration-0.5) : pendingSeek;
+    audio.currentTime=Math.min(pendingSeek,max);
+    pendingSeek=null;
+  }
+  ready=true;
+  audio.playbackRate=Number($("speed").value);
+});
+audio.addEventListener("playing",()=>{
+  $("status").textContent=`Playing · ${current.tracks[trackIndex].title}`;
+});
+audio.addEventListener("waiting",()=>{
+  $("status").textContent="Buffering recording…";
+});
+audio.addEventListener("pause",()=>{
+  if (ready && !audio.ended) {
+    persist();
+    $("status").textContent="Paused.";
+  }
+});
+audio.addEventListener("timeupdate",()=>{
+  if (Date.now()-lastSave>3000) {
+    persist();
+    lastSave=Date.now();
+  }
+});
+audio.addEventListener("ended",()=>{
+  if (trackIndex+1<current.tracks.length) {
+    persist();
+    loadTrack(trackIndex+1);
+  } else {
+    positions[current.id]={index:0,time:0};
+    writeStorage("lc-progress",positions);
+    ready=false;
+    $("status").textContent="Book finished. Nice listening!";
+  }
+});
+audio.addEventListener("error",()=>{
+  $("status").textContent=
+    "Recording unavailable or connection interrupted. Retry Listen, or use Recording source.";
+});
+
+$("chapters").onchange=()=>{
+  persist();
+  loadTrack(Number($("chapters").value));
+};
+$("speed").onchange=()=>{audio.playbackRate=Number($("speed").value)};
+$("back").onclick=()=>{
+  if (ready) audio.currentTime=Math.max(0,audio.currentTime-15);
+};
+$("forward").onclick=()=>{
+  if (ready && Number.isFinite(audio.duration))
+    audio.currentTime=Math.min(audio.duration,audio.currentTime+15);
+};
+$("search").oninput=render;
+$("discover").onclick=()=>{
+  libraryOnly=false; category="All"; renderFilters(); render();
+};
+$("library").onclick=()=>{
+  libraryOnly=true; category="All"; renderFilters(); render();
+};
+$("featured").onclick=()=>listen(books[0]);
+$("closeDetail").onclick=()=>$("detail").close();
+$("detailListen").onclick=()=>{
+  $("detail").close();
+  if (detailBook) listen(detailBook);
+};
+window.addEventListener("pagehide",persist);
+document.addEventListener("visibilitychange",()=>{
+  if (document.hidden) persist();
+});
+
+renderFilters();
+render();
+</script>
+
+<!-- Site navigation back to pangtongs.github.io -->
+<style>body{padding-bottom:56px}</style>
+<nav aria-label="Site" style="position:fixed;left:12px;bottom:12px;z-index:9999;display:flex;gap:6px;font:600 13px/1 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif">
+  <a href="index.html" style="padding:8px 12px;border-radius:999px;background:rgba(20,23,30,.85);color:#eef1f6;text-decoration:none;border:1px solid rgba(255,255,255,.15);backdrop-filter:blur(8px)">← All tools</a>
+  <a href="../index.html" style="padding:8px 12px;border-radius:999px;background:rgba(20,23,30,.85);color:#eef1f6;text-decoration:none;border:1px solid rgba(255,255,255,.15);backdrop-filter:blur(8px)">Home</a>
+</nav>
+</body>
+</html>
