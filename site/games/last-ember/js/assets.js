@@ -119,18 +119,28 @@ const Sprites = {
     }));
   },
 
+  // Hostile shots share one look that player spells never use: a red danger rim and
+  // glow around a dark core, with the shooter's colour only in the centre.
   enemyShot(kind) {
-    return this.get('shot:' + kind, () => makeSprite(56, 40, c => {
-      const r = kind === 'spitter' ? 9 : 6;
+    return this.get('shot:' + kind, () => makeSprite(60, 44, c => {
+      const r = kind === 'spitter' ? 9 : 7;
       const tint = kind === 'warlock' ? '#d490ff' : kind === 'sentinel' ? '#7af1ff' : '#a4f072';
-      c.shadowColor = tint; c.shadowBlur = 13;
-      c.fillStyle = tint + '99'; c.beginPath(); c.ellipse(-6, 0, r + 9, r * .65, 0, 0, TAU); c.fill();
+      // Smoky red tail
+      const tail = c.createLinearGradient(-r - 16, 0, 0, 0);
+      tail.addColorStop(0, '#ff2d5500'); tail.addColorStop(1, '#ff2d55aa');
+      c.fillStyle = tail; c.beginPath(); c.ellipse(-r - 4, 0, r + 10, r * .7, 0, 0, TAU); c.fill();
+      // Glow, dark body, red rim
+      c.shadowColor = '#ff2d55'; c.shadowBlur = 12;
+      c.fillStyle = '#22060f'; c.beginPath(); c.arc(0, 0, r + 3, 0, TAU); c.fill();
+      c.shadowBlur = 0;
+      c.strokeStyle = '#ff4d6d'; c.lineWidth = 2.5; c.stroke();
+      // Shooter colour in the core, shaped by type
       c.fillStyle = tint; c.beginPath();
-      if (kind === 'sentinel') { c.moveTo(r + 5, 0); c.lineTo(-r, -5); c.lineTo(-r, 5); c.closePath(); }
-      else if (kind === 'warlock') { c.arc(0, 0, r + 2, -1.5, 1.5); c.lineTo(-2, 0); }
-      else c.ellipse(0, 0, r + 2, r * .8, 0, 0, TAU);
+      if (kind === 'sentinel') { c.moveTo(r - 1, 0); c.lineTo(-r + 2, -r + 2); c.lineTo(-r + 2, r - 2); c.closePath(); }
+      else if (kind === 'warlock') { c.arc(0, 0, r - 1, -1.4, 1.4); c.lineTo(-1, 0); c.closePath(); }
+      else c.arc(0, 0, r - 1.5, 0, TAU);
       c.fill();
-      c.shadowBlur = 0; c.fillStyle = '#f7ffff'; c.beginPath(); c.arc(2, -1, 2, 0, TAU); c.fill();
+      c.fillStyle = '#fff'; c.beginPath(); c.arc(1.5, -1.5, 1.6, 0, TAU); c.fill();
     }));
   },
 
@@ -229,5 +239,14 @@ const SIGILS = {
   heart: '<path d="M12 21 3.5 12.5a5 5 0 0 1 7-7L12 7l1.5-1.5a5 5 0 0 1 7 7L12 21Z"/>',
   shield: '<path d="M12 2 3 6v6c0 5 3 8 9 10 6-2 9-5 9-10V6l-9-4Z"/><path d="m8 12 3 3 5-6"/>',
   attack: '<path d="m5 19 14-14M14 4l6 6M3 17l4 4m0-6 2 2"/>',
+  // Bargains: each drawn for its own deal.
+  pact: '<path d="M12 3c-3 5-6 8-6 11a6 6 0 0 0 12 0c0-3-3-6-6-11Z"/><path d="M9 14h6M12 11v6"/>',                         // blood drop marked with a cross
+  wick: '<path d="M8 21h8M9 21V10h6v11"/><path d="M12 10V7"/><path d="M12 7c-2-1.5-1.5-4 0-5 1.5 1 2 3.5 0 5Z"/><path d="m10 13 2 2-1 2 2 2"/>', // cracked glass candle
+  volatile: '<circle cx="11" cy="14" r="6"/><path d="m15 9 2-2"/><path d="M18 3v2M21 6h-2M20.5 3.5 19 5"/><path d="M8.5 12.5 10 14"/>', // bomb with a lit fuse
+  hoard: '<ellipse cx="12" cy="6" rx="7" ry="2.5"/><path d="M5 6v4c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5V6"/><path d="M5 10v4c0 1.4 3.1 2.5 7 2.5"/><circle cx="17.5" cy="17.5" r="3.5"/><path d="M16.3 17h.01M18.7 17h.01M16.5 19h2"/>', // coin stack with a skull coin
+  oath: '<path d="M12 21 3.5 12.5a5 5 0 0 1 7-7L12 7l1.5-1.5a5 5 0 0 1 7 7L12 21Z"/><path d="m12 7-1.5 4 3 2-2 4"/>', // cracked heart
+  hunted: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="M12 1v5M12 18v5M1 12h5M18 12h5"/>',       // crosshair
+  quarters: '<circle cx="12" cy="12" r="9" stroke-dasharray="3 3"/><circle cx="12" cy="12" r="3.5"/><path d="m5 5 3.5 3.5M19 5l-3.5 3.5M5 19l3.5-3.5M19 19l-3.5-3.5"/>', // close ring with inward strikes
+  overcharge: '<rect x="3" y="7" width="16" height="10" rx="2"/><path d="M21 10v4"/><path d="m12 8-3 4h4l-3 4"/>',        // battery with a lightning bolt
 };
 const iconMarkup = key => SIGILS[key] ? `<svg class="sigil" viewBox="0 0 24 24" aria-hidden="true">${SIGILS[key]}</svg>` : '';

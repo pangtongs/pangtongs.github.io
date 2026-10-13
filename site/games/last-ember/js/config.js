@@ -98,21 +98,21 @@ const ORIGINS = {
 // Bargains: one appears at each spell level up until all are taken. Each grants a strong
 // bonus at a real cost; the effects outside apply() live in game.js and spells.js.
 const BARGAINS = {
-  bloodPact:     {name: 'Blood Pact', icon: 'leech', gain: '+40% damage', cost: 'Every spell cast drains 0.3% of your current HP',
+  bloodPact:     {name: 'Blood Pact', icon: 'pact', gain: '+40% damage', cost: 'Every spell cast drains 0.3% of your current HP',
     apply: p => { p.atk *= 1.4; }},
-  glassWick:     {name: 'Glass Wick', icon: 'ice', gain: 'Spells cast 35% faster', cost: 'You can never hold a shield again',
+  glassWick:     {name: 'Glass Wick', icon: 'wick', gain: 'Spells cast 35% faster', cost: 'You can never hold a shield again',
     apply: p => { p.castCooldown *= .74; p.shield = 0; }},
-  volatile:      {name: 'Volatile Core', icon: 'fire', gain: 'Slain foes explode for half their max HP', cost: 'The blasts hurt you too',
+  volatile:      {name: 'Volatile Core', icon: 'volatile', gain: 'Slain foes explode for half their max HP', cost: 'The blasts hurt you too',
     apply: () => {}},
-  cursedHoard:   {name: 'Cursed Hoard', icon: 'coin', gain: 'Gem and gold drops ×2', cost: 'Enemies that appear from now on have +30% HP',
+  cursedHoard:   {name: 'Cursed Hoard', icon: 'hoard', gain: 'Gem and gold drops ×2', cost: 'Enemies that appear from now on have +30% HP',
     apply: (p, g) => { g.yields.gems *= 2; g.yields.coins *= 2; }},
-  berserker:     {name: "Berserker's Oath", icon: 'attack', gain: 'Up to +80% damage as your HP falls', cost: 'Max HP −30%',
+  berserker:     {name: "Berserker's Oath", icon: 'oath', gain: 'Up to +80% damage as your HP falls', cost: 'Max HP −30%',
     apply: p => { p.maxHp *= .7; p.hp = Math.min(p.hp, p.maxHp); }},
-  hunted:        {name: 'Hunted', icon: 'soul', gain: '+50% XP', cost: 'Enemies spawn 30% faster',
+  hunted:        {name: 'Hunted', icon: 'hunted', gain: '+50% XP', cost: 'Enemies spawn 30% faster',
     apply: () => {}},
-  closeQuarters: {name: 'Close Quarters', icon: 'blades', gain: '+60% damage to foes within 160px', cost: '−40% damage to foes farther away',
+  closeQuarters: {name: 'Close Quarters', icon: 'quarters', gain: '+60% damage to foes within 160px', cost: '−40% damage to foes farther away',
     apply: () => {}},
-  overcharge:    {name: 'Overcharge', icon: 'solar', gain: 'Ultimate cooldowns −40%', cost: 'Every other spell casts 15% slower',
+  overcharge:    {name: 'Overcharge', icon: 'overcharge', gain: 'Ultimate cooldowns −40%', cost: 'Every other spell casts 15% slower',
     apply: p => { p.castCooldown *= 1.15; p.ultimateHaste *= .52; }}, // .52 × 1.15 ≈ .6 on the ultimate
 };
 const CLOSE_QUARTERS_RANGE = 160;
@@ -153,14 +153,15 @@ const ARTIFACTS = {
 };
 
 // In-run market. Costs grow by `growth` per purchase; `max` caps investments.
+// short: label for the HUD's auto-buy progress.
 const MARKET = {
-  attack:    {currency: 'gems',  base: 6,  growth: 1.8, label: 'ATK +12%', note: 'Stackable for this run'},
-  haste:     {currency: 'gems',  base: 12, growth: 1.8, label: 'Spells 8% faster', note: 'Reduces all cast cooldowns'},
-  coinYield: {currency: 'gems',  base: 5,  growth: 1.9, max: 4, yieldOf: 'coins'},
-  hp:        {currency: 'coins', base: 12, growth: 1.8, label: 'Max HP +12%', note: 'Heal the added HP'},
-  shield:    {currency: 'coins', base: 14, growth: 1.8, label: 'Shield +25% max HP', note: 'Plus 0.1% max HP/sec regen'},
-  speed:     {currency: 'coins', base: 10, growth: 1.8, label: 'Speed +10%', note: 'Move faster, stackable'},
-  gemYield:  {currency: 'coins', base: 12, growth: 1.9, max: 4, yieldOf: 'gems'},
+  attack:    {currency: 'gems',  base: 6,  growth: 1.8, short: 'ATK', label: 'ATK +12%', note: 'Stackable for this run'},
+  haste:     {currency: 'gems',  base: 12, growth: 1.8, short: 'HASTE', label: 'Spells 8% faster', note: 'Reduces all cast cooldowns'},
+  coinYield: {currency: 'gems',  base: 5,  growth: 1.9, max: 4, yieldOf: 'coins', short: 'GOLD×'},
+  hp:        {currency: 'coins', base: 12, growth: 1.8, short: 'HP', label: 'Max HP +12%', note: 'Heal the added HP'},
+  shield:    {currency: 'coins', base: 14, growth: 1.8, short: 'SHIELD', label: 'Shield +25% max HP', note: 'Plus 0.1% max HP/sec regen'},
+  speed:     {currency: 'coins', base: 10, growth: 1.8, short: 'SPEED', label: 'Speed +10%', note: 'Move faster, stackable'},
+  gemYield:  {currency: 'coins', base: 12, growth: 1.9, max: 4, yieldOf: 'gems', short: 'GEM×'},
 };
 const YIELD_STEP = 1.35;
 

@@ -32,6 +32,7 @@
       <span class="gems" title="Gems">GEMS <b id="gems">0</b></span>
       <span class="coins" title="Gold">GOLD <b id="coins">0</b></span>
     </div>
+    <div id="autoBuyInfo" class="autoBuyInfo hidden"></div>
     <div class="hudActions">
       <button id="marketBtn">MARKET</button>
       <button id="pauseBtn">Ⅱ PAUSE</button>
@@ -43,6 +44,10 @@
 <div id="bossUI" class="bossbar hidden"><img id="bossPortrait" class="bossPortrait" src="assets/boss-0.webp" alt=""><span id="bossName">GRAVE WARDEN</span><div class="bar"><div id="bossBar" class="fill hp"></div></div></div>
 <div id="toast" class="toast"></div>
 <div id="spellTray" class="spellTray"></div>
+<div class="touchActions">
+  <button id="touchMarket" class="touchBtn" aria-label="Market"><i class="icon icon-coin"></i></button>
+  <button id="touchPause" class="touchBtn" aria-label="Pause">Ⅱ</button>
+</div>
 <div id="joystick" class="joystick"><div class="stick"></div><div id="nub" class="nub"></div></div>
 <div id="perf" class="perf hidden"></div>
 
@@ -107,6 +112,7 @@
 
 <div id="levelOverlay" class="overlay hidden"><div class="modal">
   <h1 id="levelTitle">LEVEL UP!</h1><p id="levelDesc">Choose a spell</p>
+  <div id="levelWallet" class="levelWallet"></div>
   <div id="choices" class="choices"></div>
 </div></div>
 
@@ -128,6 +134,7 @@
 
 <div id="marketOverlay" class="overlay hidden"><div class="modal marketModal">
   <h1>RIFT MARKET</h1><p id="marketBalance" class="marketBalance"></p>
+  <p class="menuNote">Tap AUTO on one item per currency to save toward it: it buys itself every time you can afford it.</p>
   <div class="marketSections">
     <section class="marketSection gems"><h2>SPEND GEMS</h2><div class="merchant" data-currency="gems"></div></section>
     <section class="marketSection coins"><h2>SPEND GOLD</h2><div class="merchant" data-currency="coins"></div></section>

@@ -6,7 +6,7 @@ class Hud {
   constructor() {
     this.el = {};
     for (const id of ['hpText', 'hpBar', 'shieldText', 'shieldBar', 'xpText', 'xpBar', 'souls', 'gems', 'coins', 'finishBtn',
-      'stageGoal', 'wave', 'timer', 'spellTray', 'bossUI', 'bossBar', 'bossName', 'bossPortrait', 'perf', 'pauseBtn']) this.el[id] = $(id);
+      'stageGoal', 'wave', 'timer', 'spellTray', 'autoBuyInfo', 'bossUI', 'bossBar', 'bossName', 'bossPortrait', 'perf', 'pauseBtn']) this.el[id] = $(id);
     this.cache = new Map();
     this.nextAt = 0;
     this.fps = {frames: 0, since: performance.now(), text: ''};
@@ -44,6 +44,9 @@ class Hud {
     this.text('souls', String(g.wallet));
     this.text('gems', String(g.gemsCount));
     this.text('coins', String(g.coins));
+    const auto = ['gems', 'coins'].filter(c => g.autoBuy[c]).map(c => `${MARKET[g.autoBuy[c]].short} ${g.balance(c)}/${g.marketCost(g.autoBuy[c])}`);
+    this.toggle('autoBuyInfo', 'hidden', !auto.length);
+    if (auto.length) this.text('autoBuyInfo', 'AUTO ' + auto.join(' · '));
     this.toggle('finishBtn', 'ready', !!g.stageComplete);
     this.text('pauseBtn', g.paused && g.running ? '▶ RESUME' : 'Ⅱ PAUSE');
     this.text('stageGoal', g.stageComplete ? 'STAGE CLEARED · FINISH WHEN READY'

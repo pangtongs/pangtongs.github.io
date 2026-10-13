@@ -43,6 +43,7 @@ class Game {
     this.yields = {gems: 1, coins: 1};
     this.dropRemainders = {gems: 0, coins: 0};
     this.marketRanks = Object.fromEntries(Object.keys(MARKET).map(k => [k, 0]));
+    this.autoBuy = {gems: null, coins: null}; // market item bought automatically per currency
     this.enemies = []; this.drops = []; this.projectiles = []; this.enemyShots = []; this.chests = []; this.meteors = [];
     this.nearby = [];
     this.fx.clear();
@@ -93,6 +94,8 @@ class Game {
     on('loadBtn', () => this.loadRun());
     on('restartBtn', () => this.showMenu());
     on('pauseBtn', () => this.togglePause());
+    on('touchPause', () => this.togglePause());
+    on('touchMarket', () => this.openMarket());
     on('resumeBtn', () => this.togglePause());
     on('saveBtn', () => this.saveRun());
     on('menuBtn', () => { this.saveRun(true); this.showMenu(); });
@@ -413,6 +416,7 @@ class Game {
     else if (d.type === 'soul') { this.souls += d.value; this.wallet += d.value; }
     else if (d.type === 'gems') this.gemsCount += d.value;
     else this.coins += d.value;
+    if (d.type === 'gems' || d.type === 'coins') this.runAutoBuy(d.type);
     this.burst(d.x, d.y, DROP_COLORS[d.type], 5);
   }
 
@@ -461,7 +465,27 @@ class Game {
     $('pauseOverlay').classList.toggle('hidden', !this.paused);
   }
 
-  purchase(kind) {
+  // Toggle the auto-buy target for this item's currency (one per currency).
+  setAutoBuy(kind) {
+    const cur = MARKET[kind].currency;
+    this.autoBuy[cur] = this.autoBuy[cur] === kind ? null : kind;
+    this.runAutoBuy(cur);
+    UI.renderMarket(this);
+    this.hud.update(this, performance.now(), true);
+  }
+
+  runAutoBuy(currency) {
+    const kind = this.autoBuy[currency];
+    if (!kind) return;
+    const item = MARKET[kind];
+    for (let i = 0; i < 5 && this.balance(currency) >= this.marketCost(kind); i++) {
+      if (item.max && this.marketRanks[kind] >= item.max) break;
+      this.purchase(kind, true);
+    }
+    if (item.max && this.marketRanks[kind] >= item.max) this.autoBuy[currency] = null;
+  }
+
+  purchase(kind, auto = false) {
     const item = MARKET[kind], p = this.player;
     if (item.max && this.marketRanks[kind] >= item.max) { this.toast('Investment maxed'); return; }
     const cost = this.marketCost(kind);
@@ -477,8 +501,8 @@ class Game {
       coinYield: () => { this.yields.coins *= YIELD_STEP; return `Gold drops ×${this.yields.coins.toFixed(2)}`; },
       gemYield: () => { this.yields.gems *= YIELD_STEP; return `Gem drops ×${this.yields.gems.toFixed(2)}`; },
     };
-    this.toast(messages[kind]());
-    UI.renderMarket(this);
+    this.toast((auto ? 'AUTO-BUY · ' : '') + messages[kind]());
+    if (isOpen('marketOverlay')) UI.renderMarket(this);
     this.hud.update(this, performance.now(), true);
   }
 
@@ -564,6 +588,8 @@ class Game {
       else this.coins += d.value;
     }
     this.drops.length = 0;
+    this.runAutoBuy('gems');
+    this.runAutoBuy('coins');
     if (xp) this.gainXP(xp * this.xpMultiplier);
     return found;
   }
@@ -620,7 +646,7 @@ class Game {
       version: SAVE_VERSION, savedAt: Date.now(),
       ...pick(this, ['stage', 'difficulty', 'time', 'stageTime', 'growthClock', 'bossCD', 'miniCD', 'miniCount', 'minisDefeated', 'miniGoal',
         'spawnCD', 'stageClearPending', 'stageComplete', 'levelQueue', 'stageLootCollected', 'lastArtifact', 'souls', 'gemsCount', 'coins']),
-      yields: {...this.yields}, dropRemainders: {...this.dropRemainders}, marketRanks: {...this.marketRanks},
+      yields: {...this.yields}, dropRemainders: {...this.dropRemainders}, marketRanks: {...this.marketRanks}, autoBuy: {...this.autoBuy},
       player: JSON.parse(JSON.stringify(this.player)),
       enemies: this.enemies.filter(e => !e.dead).map(e => ({...e})),
       drops: this.drops.map(d => ({...d})),
@@ -645,11 +671,12 @@ class Game {
   restore(data) {
     if (data.stage < 1 || data.stage > STAGE_COUNT || !data.player) return false;
     this.reset();
-    const {player, enemies, drops, chests, enemyShots, yields, dropRemainders, marketRanks, version, savedAt, ...state} = data;
+    const {player, enemies, drops, chests, enemyShots, yields, dropRemainders, marketRanks, autoBuy, version, savedAt, ...state} = data;
     Object.assign(this, state);
     this.yields = {...this.yields, ...yields};
     this.dropRemainders = {...this.dropRemainders, ...dropRemainders};
     this.marketRanks = {...this.marketRanks, ...marketRanks};
+    this.autoBuy = {...this.autoBuy, ...autoBuy};
     const base = new Player();
     this.player = Object.assign(base, player, {
       skills: {...base.skills, ...player.skills}, passiveRanks: {...base.passiveRanks, ...player.passiveRanks}, cool: {...base.cool, ...player.cool},

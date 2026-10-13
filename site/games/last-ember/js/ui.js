@@ -23,7 +23,7 @@ const UI = {
   renderSpellbook() {
     $('spellBookSections').innerHTML = SPELLBOOK.map(section => `
       <section class="bookSection"><h2>${section.title}</h2><div class="spellGuide">
-        ${section.cards.map(c => `<div class="spellGuideCard"><div class="spellArt icon icon-${c.icon}"></div><strong>${c.name}</strong><small>${c.text}</small></div>`).join('')}
+        ${section.cards.map(c => `<div class="spellGuideCard"><div class="spellArt icon icon-${c.icon}">${iconMarkup(c.icon)}</div><strong>${c.name}</strong><small>${c.text}</small></div>`).join('')}
       </div></section>`).join('');
   },
 
@@ -109,6 +109,8 @@ const UI = {
       $('levelDesc').textContent = 'Evolve a spell, build a passive power, or strike a bargain. Growth triggers every minute while you survive.';
       options = this.spellOptions(g);
     }
+    $('levelWallet').innerHTML = `<span class="gems">GEMS <b>${g.gemsCount}</b></span><span class="coins">GOLD <b>${g.coins}</b></span>` +
+      ['gems', 'coins'].filter(c => g.autoBuy[c]).map(c => `<span class="auto">AUTO ${MARKET[g.autoBuy[c]].short} ${g.balance(c)}/${g.marketCost(g.autoBuy[c])}</span>`).join('');
     const box = $('choices');
     box.dataset.tier = tier;
     box.innerHTML = '';
@@ -154,29 +156,36 @@ const UI = {
     ];
   },
 
-  // Two passives, then owned spells, then new spells, up to five cards. While any bargain
-  // is left, the last card is a bargain.
+  // Five cards: three spells, one passive and one bargain. Spells are drawn at random,
+  // but include at least one you own and one you don't when both exist, so new spells
+  // keep showing up. With no bargains left, a second passive takes that slot.
   spellOptions(g) {
     const p = g.player;
     const spells = Object.entries(SPELLS).filter(([key]) => p.skills[key] < SPELL_MAX_RANK).map(([key, s]) => ({
       key, name: `${s.name} · ${p.skills[key] + 1}/${SPELL_MAX_RANK}`, icon: s.icon, tone: 'SPELL', desc: s.desc,
       take: () => { p.skills[key]++; if (p.cool[key] !== undefined) p.cool[key] = 0; },
     }));
-    const passives = Object.entries(PASSIVES).filter(([key]) => p.passiveRanks[key] < 5).map(([key, s]) => ({
+    const passives = shuffle(Object.entries(PASSIVES).filter(([key]) => p.passiveRanks[key] < 5).map(([key, s]) => ({
       name: `${s.name} · ${p.passiveRanks[key] + 1}/5`, icon: key, tone: 'PASSIVE', desc: s.desc, take: () => { p.passiveRanks[key]++; },
-    }));
-    const bargains = Object.entries(BARGAINS).filter(([key]) => !p.bargains[key]).map(([key, b]) => ({
+    })));
+    const bargains = shuffle(Object.entries(BARGAINS).filter(([key]) => !p.bargains[key]).map(([key, b]) => ({
       name: b.name, icon: b.icon, tone: 'BARGAIN', desc: `<span class="gain">${b.gain}</span><span class="cost">${b.cost}</span>`,
       take: () => { p.bargains[key] = true; b.apply(p, g); g.toast(`BARGAIN STRUCK · ${b.name.toUpperCase()}`); },
-    }));
-    const slots = bargains.length ? 4 : 5;
-    const options = shuffle(passives).slice(0, 2);
+    })));
+
     const owned = shuffle(spells.filter(o => p.skills[o.key] > 0)), fresh = shuffle(spells.filter(o => p.skills[o.key] === 0));
-    options.push(...owned.slice(0, Math.min(2, slots - options.length)));
-    options.push(...fresh.slice(0, slots - options.length));
-    options.push(...owned.filter(o => !options.includes(o)).slice(0, slots - options.length));
+    const picked = [];
+    if (owned.length) picked.push(owned.shift());
+    if (fresh.length) picked.push(fresh.shift());
+    picked.push(...shuffle([...owned, ...fresh]).slice(0, 3 - picked.length));
+
+    const options = shuffle(picked);
+    options.push(...passives.splice(0, bargains.length ? 1 : 2));
+    // Short on spells late in a run: top up with passives, then Arcane Echo.
+    const slots = bargains.length ? 4 : 5;
+    options.push(...passives.slice(0, slots - options.length));
     while (options.length < slots) options.push({name: 'Arcane Echo', icon: 'bolt', tone: 'SPELL', desc: 'Increase your homing bolt damage by 4 per rank.', take: () => { p.skills.echo++; }});
-    if (bargains.length) options.push(shuffle(bargains)[0]);
+    if (bargains.length) options.push(bargains[0]);
     return options;
   },
 
@@ -206,11 +215,19 @@ const UI = {
   // Market buttons are created once, then relabeled whenever balances change.
   buildMarket(g) {
     for (const [kind, item] of Object.entries(MARKET)) {
+      const row = document.createElement('div');
+      row.className = 'merchantRow';
       const b = document.createElement('button');
       b.className = 'button';
       b.dataset.purchase = kind;
       b.onclick = () => g.purchase(kind);
-      document.querySelector(`.merchant[data-currency="${item.currency}"]`).appendChild(b);
+      const auto = document.createElement('button');
+      auto.className = 'autoBtn';
+      auto.dataset.auto = kind;
+      auto.title = 'Buy automatically whenever affordable';
+      auto.onclick = () => g.setAutoBuy(kind);
+      row.append(b, auto);
+      document.querySelector(`.merchant[data-currency="${item.currency}"]`).appendChild(row);
     }
   },
 
@@ -220,6 +237,10 @@ const UI = {
       const b = document.querySelector(`[data-purchase="${kind}"]`);
       const rank = g.marketRanks[kind], cost = g.marketCost(kind), cur = CURRENCY_LABEL[item.currency];
       const affordable = g.balance(item.currency) >= cost;
+      const auto = document.querySelector(`[data-auto="${kind}"]`), on = g.autoBuy[item.currency] === kind;
+      auto.textContent = on ? 'AUTO ✓' : 'AUTO';
+      auto.setAttribute('aria-pressed', String(on));
+      auto.disabled = !!item.max && rank >= item.max;
       if (item.yieldOf) {
         const name = item.yieldOf === 'gems' ? 'Gem' : 'Gold', mult = g.yields[item.yieldOf];
         const maxed = rank >= item.max;

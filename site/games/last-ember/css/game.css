@@ -73,6 +73,12 @@ canvas{display:block;width:100vw;height:100vh}
 .stick{position:absolute;inset:0;border-radius:50%;background:#2b264a99;border:2px solid #756a9b}
 .nub{position:absolute;width:54px;height:54px;left:41px;top:41px;border-radius:50%;background:#b58affbb;border:2px solid #f0d4ff;box-shadow:0 3px 0 #4d3477}
 
+/* Auto-buy progress under the currencies, and the touch buttons (phones only). */
+.autoBuyInfo{margin-top:4px;font-size:9px;font-weight:800;letter-spacing:.04em;color:#ffd083}
+.touchActions{position:fixed;right:14px;bottom:16px;z-index:4;display:none;flex-direction:column;gap:14px}
+.touchBtn{display:grid;place-items:center;width:56px;height:56px;padding:0;font:900 20px ui-monospace,monospace;color:#fff0ce;background:#173148e6;border:2px solid #62849d;border-radius:50%;box-shadow:0 4px 14px #0008;touch-action:manipulation}
+.touchBtn:active{transform:scale(.94);background:#24496a}
+.touchBtn .icon{width:32px;height:32px;border-radius:50%}
 .perf{position:fixed;right:10px;bottom:10px;z-index:4;padding:4px 7px;font:11px ui-monospace,monospace;color:#9fe8c6;background:#07121ecc;border:1px solid #2d4a5f;border-radius:6px;pointer-events:none;white-space:pre}
 
 /* ---------- Overlays and modals ---------- */
@@ -105,6 +111,11 @@ canvas{display:block;width:100vw;height:100vh}
 .originModal .choice{min-height:175px}
 .originModal .choiceIcon{float:none;width:70px;height:70px;margin:0 0 10px}
 
+/* Balances shown while choosing a level up */
+.levelWallet{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin:4px 0 0;font-size:11px;font-weight:800}
+.levelWallet span{padding:4px 9px;background:#0b2136;border:1px solid #47617a;border-radius:6px}
+.levelWallet .gems{color:#85e1dd;border-color:#418991}.levelWallet .coins{color:#ffd083;border-color:#a88343}.levelWallet .auto{color:#ffd083;border-style:dashed}
+
 #chestOverlay .modal{width:min(860px,100%)}
 #chestOverlay .choice{min-height:160px}
 #chestOverlay .choice em{color:#ffd38b}
@@ -124,7 +135,11 @@ canvas{display:block;width:100vw;height:100vh}
 .marketSection h2{display:flex;align-items:center;gap:8px;margin:0 0 12px;font-size:17px}
 .marketSection.gems h2{color:#85e1dd}.marketSection.coins h2{color:#ffd083}
 .merchant{display:grid;gap:10px}
+.merchantRow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px}
 .merchant .button{width:100%;margin:0;padding:11px;text-align:left;font-size:13px}
+.autoBtn{min-width:64px;padding:0 8px;font:800 11px ui-monospace,monospace;letter-spacing:.06em;color:#c9d8e6;background:#14283c;border:1px solid #4d6b84;border-radius:8px;cursor:pointer}
+.autoBtn[aria-pressed="true"]{color:#2a1c05;background:linear-gradient(180deg,#ffe09a,#ffb653);border-color:#ffd083}
+.autoBtn:disabled{opacity:.35;cursor:not-allowed}
 .merchant small{display:block;margin-top:5px;font-size:11px;opacity:.75}
 
 .stageArt{height:100px;object-fit:contain;filter:drop-shadow(0 0 20px #9b7aff)}
@@ -143,6 +158,8 @@ canvas{display:block;width:100vw;height:100vh}
 .spellGuide{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));align-items:stretch;gap:12px;margin:12px 0}
 .spellGuideCard{min-width:0;padding:10px;text-align:left;background:#101f32;border:1px solid #3f617c;border-radius:12px}
 .spellGuideCard .spellArt{width:100%;aspect-ratio:1.35;margin-bottom:8px;background-color:#11253a;border:1px solid #496a86;border-radius:8px}
+.spellGuideCard .spellArt{display:grid;place-items:center;color:#ff9cb2}
+.spellGuideCard .sigil{width:54px;height:54px;stroke-width:1.5}
 .spellGuideCard strong{display:block;font-size:13px;color:#ffe0a1;overflow-wrap:anywhere}
 .spellGuideCard small{font-size:11px;color:#b8cadd;overflow-wrap:anywhere}
 
@@ -215,6 +232,25 @@ canvas{display:block;width:100vw;height:100vh}
   .bossbar{top:80px;left:10%;width:80%}
   .spellTray{display:none}
   .joystick{display:block;bottom:14px;left:12px}
+  /* Pause and market move to big thumb buttons at the bottom right. */
+  .touchActions{display:flex}
+  #marketBtn,#pauseBtn{display:none}
+  .autoBuyInfo{font-size:7px}
+  .perf{bottom:150px}
+
+  /* Level ups and chests: compact rows so every card, bargain included, fits without scrolling. */
+  #levelOverlay,#chestOverlay{align-items:flex-start;padding:10px}
+  #levelOverlay .modal,#chestOverlay .modal{padding:14px 12px}
+  #levelOverlay h1,#chestOverlay h1{font-size:19px}
+  #levelOverlay .modal p,#chestOverlay .modal p{margin:4px 0;font-size:11px;line-height:1.4}
+  #levelOverlay .choices,#chestOverlay .choices{gap:7px;margin-top:10px}
+  #levelOverlay .choice,#chestOverlay .choice{display:grid;grid-template-columns:40px minmax(0,1fr);column-gap:10px;align-content:start;min-height:0;padding:9px 10px;box-shadow:0 4px 0 #07111d}
+  #levelOverlay .choiceIcon,#chestOverlay .choiceIcon{grid-row:1/4;width:40px;height:40px;margin:0;float:none}
+  #levelOverlay .choiceIcon .sigil,#chestOverlay .choiceIcon .sigil{width:26px;height:26px}
+  #levelOverlay .choice em,#chestOverlay .choice em{justify-self:start;margin:0 0 3px;padding:2px 5px;font-size:7px}
+  #levelOverlay .choice b,#chestOverlay .choice b{margin:0 0 2px;padding:0;font-size:12px}
+  #levelOverlay .choice small,#chestOverlay .choice small{padding:0;font-size:10.5px;line-height:1.35}
+  .levelWallet{font-size:10px}
 
   .modal{max-height:92vh;overflow:auto;padding:20px 16px;border-radius:14px}
   .modal h1{font-size:24px}
