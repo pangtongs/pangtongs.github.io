@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#151d31">
+  <title>Warga Tactics — Serikat Lentera</title>
+  <meta name="description" content="An Indonesian urban-fantasy tactical RPG. Gather a clan at Bu Ratih’s warteg, fight on living city maps that flood, burn and fight back, and free Sagara district by district.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23151d31'/%3E%3Cpath d='M32 10c-6 8-12 13-12 22a12 12 0 0 0 24 0c0-9-6-14-12-22z' fill='%23f3c96b'/%3E%3C/svg%3E">
+  <!-- Paint the dark backdrop immediately and reveal the page once styles are applied (main.ts). -->
+  <style>html,body{--lightningcss-light: ;--lightningcss-dark:initial;color-scheme:dark;background:#0c1120;margin:0}body:not(.ready){visibility:hidden}</style>
+  <script type="module" crossorigin src="./assets/index-CanBhUBN.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-BnpGjz5t.css">
+</head>
+<body>
+<div class="app-shell">
+  <header>
+    <button id="title-button" class="brand" aria-label="Title screen"><span>WARGA TACTICS</span><small>SERIKAT LENTERA</small></button>
+    <nav id="navigation" aria-label="Game screens">
+      <button data-page="hub" class="active">Warteg</button>
+      <button data-page="quests">Quest Board</button>
+      <button data-page="city" hidden>City</button>
+      <button data-page="clan">Clan & Jobs</button>
+      <button data-page="journal">Journal</button>
+    </nav>
+    <div class="resources"><span id="chapter">CHAPTER I</span><b id="gold">Rp120.000</b><button id="settings" aria-label="Settings">Settings</button><button id="help" aria-label="How to play">?</button></div>
+  </header>
+  <main id="main"><div class="loading"><h1>Serikat Lentera</h1><p>Lighting the warteg. Gathering the clan…</p></div></main>
+  <footer><span id="footer-location">KOTA SAGARA · WARTEG BU RATIH</span><span id="save-state">Saves on this device</span></footer>
+</div>
+<div id="title-screen" class="title-screen" hidden></div>
+<div id="story-overlay" class="story-overlay" hidden><div id="story-portrait"></div><div class="dialogue-box"><div class="dialogue-top"><span id="story-speaker"></span><span id="story-count"></span></div><p id="story-text"></p><div class="dialogue-bottom"><button id="skip-story" class="text-button">Skip scene</button><button id="next-story" class="gold-button">Continue <span>→</span></button></div></div></div>
+<dialog id="modal"><div id="modal-content"></div><div id="modal-actions"></div></dialog>
+<div id="toast" role="status"></div>
+</body>
+</html>

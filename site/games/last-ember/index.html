@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Last Ember: Horde Survival</title>
+<meta name="description" content="Survive the horde, grow your magic, and see how long you last.">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2712%27 fill=%27%2317142b%27/%3E%3Cpath d=%27M32 7 39 25 56 32 39 39 32 57 25 39 8 32 25 25Z%27 fill=%27%23ffc65c%27/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/game.css">
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<!-- In-game HUD -->
+<div class="hud">
+  <div class="card">
+    <div class="brand">✦ LAST EMBER</div>
+    <div class="stats">
+      HP <span id="hpText">100 / 100</span><div class="bar"><div id="hpBar" class="fill hp"></div></div>
+      SHIELD <span id="shieldText">0</span><div class="bar"><div id="shieldBar" class="fill shield"></div></div>
+      EXP <span id="xpText">0 / 10</span><div class="bar"><div id="xpBar" class="fill xp"></div></div>
+    </div>
+  </div>
+  <div class="card center">
+    <div class="timer" id="timer">00:00</div>
+    <div class="wave" id="wave">STAGE 1 · LV 1</div>
+    <div class="stageGoal" id="stageGoal"></div>
+  </div>
+  <div class="card right">
+    <div class="currency">
+      <span class="souls" title="Souls">SOULS <b id="souls">0</b></span>
+      <span class="gems" title="Gems">GEMS <b id="gems">0</b></span>
+      <span class="coins" title="Gold">GOLD <b id="coins">0</b></span>
+    </div>
+    <div class="hudActions">
+      <button id="marketBtn">MARKET</button>
+      <button id="pauseBtn">Ⅱ PAUSE</button>
+      <button id="finishBtn" class="clearAction">FINISH STAGE</button>
+    </div>
+    <button class="spellbookBtn" id="openSpellbook">SPELLBOOK</button>
+  </div>
+</div>
+<div id="bossUI" class="bossbar hidden"><img id="bossPortrait" class="bossPortrait" src="assets/boss-0.webp" alt=""><span id="bossName">GRAVE WARDEN</span><div class="bar"><div id="bossBar" class="fill hp"></div></div></div>
+<div id="toast" class="toast"></div>
+<div id="spellTray" class="spellTray"></div>
+<div id="joystick" class="joystick"><div class="stick"></div><div id="nub" class="nub"></div></div>
+<div id="perf" class="perf hidden"></div>
+
+<!-- Main menu -->
+<div id="startOverlay" class="overlay"><div class="modal menuModal">
+  <h1 class="menuTitle">LAST EMBER</h1><p class="menuSubtitle">A horde survival adventure</p>
+  <section id="menuHome" class="menuPanel">
+    <div class="menuHero">
+      <div class="menuFigure"><img src="assets/mage-0.webp" alt="Last Ember mage"></div>
+      <nav class="menuStack" aria-label="Main menu">
+        <button class="button" data-menu="start">START</button>
+        <button class="button" data-menu="upgrades">UPGRADES</button>
+        <button class="button" data-menu="stats">STATS</button>
+        <button class="button" data-open-spellbook>VIEW SPELLS</button>
+        <button class="button" data-menu="settings">SETTINGS</button>
+      </nav>
+      <div class="menuFigure foe"><img src="assets/boss-0.webp" alt="Grave Warden"></div>
+    </div>
+  </section>
+  <section id="menuStart" class="menuPanel hidden">
+    <h2>CHOOSE A STAGE</h2>
+    <p>Defeat the final boss to unlock the next stage. Every stage selection starts a fresh run.</p>
+    <div id="stageSelect" class="stageSelect"></div>
+    <p id="menuSaveInfo" class="menuNote"></p>
+    <div class="menuActions"><button class="button" id="startBtn">PLAY SELECTED STAGE</button><button class="button secondary" id="loadBtn">CONTINUE SAVED RUN</button></div>
+    <button class="button secondary menuBack" data-menu="home">BACK</button>
+  </section>
+  <section id="menuUpgrades" class="menuPanel hidden">
+    <h2>DEN OF MAGIC</h2>
+    <p>Spend permanent souls to strengthen future runs.</p>
+    <div class="menuBalance"><svg class="soulGlyph" viewBox="0 0 32 32" aria-hidden="true"><path d="M17 2C14 8 9 10 9 17c0 5 3 10 8 12-2-4 1-6 4-9 3-4 2-10-4-18Z" fill="#b888f1"/><path d="M14 11c0 5 6 6 5 11-1 2-3 4-4 4-5-6-2-11-1-15Z" fill="#efe2ff"/></svg> SOULS AVAILABLE <span id="menuSouls">0</span></div>
+    <div class="upgradeList">
+      <div class="upgradeCard"><h3>EMBER FOCUS</h3><p>Base attack +10% per rank. Rank <span id="menuAtkRank">0</span></p><button id="menuAtkBuy" class="button" data-meta-buy="atk">BUY · <span>30</span> SOULS</button></div>
+      <div class="upgradeCard"><h3>LIVING VIGOR</h3><p>Max HP +20% per rank. Rank <span id="menuHpRank">0</span></p><button id="menuHpBuy" class="button" data-meta-buy="hp">BUY · <span>30</span> SOULS</button></div>
+    </div>
+    <button class="button secondary menuBack" data-menu="home">BACK</button>
+  </section>
+  <section id="menuStats" class="menuPanel hidden">
+    <h2>STATS</h2>
+    <div id="menuStatsGrid" class="menuStats"></div>
+    <button class="button secondary menuBack" data-menu="home">BACK</button>
+  </section>
+  <section id="menuSettings" class="menuPanel hidden">
+    <h2>SETTINGS</h2>
+    <div class="menuSetting"><span>Floating damage numbers</span><button class="button secondary" data-setting="damageNumbers">ON</button></div>
+    <div class="menuSetting"><span>Combat particles</span><button class="button secondary" data-setting="particles">ON</button></div>
+    <div class="menuSetting"><span>Show FPS counter</span><button class="button secondary" data-setting="showFps">OFF</button></div>
+    <div class="menuSetting"><span>Render quality</span><button id="qualitySetting" class="button secondary">AUTO</button></div>
+    <div class="menuSetting"><span>Difficulty for new runs</span><button id="difficultySetting" class="button secondary">STANDARD</button></div>
+    <div id="difficultyLegend" class="difficultyLegend"></div>
+    <p>Move with WASD, arrow keys, or the touch stick. Spells cast automatically. Press P or Escape to pause.</p>
+    <button class="button secondary menuBack" data-menu="home">BACK</button>
+  </section>
+</div></div>
+
+<!-- Run overlays -->
+<div id="originOverlay" class="overlay hidden"><div class="modal originModal">
+  <h1>CHOOSE YOUR FIRST SPELL</h1>
+  <p>Your first spell starts at rank 2/5 and is your signature: its Path is offered at level 5 and its Ultimate at level 12. Build other spells and you can cross over to their Path and Ultimate instead.</p>
+  <div id="originChoices" class="choices"></div>
+</div></div>
+
+<div id="levelOverlay" class="overlay hidden"><div class="modal">
+  <h1 id="levelTitle">LEVEL UP!</h1><p id="levelDesc">Choose a spell</p>
+  <div id="choices" class="choices"></div>
+</div></div>
+
+<div id="chestOverlay" class="overlay hidden"><div class="modal">
+  <h1 id="chestTitle">BOSS CHEST</h1><p>Choose one stat artifact. Its bonus lasts for this run.</p>
+  <div id="chestChoices" class="choices"></div>
+</div></div>
+
+<div id="pauseOverlay" class="overlay hidden"><div class="modal">
+  <h1>PAUSED</h1><p>Take a break or save this run.</p>
+  <div class="pauseActions">
+    <button class="button" id="resumeBtn">RESUME</button>
+    <button class="button secondary" id="pauseMarketBtn">OPEN MARKET</button>
+    <button class="button secondary" id="saveBtn">SAVE RUN</button>
+    <button class="button secondary" id="menuBtn">SAVE &amp; MENU</button>
+  </div>
+  <p id="saveStatus"></p>
+</div></div>
+
+<div id="marketOverlay" class="overlay hidden"><div class="modal marketModal">
+  <h1>RIFT MARKET</h1><p id="marketBalance" class="marketBalance"></p>
+  <div class="marketSections">
+    <section class="marketSection gems"><h2>SPEND GEMS</h2><div class="merchant" data-currency="gems"></div></section>
+    <section class="marketSection coins"><h2>SPEND GOLD</h2><div class="merchant" data-currency="coins"></div></section>
+  </div>
+  <button class="button secondary" id="closeMarket">BACK TO RUN</button>
+</div></div>
+
+<div id="stageOverlay" class="overlay hidden"><div class="modal">
+  <img id="stagePortrait" class="stageArt" src="assets/boss-0.webp" alt="Defeated boss">
+  <h1 id="stageTitle">STAGE CLEAR</h1><p id="stageSummary"></p>
+  <p>Remaining drops were collected. Continue from the next stage in the main menu.</p>
+  <button class="button" id="nextStage">RETURN TO MENU</button>
+</div></div>
+
+<div id="gameOver" class="overlay hidden"><div class="modal">
+  <h1 id="gameOverTitle">THE EMBERS FADE</h1><p id="runSummary"></p>
+  <div class="endWallet">
+    <div><strong id="endSouls">0</strong><small>SOULS AVAILABLE</small></div>
+    <div><strong id="endAtk">0</strong><small>ATK UPGRADES BOUGHT</small></div>
+    <div><strong id="endHp">0</strong><small>HP UPGRADES BOUGHT</small></div>
+  </div>
+  <h3>DEN OF MAGIC</h3><p>Spend souls to strengthen your next run.</p>
+  <div class="shop">
+    <button id="atkBuy" class="button" data-meta-buy="atk">ATK +10% · <span>30</span> souls</button>
+    <button id="hpBuy" class="button" data-meta-buy="hp">MAX HP +20% · <span>30</span> souls</button>
+  </div>
+  <p id="bonusText" class="menuNote"></p>
+  <button id="restartBtn" class="button">MAIN MENU</button>
+</div></div>
+
+<div id="spellBookOverlay" class="overlay hidden"><div class="modal">
+  <h1>THE SPELLBOOK</h1>
+  <p>Choose a rank 2 signature spell at level 1. At level 5 pick its Path or cross over to the Path your other spells lean toward; at level 12 do the same for Ultimates. Other level ups evolve spells, grow passives or offer a bargain: big power at a lasting cost. Boss chests grant artifacts.</p>
+  <div id="spellBookSections"></div>
+  <button class="button" id="closeSpellbook">BACK</button>
+</div></div>
+
+<!-- Classic scripts share one global scope, so the game runs from file:// with no build step. Order matters. -->
+<script src="js/util.js"></script>
+<script src="js/config.js"></script>
+<script src="js/assets.js"></script>
+<script src="js/grid.js"></script>
+<script src="js/effects.js"></script>
+<script src="js/entities.js"></script>
+<script src="js/spells.js"></script>
+<script src="js/render.js"></script>
+<script src="js/hud.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/game.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

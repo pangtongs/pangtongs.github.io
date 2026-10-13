@@ -62,6 +62,30 @@
         }
     ];
 
+    // Full games: bigger multi-file projects with their own saves and menus. They live in
+    // their own folders and open full page instead of inside the shell's frame.
+    // coverFit: 'cover' for scene art, 'contain' for a transparent character cutout.
+    const FULL_GAMES = [
+        {
+            id: 'last-ember', href: 'games/last-ember/index.html', name: 'Last Ember', icon: '🔥', accent: '#ff8a4c',
+            genre: 'Horde survival', cover: 'games/last-ember/assets/boss-3.webp', coverFit: 'contain',
+            tagline: 'Survive the horde, build your spells, strike bargains and topple eight bosses.',
+            meta: ['8 stages', 'Auto-cast spells', 'Keyboard or touch']
+        },
+        {
+            id: 'wargamon', href: 'games/wargamon/index.html', name: 'Wargamon', icon: '🦀', accent: '#3fa7d6',
+            genre: 'Creature RPG', cover: 'games/wargamon/img/creatures/005-galomang.webp', coverFit: 'contain',
+            tagline: 'Catch, train and battle neighbourhood creatures in the Liga Sekampung.',
+            meta: ['Story campaign', 'Bahasa Indonesia · English', 'Plays offline']
+        },
+        {
+            id: 'warga-tactics', href: 'games/warga-tactics/index.html', name: 'Warga Tactics', icon: '🏮', accent: '#f2b544',
+            genre: 'Tactical RPG', cover: 'games/warga-tactics/assets/warteg.webp', coverFit: 'cover',
+            tagline: 'Gather a clan at Bu Ratih’s warteg and free Sagara on maps that flood, burn and fight back.',
+            meta: ['10 chapters', '18 jobs', 'English · Bahasa Indonesia']
+        }
+    ];
+
     // ---------- Saved state ----------
     // The shell and the game iframe share one localStorage entry. Every write re-reads it
     // first so neither document overwrites the other's changes with a stale copy.
@@ -269,6 +293,7 @@
 
     window.Arcade = {
         games: GAMES,
+        fullGames: FULL_GAMES,
         categories: CATEGORIES,
         game,
         url,

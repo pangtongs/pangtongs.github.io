@@ -1,0 +1,156 @@
+:root {
+  color-scheme: dark;
+  font:
+    16px/1.45 system-ui,
+    sans-serif;
+  color: #f1f2d9;
+  background: #13242b;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+header {
+  padding: 18px 28px 8px;
+}
+h1 {
+  margin: 8px 0;
+  font-size: 28px;
+}
+h2 {
+  font-size: 18px;
+  margin: 22px 0 10px;
+}
+p {
+  margin: 8px 0 16px;
+}
+a {
+  color: #bedf95;
+  cursor: pointer;
+}
+main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 24px;
+  padding: 8px 28px 90px;
+}
+aside {
+  padding: 0 18px 16px;
+  background: #1d3439;
+  border-radius: 12px;
+}
+label {
+  display: block;
+  margin: 10px 0;
+}
+label.check {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-size: 14px;
+}
+button,
+select,
+textarea,
+input[type='file'] {
+  font: inherit;
+  max-width: 100%;
+  border: 1px solid #698778;
+  border-radius: 6px;
+  padding: 9px;
+  background: #254a42;
+  color: inherit;
+}
+button {
+  cursor: pointer;
+  margin: 3px 4px 3px 0;
+}
+button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+textarea {
+  width: 100%;
+  resize: vertical;
+  background: #14262d;
+}
+.toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.toolbar label {
+  margin: 0;
+}
+#sessions {
+  width: 260px;
+}
+.hint,
+#selection,
+#report {
+  font-size: 14px;
+  color: #c3d1c5;
+}
+.surface {
+  overflow: auto;
+  background: #09191d;
+  border: 1px solid #527b62;
+}
+.comparisons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+figure {
+  margin: 0;
+  min-width: 0;
+}
+figcaption {
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+.comparisons canvas {
+  max-height: 500px;
+  object-fit: contain;
+  background: #09191d;
+  cursor: default;
+}
+canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  cursor: crosshair;
+  touch-action: none;
+}
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 12px 0;
+}
+#status {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 14px 28px;
+  margin: 0;
+  background: #243d41;
+  border-top: 1px solid #698778;
+}
+#status.error {
+  color: #ffb6a9;
+}
+@media (max-width: 900px) {
+  main {
+    grid-template-columns: 1fr;
+    padding: 8px 14px 105px;
+  }
+  header {
+    padding: 18px 14px 8px;
+  }
+}

@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Winston's Arcade</title>
-    <meta name="description" content="A catalog of small browser games: 2048, Snake, Flappy Bird, Minesweeper, Sudoku, Memory, Hangman and Slots.">
+    <meta name="description" content="Browser games by Winston: full games Last Ember, Wargamon and Warga Tactics, plus quick games 2048, Snake, Flappy Bird, Minesweeper, Sudoku, Memory, Hangman and Slots.">
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="shell.css">
 </head>
@@ -58,7 +58,8 @@
     <script src="arcade.js"></script>
     <script>
         const A = Arcade;
-        const GAMES = A.games;
+        const GAMES = A.games;          // quick games, played inside the frame
+        const FULL = A.fullGames;       // full games, opened full page in their own folder
         const $ = id => document.getElementById(id);
 
         const ICONS = {
@@ -116,6 +117,9 @@
             $('nav').innerHTML =
                 `<a class="side-link${current ? '' : ' active'}" href="#/" data-tip="All games">
                     <span class="ico">${ICONS.home}</span><span class="label nm">All games</span></a>` +
+                `<div class="side-section"><span class="label">Full games</span></div>` +
+                FULL.map(f => `<a class="side-link full" href="${A.url(f.href)}" data-tip="${f.name}" style="--accent:${f.accent}">
+                    <span class="ico">${f.icon}</span><span class="label nm">${f.name}</span><span class="label bd">↗</span></a>`).join('') +
                 groups.map(([label, list]) =>
                     `<div class="side-section"><span class="label">${label}</span></div>` + list.map(sideLink).join('')).join('');
 
@@ -145,7 +149,7 @@
 
         function renderBar() {
             if (!current) {
-                $('barTitle').innerHTML = `<div><b>All games</b><small>${GAMES.length} games · scores saved in this browser</small></div>`;
+                $('barTitle').innerHTML = `<div><b>All games</b><small>${FULL.length} full games · ${GAMES.length} quick games · progress saved in this browser</small></div>`;
                 $('barActions').innerHTML = `<button class="btn primary" id="surpriseBar">🎲 Surprise me</button>`;
                 $('surpriseBar').addEventListener('click', surprise);
                 return;
@@ -200,7 +204,7 @@
                         <div>
                             <small>Welcome</small>
                             <h1>Pick a game, any game</h1>
-                            <p>${GAMES.length} small games that run right here. No sign-up, no ads, your scores stay in this browser.</p>
+                            <p>${FULL.length} full games and ${GAMES.length} quick games that run right here. No sign-up, no ads, your progress stays in this browser.</p>
                             <div class="hero-actions">
                                 <a class="btn primary" href="#/${heroGame.id}" style="--accent:${heroGame.accent}">▶ Start with ${heroGame.name}</a>
                                 <button class="btn" data-surprise>🎲 Surprise me</button>
@@ -226,7 +230,13 @@
                 </section>
                 <section>
                     <div class="section-head">
-                        <h2>Library</h2>
+                        <h2>Full games <small>Story, saves and hours of play · open full screen</small></h2>
+                    </div>
+                    <div class="feature-grid">${FULL.map(feature).join('')}</div>
+                </section>
+                <section>
+                    <div class="section-head">
+                        <h2>Quick games <small>One-minute rounds · play right here</small></h2>
                         <div class="chips" id="chips">${tabs.map(t =>
                             `<button aria-pressed="${t === filter}">${t}</button>`).join('')}</div>
                     </div>
@@ -235,6 +245,18 @@
                 </section>
                 <p class="foot-note">Made by Winston · <a href="../index.html">more links</a></p>
             </div>`;
+        }
+
+        function feature(f) {
+            return `<a class="feature" href="${A.url(f.href)}" style="--accent:${f.accent}">
+                <div class="feature-art ${f.coverFit}"><img src="${A.url(f.cover)}" alt="" loading="lazy"><span class="tag">${f.genre}</span></div>
+                <div class="feature-body">
+                    <h3>${f.name}</h3>
+                    <p>${f.tagline}</p>
+                    <ul class="feature-meta">${f.meta.map(m => `<li>${m}</li>`).join('')}</ul>
+                    <span class="btn primary">▶ Play full game</span>
+                </div>
+            </a>`;
         }
 
         function card(g) {
@@ -295,6 +317,8 @@
 
         function route() {
             const id = location.hash.replace(/^#\/?/, '');
+            const full = FULL.find(f => f.id === id);
+            if (full) return location.assign(A.url(full.href));
             current = GAMES.find(g => g.id === id) || null;
             shell.classList.toggle('in-game', !!current);
             document.documentElement.style.setProperty('--accent', current ? current.accent : '#a855f7');
@@ -343,7 +367,8 @@
         function filterPalette() {
             const q = $('palInput').value.trim().toLowerCase();
             const home = { id: '', name: 'All games', icon: '🏠', accent: '#a855f7', category: 'Catalog', tagline: 'Back to the library' };
-            palItems = [home, ...recentGames(), ...GAMES.filter(g => !A.lastPlayed(g.id))]
+            const fulls = FULL.map(f => ({ ...f, category: 'Full game' }));
+            palItems = [home, ...fulls, ...recentGames(), ...GAMES.filter(g => !A.lastPlayed(g.id))]
                 .filter(g => !q || (g.name + ' ' + g.category + ' ' + g.tagline).toLowerCase().includes(q));
             palIndex = 0;
             paintPalette();
@@ -362,6 +387,7 @@
             const g = palItems[i];
             if (!g) return;
             $('palette').hidden = true;
+            if (g.href) return location.assign(A.url(g.href));
             location.hash = '#/' + g.id;
             focusGame();
         }

@@ -1,0 +1,264 @@
+/* Last Ember stylesheet.
+   One layer, no overrides: each component is styled once, then adjusted in the
+   two media queries at the bottom. The in-game HUD avoids backdrop-filter because
+   the canvas beneath it repaints every frame. */
+
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#08111d;color:#eff7ff;font-family:Inter,ui-monospace,monospace;touch-action:none}
+canvas{display:block;width:100vw;height:100vh}
+.hidden{display:none!important}
+
+/* ---------- Buttons ---------- */
+.button{font:inherit;font-weight:bold;color:#f7fcff;background:linear-gradient(180deg,#3c9bd0,#2474a9);border:1px solid #80bce0;border-radius:8px;padding:13px 20px;margin:8px;cursor:pointer;box-shadow:0 3px 0 #163e62,0 8px 20px #0005;transition:transform .14s,filter .14s}
+.button:hover{filter:brightness(1.08);transform:translateY(-2px)}
+.button.secondary{color:#f1f6fc;background:linear-gradient(180deg,#405b73,#2c435b);border-color:#708aa2;box-shadow:0 3px 0 #172a40,0 8px 20px #0005}
+.button:disabled,.button:disabled:hover{color:#aab9c5;background:#344452;border-color:#586b7a;box-shadow:none;filter:none;opacity:.62;cursor:not-allowed;transform:none}
+
+/* ---------- Icons ----------
+   Four sprite sheets. .icon-<name> picks the sheet and cell; heart/shield/attack are inline SVG. */
+.icon{background-repeat:no-repeat}
+.icon-ice,.icon-venom,.icon-nova,.icon-blades,.icon-starfall,.icon-coin,.icon-gems,.icon-soul{background-image:url('../assets/spell-icons.webp');background-size:400% 200%}
+.icon-ice{background-position:0 0}.icon-venom{background-position:33.333% 0}.icon-nova{background-position:66.666% 0}.icon-blades{background-position:100% 0}
+.icon-starfall{background-position:0 100%}.icon-coin{background-position:33.333% 100%}.icon-gems{background-position:66.666% 100%}.icon-soul{background-position:100% 100%}
+.icon-bolt,.icon-orb,.icon-fire,.icon-lightning,.icon-armageddon,.icon-aura{background-image:url('../assets/spell-effects.jpg');background-size:300% 200%}
+.icon-bolt{background-position:0 0}.icon-orb{background-position:50% 0}.icon-fire{background-position:100% 0}
+.icon-lightning{background-position:0 100%}.icon-armageddon{background-position:50% 100%}.icon-aura{background-position:100% 100%}
+.icon-solar,.icon-void{background-image:url('../assets/ultimate-effects.jpg');background-size:200% 100%}
+.icon-solar{background-position:0 0}.icon-void{background-position:100% 0}
+.icon-leech,.icon-heartGrowth,.icon-emberGrowth,.icon-aegisGrowth{background-image:url('../assets/passive-icons.webp');background-size:400% 100%}
+.icon-leech{background-position:0 0}.icon-heartGrowth{background-position:33.333% 0}.icon-emberGrowth{background-position:66.666% 0}.icon-aegisGrowth{background-position:100% 0}
+.sigil{display:block;width:36px;height:36px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+
+/* ---------- HUD ---------- */
+.hud{position:fixed;inset:8px 10px auto;z-index:4;display:grid;grid-template-columns:minmax(165px,240px) auto minmax(186px,240px);justify-content:space-between;align-items:start;gap:8px;opacity:.9;pointer-events:none}
+.hud .card{padding:7px 10px;background:#0a1829e0;border:1px solid #3d617a;border-radius:12px;box-shadow:0 3px 12px #0005}
+.hud .center{justify-self:center;min-width:110px;padding:6px 10px;text-align:center;border-color:#ad8250}
+.hud .right{text-align:right}
+.brand{font-weight:900;font-size:10px;letter-spacing:1.4px;color:#ffd17b}
+.stats{font-size:10px;line-height:1.15;color:#c7d6e5}
+.bar{height:5px;margin:2px 0 4px;background:#081320;border:1px solid #354d63;border-radius:5px;overflow:hidden}
+.fill{height:100%;width:100%;border-radius:4px;transform-origin:left center;transform:scaleX(0);transition:transform .15s linear}
+.hp{background:linear-gradient(90deg,#ef4b67,#ff9c68)}
+.shield{background:linear-gradient(90deg,#42aaff,#a1f0ff)}
+.xp{background:linear-gradient(90deg,#9066ff,#e687ff)}
+.timer{font-size:16px;font-weight:bold;color:#ffe0a1;text-shadow:0 0 15px #ffaf5266}
+.wave{font-size:9px;letter-spacing:1px;color:#b5c8dd}
+.stageGoal{font-size:9px;color:#bfe6e8}
+.currency{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:5px;font-weight:800}
+.currency span{display:inline-flex;align-items:center;gap:3px;padding:4px 6px;font-size:10px;letter-spacing:.02em;background:#0b2136e6;border:1px solid #47617a;border-radius:5px}
+.currency .souls{color:#d7baff;border-color:#805ba2}.currency .gems{color:#85e1dd;border-color:#418991}.currency .coins{color:#ffd083;border-color:#a88343}
+.hudActions{display:flex;justify-content:flex-end;gap:5px;margin-top:5px}
+.hudActions button,.spellbookBtn{pointer-events:auto;cursor:pointer;border-radius:6px}
+.hudActions button{padding:5px 7px;font:700 10px ui-monospace,monospace;color:#fff0ce;background:#173148;border:1px solid #62849d}
+.hudActions .clearAction{display:none;color:#fff2d5;background:#5b4570}
+.hudActions .clearAction.ready{display:block}
+.spellbookBtn{margin:5px 0 0;padding:3px 7px;font:inherit;font-size:9px;letter-spacing:.5px;color:#ffe0a1;background:#22384a;border:1px solid #658aa5}
+
+.bossbar{position:fixed;top:88px;left:25%;width:50%;padding:5px 9px;pointer-events:none;background:#0b1728dd;border:1px solid #9a5267;border-radius:9px;box-shadow:0 6px 20px #0007}
+.bossbar span{font-size:10px;letter-spacing:1.5px;color:#ffb1bd;text-shadow:0 2px #111}
+.bossbar .bar{height:10px;background:#261522;border-color:#795062;border-radius:6px}
+.bossbar .hp{background:linear-gradient(90deg,#b52a55,#ff8d75)}
+.bossPortrait{display:inline-block;width:24px;height:24px;margin-right:4px;vertical-align:middle;object-fit:contain}
+
+.toast{position:fixed;top:116px;left:50%;z-index:3;transform:translateX(-50%);padding:12px 18px;font-size:12px;color:#f1f8ff;background:#122941;border:1px solid #83b6d2;border-radius:10px;box-shadow:0 8px 28px #0008;pointer-events:none;opacity:0;transition:opacity .2s}
+.toast.on{opacity:1}
+
+.spellTray{position:fixed;left:50%;bottom:10px;transform:translateX(-50%);display:flex;flex-wrap:wrap-reverse;justify-content:center;gap:7px;width:max-content;max-width:min(560px,90vw);opacity:.7;pointer-events:none}
+.spellChip{display:grid;place-items:center;width:29px;height:29px;padding:3px;background:#0d1a2b;border:1px solid #425f78;border-radius:9px;box-shadow:0 5px 16px #0006}
+.spellChip i{display:grid;place-items:center;width:24px;height:24px;border-radius:5px;color:#ff9cb2}
+.spellChip .sigil{width:18px;height:18px}
+.spellChip.bargain{border-color:#a45b70;background:#2a1724}
+
+.joystick{position:fixed;bottom:18px;left:18px;width:140px;height:140px;display:none;touch-action:none}
+.stick{position:absolute;inset:0;border-radius:50%;background:#2b264a99;border:2px solid #756a9b}
+.nub{position:absolute;width:54px;height:54px;left:41px;top:41px;border-radius:50%;background:#b58affbb;border:2px solid #f0d4ff;box-shadow:0 3px 0 #4d3477}
+
+.perf{position:fixed;right:10px;bottom:10px;z-index:4;padding:4px 7px;font:11px ui-monospace,monospace;color:#9fe8c6;background:#07121ecc;border:1px solid #2d4a5f;border-radius:6px;pointer-events:none;white-space:pre}
+
+/* ---------- Overlays and modals ---------- */
+.overlay{position:fixed;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;padding:18px;background:radial-gradient(ellipse at center,#172a41bb,#050b14ed);backdrop-filter:blur(5px)}
+.modal{width:min(1160px,100%);padding:30px;text-align:center;background:linear-gradient(150deg,#172941 0%,#0c1727 80%);border:1px solid #6786a0;border-radius:18px;box-shadow:0 26px 90px #000b,inset 0 1px #ffffff20}
+.modal h1{margin:0 0 6px;font-size:clamp(26px,4vw,40px);letter-spacing:2px}
+.modal h1,.modal h3,.menuTitle,.menuPanel h2{color:#e6f5ff;text-shadow:0 2px 18px #59a9d355}
+.modal h3{letter-spacing:2px}
+.modal p{color:#b7cadd;line-height:1.6}
+.menuNote{margin:8px 0;font-size:12px;line-height:1.4;color:#a8c7dd}
+
+/* Choice cards: level ups, origins, chests */
+.choices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:22px}
+.choices[data-tier="PATH"],.choices[data-tier="ULTIMATE"]{grid-template-columns:repeat(3,minmax(0,1fr));max-width:980px;margin-left:auto;margin-right:auto}
+.choices[data-tier="PATH"] .choice,.choices[data-tier="ULTIMATE"] .choice{min-height:150px}
+.choice{position:relative;overflow:hidden;min-height:132px;padding:17px;font:inherit;color:#eff7ff;text-align:left;cursor:pointer;background:linear-gradient(150deg,#1b3048,#101c2c);border:1px solid #405c76;border-radius:12px;box-shadow:0 8px 0 #07111d,0 14px 30px #0003;transition:transform .16s,border-color .16s,box-shadow .16s}
+.choice:hover{border-color:#65bdeb;transform:translateY(-4px);box-shadow:0 10px 0 #07111d,0 20px 36px #0007}
+.choice em{display:inline-block;margin:0 0 9px;padding:3px 6px;font-size:8px;font-style:normal;letter-spacing:1.2px;color:#8fc6da;border:1px solid #385872;border-radius:5px}
+.choice b{display:block;margin-bottom:8px;padding-right:12px;font-size:13px;line-height:1.4;color:#cfeeff}
+.choice small{display:block;padding-top:4px;font-size:11px;line-height:1.55;color:#c3d3e3}
+.choiceIcon{position:relative;float:left;display:grid;place-items:center;width:56px;height:56px;margin:0 9px 6px 0;color:#8de5ef;background-color:#102137;border:1px solid #6490a5;border-radius:8px;box-shadow:0 0 14px #48cde344}
+.choice[data-tone="BARGAIN"]{background:linear-gradient(150deg,#382333,#1d1828);border-color:#a45b70}
+.choice[data-tone="BARGAIN"] em{color:#ff9cb2;border-color:#a45b70}
+.choice[data-tone="BARGAIN"] .choiceIcon{color:#ff9cb2;background-color:#662c4d}
+.choice .gain,.choice .cost{display:block}.choice .gain{color:#93e3c9}.choice .cost{margin-top:3px;color:#ff9cb2}
+.choice[data-tone="PASSIVE"] .choiceIcon{background-color:#132439}
+
+.originModal{max-height:92dvh;overflow-y:auto}
+.originModal .choices{grid-template-columns:repeat(4,minmax(0,1fr))}
+.originModal .choice{min-height:175px}
+.originModal .choiceIcon{float:none;width:70px;height:70px;margin:0 0 10px}
+
+#chestOverlay .modal{width:min(860px,100%)}
+#chestOverlay .choice{min-height:160px}
+#chestOverlay .choice em{color:#ffd38b}
+#chestOverlay .choiceIcon{color:#ffd38b;background-color:#49354b}
+
+/* Pause, market, stage clear, game over */
+#pauseOverlay{z-index:9}
+#pauseOverlay .modal{max-width:530px}
+.pauseActions{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
+.pauseActions .button{min-width:130px;margin:4px}
+#saveStatus{font-size:13px;color:#87e6d5}
+
+.marketModal{max-height:92vh;overflow:auto}
+.marketBalance{font-size:16px;font-weight:800}
+.marketSections{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin:18px 0;text-align:left}
+.marketSection{padding:14px;background:#0b1b2c;border:1px solid #456680;border-radius:13px}
+.marketSection h2{display:flex;align-items:center;gap:8px;margin:0 0 12px;font-size:17px}
+.marketSection.gems h2{color:#85e1dd}.marketSection.coins h2{color:#ffd083}
+.merchant{display:grid;gap:10px}
+.merchant .button{width:100%;margin:0;padding:11px;text-align:left;font-size:13px}
+.merchant small{display:block;margin-top:5px;font-size:11px;opacity:.75}
+
+.stageArt{height:100px;object-fit:contain;filter:drop-shadow(0 0 20px #9b7aff)}
+.shop{display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin:14px}
+.endWallet{display:flex;flex-wrap:wrap;justify-content:center;gap:14px;margin:15px}
+.endWallet div{padding:12px 18px;background:#10263b;border:1px solid #5c7c95;border-radius:10px}
+.endWallet strong{display:block;font-size:21px;color:#e8f5ff}
+.endWallet div:first-child strong{color:#d7baff}
+.endWallet small{color:#b7ccdc}
+
+/* Spellbook */
+#spellBookOverlay .modal{width:min(1050px,100%);max-height:90vh;overflow:auto}
+#spellBookOverlay .modal h1{font-size:28px}
+.bookSection{margin-top:24px;text-align:left}
+.bookSection h2{margin:0;padding:0 0 8px;font-size:15px;letter-spacing:.08em;color:#a9daf0;border-bottom:1px solid #50738b}
+.spellGuide{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));align-items:stretch;gap:12px;margin:12px 0}
+.spellGuideCard{min-width:0;padding:10px;text-align:left;background:#101f32;border:1px solid #3f617c;border-radius:12px}
+.spellGuideCard .spellArt{width:100%;aspect-ratio:1.35;margin-bottom:8px;background-color:#11253a;border:1px solid #496a86;border-radius:8px}
+.spellGuideCard strong{display:block;font-size:13px;color:#ffe0a1;overflow-wrap:anywhere}
+.spellGuideCard small{font-size:11px;color:#b8cadd;overflow-wrap:anywhere}
+
+/* ---------- Main menu ---------- */
+#startOverlay{align-items:safe center;padding:24px 18px;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;background:radial-gradient(ellipse at 50% 18%,#3d243f99,transparent 48%),linear-gradient(180deg,#080e1bfa,#0b1422f7)}
+.menuModal{position:relative;width:min(740px,100%);max-height:calc(100dvh - 48px);padding:22px 25px 30px;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;background:linear-gradient(160deg,#17293bee,#111d2eee 68%,#151525f5);border-color:#9c755d;box-shadow:0 0 0 6px #08111bcc,0 26px 100px #000b}
+.menuTitle{margin:8px 0 5px!important;font:900 clamp(38px,9vw,70px)/1 Georgia,serif!important;letter-spacing:.09em!important}
+.menuSubtitle{margin:0 0 13px!important;font-size:11px;letter-spacing:.23em;text-transform:uppercase;color:#aec2d1!important}
+.menuBalance{display:inline-flex;align-items:center;gap:7px;margin:2px auto 15px;padding:8px 16px;font-size:13px;font-weight:800;color:#d7baff;background:#271d38;border:1px solid #735592;border-radius:10px}
+.soulGlyph{width:23px;height:23px;flex:none;filter:drop-shadow(0 0 5px #ba8dfa77)}
+.menuHero{display:grid;grid-template-columns:minmax(0,1fr) minmax(190px,290px) minmax(0,1fr);align-items:center;gap:10px;min-height:296px}
+.menuFigure{position:relative;height:220px;display:flex;align-items:center;justify-content:center}
+.menuFigure:after{content:'';position:absolute;bottom:12px;width:75%;height:14px;background:#070e18a8;border-radius:50%;filter:blur(8px)}
+.menuFigure img{max-width:100%;max-height:100%;object-fit:contain;filter:drop-shadow(0 5px 25px #4ae6e455)}
+.menuFigure.foe img{filter:drop-shadow(0 5px 25px #e26a6255)}
+.menuStack{position:relative;z-index:1;display:flex;flex-direction:column;gap:9px}
+.menuStack .button{display:block;width:100%;height:45px;margin:0;padding:0 12px;font-size:15px;letter-spacing:.13em;border-radius:6px;box-shadow:inset 0 1px #b4e7ff77,0 4px 0 #163e62,0 8px 20px #0007}
+.menuStack .button:hover{filter:brightness(1.18)}
+.menuStack .button:focus-visible,.menuBack:focus-visible,.stagePick:focus-visible{outline:3px solid #78e8f5;outline-offset:3px}
+.menuPanel{position:relative;z-index:1}
+.menuPanel h2{margin:5px 0 6px;font:900 27px Georgia,serif;letter-spacing:.12em}
+.menuPanel p{margin:7px 0 12px;font-size:12px;line-height:1.5}
+.menuBack{display:block;margin:18px auto 0!important;padding:9px 19px!important;font-size:12px!important}
+
+.stageSelect{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;max-height:min(36dvh,340px);margin:14px 0 10px;padding:4px;overflow:auto;scrollbar-color:#8f779d #12263a}
+.stagePick{min-height:128px;padding:9px;font:inherit;color:#f6e8ce;text-align:left;cursor:pointer;background:#13263b;border:2px solid #506d85;border-radius:12px}
+.stagePick img{display:block;width:100%;height:73px;object-fit:contain;filter:drop-shadow(0 0 12px #bb90ef55)}
+.stagePick strong{display:block;margin:8px 0 3px;font-size:12px}
+.stagePick small{font-size:10px;color:#a8bed1}
+.stagePick.selected{background:#2d3146;border-color:#64c9e9;box-shadow:0 0 17px #51a9d43d}
+.stagePick:disabled{opacity:.38;cursor:default}
+.menuActions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch;gap:12px;width:min(100%,640px);margin:14px auto 10px}
+.menuActions .button{width:100%;min-width:0;min-height:46px;margin:0;font-size:12px;line-height:1.25;white-space:normal}
+.menuActions .button:disabled{opacity:.4;filter:grayscale(1)}
+
+.upgradeList{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:15px 0;text-align:left}
+.upgradeCard{padding:14px;background:#0d1d30;border:1px solid #5b758b;border-radius:10px}
+.upgradeCard h3{margin:2px 0 6px;font-size:15px;color:#cfeeff}
+.upgradeCard p{margin:5px 0;color:#bfd0df}
+.upgradeCard .button{display:block;width:100%;margin:12px 0 0;font-size:12px}
+.menuStats{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;max-width:500px;margin:18px auto;text-align:left}
+.menuStats div{padding:12px;color:#a8bfd2;background:#0c1e31;border:1px solid #48647c;border-radius:8px}
+.menuStats strong{display:block;margin-top:4px;font-size:18px;color:#ffe2a7}
+.menuSetting{display:flex;align-items:center;justify-content:space-between;gap:15px;max-width:510px;margin:12px auto;padding:12px;text-align:left;background:#0d2032;border:1px solid #52708a;border-radius:8px}
+.menuSetting .button{min-width:96px;margin:0;font-size:12px}
+.difficultyLegend{display:grid;gap:6px;max-width:540px;margin:8px auto 16px;text-align:left}
+.difficultyLegend div{display:flex;justify-content:space-between;gap:12px;padding:8px 10px;font-size:11px;line-height:1.3;color:#aebfce;background:#0e2032;border:1px solid #456178;border-radius:8px}
+.difficultyLegend b{min-width:84px;color:#d6e8f4}
+.difficultyLegend .active{color:#e6f7ff;background:#18364a;border-color:#63b9df}
+.difficultyLegend .active b{color:#8bdcff}
+
+/* ---------- Phones ---------- */
+@media (max-width:700px){
+  .hud{inset:5px;grid-template-columns:minmax(100px,1fr) 70px 118px;gap:4px}
+  .hud .card{min-width:0;padding:5px 6px}
+  .hud .center{grid-column:2;grid-row:1;min-width:0;padding:5px 3px}
+  .hud .right{grid-column:3;grid-row:1}
+  .brand{font-size:8px;letter-spacing:0}
+  .stats{font-size:8px}
+  .bar{height:4px;margin:1px 0 3px}
+  .timer{font-size:13px}
+  .wave{font-size:7px;letter-spacing:0}
+  .stageGoal{font-size:7px}
+  .currency{gap:2px}
+  .currency span{font-size:9px;padding:2px 3px}
+  .hudActions{flex-wrap:wrap}
+  .hudActions button{font-size:9px;padding:3px}
+  .hudActions .clearAction.ready{width:100%}
+  .spellbookBtn{font-size:7px;padding:3px;margin-top:3px}
+  .bossbar{top:80px;left:10%;width:80%}
+  .spellTray{display:none}
+  .joystick{display:block;bottom:14px;left:12px}
+
+  .modal{max-height:92vh;overflow:auto;padding:20px 16px;border-radius:14px}
+  .modal h1{font-size:24px}
+  .choices,.choices[data-tier="PATH"],.choices[data-tier="ULTIMATE"]{grid-template-columns:1fr;gap:9px}
+  .choice{min-height:unset;padding:13px}
+  .choiceIcon{width:48px;height:48px}
+  .originModal .choices{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .originModal .choice{min-height:155px}
+  #chestOverlay .choice{min-height:96px}
+  .pauseActions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .pauseActions .button{min-width:0}
+  .marketSections{grid-template-columns:1fr}
+  .spellGuide{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+  .spellGuideCard{padding:8px}
+  .spellGuideCard strong{font-size:12px}
+  .spellGuideCard:last-child:nth-child(odd){grid-column:1/-1;justify-self:center;max-width:200px}
+  .difficultyLegend div{display:block}
+  .difficultyLegend b{display:block;margin-bottom:3px}
+
+  #startOverlay{padding:10px}
+  .menuModal{max-height:calc(100dvh - 20px);padding:15px 12px 22px}
+  .menuHero{grid-template-columns:minmax(0,1fr) minmax(150px,210px) minmax(0,1fr);gap:2px;min-height:264px}
+  .menuFigure{height:150px}
+  .menuStack{gap:7px}
+  .menuStack .button{height:40px;padding:0 3px;font-size:12px}
+  .menuBalance{margin-bottom:8px}
+  .menuPanel h2{font-size:22px}
+  .menuBack{margin:14px auto 0!important}
+  .stageSelect{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;max-height:40dvh}
+  .stagePick{min-height:84px;padding:5px;display:grid;grid-template-columns:57px 1fr;grid-template-rows:auto auto;column-gap:5px;align-content:center}
+  .stagePick img{grid-row:1/3;width:56px;height:62px}
+  .stagePick strong{margin:0;font-size:10px}
+  .stagePick small{font-size:9px}
+  .menuActions{grid-template-columns:1fr;gap:9px}
+  .upgradeList{grid-template-columns:1fr}
+}
+@media (max-width:430px){
+  .menuHero{grid-template-columns:1fr;min-height:0}
+  .menuFigure{display:none}
+  .menuStack{width:min(270px,100%);margin:auto}
+  .menuStack .button{height:43px;font-size:14px}
+  .menuTitle{font-size:40px!important}
+  .menuSubtitle{font-size:9px}
+  .originModal .choices{grid-template-columns:1fr}
+  .originModal .choice{min-height:0}
+  .originModal .choiceIcon{float:left;width:57px;height:57px;margin:0 10px 7px 0}
+}
