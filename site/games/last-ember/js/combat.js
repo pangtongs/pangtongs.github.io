@@ -17,6 +17,7 @@ mixin(Game, {
     if (hadShield && p.shield <= 0) { Sound.play('shieldBreak'); this.fx.shockwave(p.x, p.y, 60, .35, '#7fd8ff'); }
     if (this.settings.damageNumbers && n >= .5) this.fx.texts.add(p.x, p.y - 18, `-${Math.ceil(n)}`, '#ff718b');
     if (n > 0 && !tick) this.hurtFlash = .25;
+    if (n > 0 && this.boss) this.bossHurt = true;
     if (p.hp <= 0 && p.secondWind) { // Second Wind: survive once, blast foes back
       p.secondWind = false; p.hp = p.maxHp * .4; p.invuln = 2;
       this.fx.shockwave(p.x, p.y, 220, .6, '#ffb064');
@@ -42,6 +43,10 @@ mixin(Game, {
     }
     e.hit = .08;
     if (e.boss && e.signature === 'gold') this.bossGoldSpill(e);
+    if (!e.broken && !e.boss && !e.mini && ENEMY_TYPES[e.type].armor && e.hp <= e.maxHp * .5) { // armour breaks
+      e.broken = true; this.burst(e.x, e.y, '#cfd6dd', 12); Sound.play('block');
+      if (this.settings.damageNumbers) this.fx.texts.add(e.x, e.y - e.r - 10, tr('BROKEN'), '#cfd6dd');
+    }
     if (p.path === 'frost' && !e.boss) e.slow = Math.max(e.slow, 1);
     // Knockback: regular foes are shoved away from the mage; heavier ones less.
     if (!e.boss && !e.mini && e.dashT <= 0 && !(e.fuseT > 0) && this.time >= (e.kbNext || 0)) {
@@ -61,9 +66,11 @@ mixin(Game, {
     e.dead = true;
     if (noLoot) return;
     this.meta.stats.kills++; this.runKills++;
+    if (this.hearthBonus) this.hearthKills++;
     if (e.boss) this.meta.stats.bosses++;
     const drop = (dx, dy, type, value) => this.addDrop(e.x + dx, e.y + dy, type, value);
     if (e.boss) {
+      if (!this.bossHurt) this.achieve('untouched');
       this.boss = null;
       drop(0, 0, 'xp', 55 + e.tier * 35);
       drop(-22, 0, 'soul', 12 + e.tier * 10);
@@ -124,6 +131,9 @@ mixin(Game, {
     let m = p.path === 'frost' && e.slow > 0 ? 1.25 : 1;
     if (e.shock > 0) m *= 1.3;
     if (this.hearthBonus) m *= HEARTH.damage;
+    // Ironclad armour: heavy damage reduction until the foe is below half HP.
+    const armor = !e.boss && !e.mini && ENEMY_TYPES[e.type].armor;
+    if (armor && !e.broken) m *= armor;
     if (b.berserker) m *= 1 + (1 - clamp(p.hp / p.maxHp, 0, 1)) * .8;
     if (b.closeQuarters) m *= dist2(p.x, p.y, e.x, e.y) < CLOSE_QUARTERS_RANGE * CLOSE_QUARTERS_RANGE ? 1.6 : .6;
     return m;

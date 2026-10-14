@@ -7,7 +7,8 @@
 
 // Obstacle look per boss art index (stage), and how many to place.
 const OBSTACLE_STYLE = ['tomb', 'rock', 'crystal', 'rock', 'rock', 'pillar', 'rock', 'pillar',
-  'crystal', 'pillar', 'thorn', 'pillar', 'tomb', 'crystal', 'pillar', 'rock'];
+  'crystal', 'pillar', 'thorn', 'pillar', 'tomb', 'crystal', 'pillar', 'rock',
+  'rock', 'crystal', 'rock', 'pillar'];
 const OBSTACLE_COUNT = 20, OBSTACLE_CLEAR = 230; // and nothing within this of the arena centre
 
 function makeObstacles(stage) {

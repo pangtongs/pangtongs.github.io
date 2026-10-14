@@ -72,6 +72,7 @@ mixin(Game, {
     else (this.meta.perks || (this.meta.perks = {}))[key] = this.perk(key) + 1;
     this.saveMeta();
     Sound.play('levelup');
+    this.checkAchievements();
     UI.renderMenu(this);
     this.toast(`${def.name.toUpperCase()} · ${def.desc(this.perk(key)).toUpperCase()}`);
   },

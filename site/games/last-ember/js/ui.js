@@ -83,7 +83,12 @@ const UI = {
       ['Favourite origin', fav ? `${ORIGINS[fav[0]].name} (${fav[1]})` : '—'],
       ['Stages unlocked', `${unlocked} / ${STAGE_COUNT}`], ['Den perks', `${Object.keys(META_PERKS).reduce((n, k) => n + g.perk(k), 0)} / ${Object.values(META_PERKS).reduce((n, d) => n + d.costs.length, 0)} ranks`],
     ].map(([label, value]) => `<div>${label}<strong>${value}</strong></div>`).join('') +
-      (fastest.length ? `<div class="statsWide">Fastest clears<strong class="fastest">${fastest.map(([s, t]) => `<span>${s}. ${STAGES[s - 1].name} <b>${formatTime(t)}</b></span>`).join('')}</strong></div>` : '');
+      (fastest.length ? `<div class="statsWide">Fastest clears<strong class="fastest">${fastest.map(([s, t]) => `<span>${s}. ${STAGES[s - 1].name} <b>${formatTime(t)}</b></span>`).join('')}</strong></div>` : '') +
+      (() => {
+        const got = g.meta.achievements || {}, n = Object.keys(got).length, total = Object.keys(ACHIEVEMENTS).length;
+        return `<div class="statsWide">Achievements · ${n} / ${total}<div class="achList">${Object.entries(ACHIEVEMENTS).map(([k, a]) =>
+          `<span class="${got[k] ? 'got' : ''}"><b>${a.name}</b><small>${a.desc}</small><i>+${a.souls}</i></span>`).join('')}</div></div>`;
+      })();
 
     document.querySelectorAll('[data-setting]').forEach(b => {
       const on = !!g.settings[b.dataset.setting];

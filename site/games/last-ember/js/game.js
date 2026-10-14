@@ -41,7 +41,7 @@ class Game {
   get xpMultiplier() { return (this.player.bargains.hunted ? 1.5 : 1) * (this.route === 'swarm' ? 1.4 : 1) * (this.mut('swarm') ? 1.4 : 1) * (this.mut('giants') ? 1.3 : 1); }
   get heatDef() { return heatDef(this.heat || 0); }
   get soulMult() { return this.heatDef.souls * (1 + .1 * this.perk('souls')) * (this.route === 'elite' ? 1.5 : 1); }
-  get dashCooldown() { return DASH.cooldown / (1 + .08 * this.player.passiveRanks.fleet) / (1 + .15 * this.perk('dash')) * (this.player.origin === 'hexblade' ? .7 : 1); }
+  get dashCooldown() { return DASH.cooldown / (1 + .08 * this.player.passiveRanks.fleet) / (1 + .15 * this.perk('dash')) * (this.player.origin === 'hexblade' ? .7 : 1) / (1 + (this.player.dashBonus || 0)); }
 
   reset() {
     const p = this.player = new Player();
@@ -61,7 +61,7 @@ class Game {
     this.surgeT = 0; this.eventIndex = 0; this.lastEvent = null; this.combo = 0; this.comboT = 0;
     this.nearby = [];
     this.obstacles = []; this.obstaclesFor = 0;
-    this.hearth = null; this.hearthCD = 0; this.route = 'road'; this.daily = null; this.runKills = 0;
+    this.hearth = null; this.hearthCD = 0; this.route = 'road'; this.daily = null; this.runKills = 0; this.hearthKills = 0; this.achieveClock = 0;
     this.fx.clear();
     this.spawnCD = 0; this.bossCD = stageInfo(1).seconds;
     this.miniCD = 55 * this.heatDef.miniCD; this.miniCount = 0; this.minisDefeated = 0; this.miniGoal = 3;
@@ -226,6 +226,7 @@ class Game {
     p.invuln = Math.max(0, p.invuln - dt);
     this.hurtFlash = Math.max(0, (this.hurtFlash || 0) - dt);
     if (this.comboT > 0 && (this.comboT -= dt) <= 0) this.endCombo();
+    if ((this.achieveClock += dt) >= 1) { this.achieveClock = 0; this.checkAchievements(); }
     p.slowTime = Math.max(0, p.slowTime - dt);
     p.lifeHealWindow += dt;
     if (p.lifeHealWindow >= 1) { p.lifeHealWindow %= 1; p.lifeHealUsed = 0; }
@@ -460,7 +461,7 @@ class Game {
     const p = this.player;
     const e = new Enemy(this, 'boss', clamp(p.x + rand(-this.viewW * .35, this.viewW * .35), -ARENA_X + 65, ARENA_X - 65), clamp(p.y - this.viewH / 2 - 48, -ARENA_Y + 65, ARENA_Y - 65));
     this.enemies.push(e);
-    this.boss = e;
+    this.boss = e; this.bossHurt = false;
     Sound.play('boss'); this.shake(8); this.freeze(.25);
     this.bossCard(e);
     this.tip('boss', 'TIP · COLOURED ZONES ARE ATTACKS · DASH OUT OF THEM');

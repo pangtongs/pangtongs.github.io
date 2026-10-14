@@ -500,6 +500,9 @@ class Renderer {
         this.place(x, y);
       } else this.sprite(Sprites.enemy(e.type, flash), x, y, 0, k);
       this.drawStatus(e);
+      if (ENEMY_TYPES[e.type].armor && !e.broken) { // intact armour: a steel ring
+        c.strokeStyle = '#cfd6dd'; c.globalAlpha = .75; c.lineWidth = 2.5; c.beginPath(); c.arc(0, 0, e.r * k + 5, 0, TAU); c.stroke(); c.globalAlpha = 1;
+      }
       if (e.hp < e.maxHp) {
         const w = e.r * 2, top = art ? -e.r * ENEMY_ART_SCALE * k * .62 - 4 : -e.r - 7;
         c.fillStyle = '#111a25'; c.fillRect(-w / 2, top, w, 3);

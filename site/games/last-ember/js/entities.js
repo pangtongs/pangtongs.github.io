@@ -48,7 +48,7 @@ class Enemy {
     // Act I curves are unchanged. Act II multiplies on top so enemies keep pace with a
     // build that has been growing for eight stages (tuned with tools/sim.js).
     const beyond = Math.max(0, g.stage - 8);
-    const actHp = Math.pow(1.22, beyond), actDamage = (g.stage >= 3 ? ENEMY_DAMAGE_SCALE : 1) * (beyond ? 1.8 * Math.pow(1.18, beyond) : 1); // tuned with tools/sim.js
+    const actHp = Math.pow(1.22, beyond), actDamage = (g.stage >= 3 ? ENEMY_DAMAGE_SCALE : 1) * (beyond ? 1.8 * Math.pow(1.18, beyond) : 1) * (g.stage > 16 && g.stage <= STAGE_COUNT ? 1.4 : 1); // tuned with tools/sim.js
     const stagePressure = 1 + (g.stage - 1) * .28;
     const scale = (1 + (this.level - 1) * .15) * stagePressure * diff.hp;
     const bossAct = (beyond ? 3.5 * Math.pow(1.36, beyond - 1) : 1) * diff.bossHp;
@@ -126,6 +126,8 @@ class Enemy {
       }
     }
     if (def && def.fuse && this.updateFuse(dt, g, d)) return;
+    if (def && def.heals) this.updateHeal(dt, g, def.heals);
+    if (def && def.blink) this.updateBlink(dt, g, def.blink, d);
 
     this.attackCD -= dt;
     if (this.damage > 0 && d < this.r + p.r && this.attackCD <= 0) { g.damage(this.damage); this.attackCD = this.boss ? .75 : .85; }
@@ -235,6 +237,28 @@ class Enemy {
     this.y = clamp(this.y + this.dvy * dt, -ARENA_Y, ARENA_Y);
     if (!this.dashHit && dist(this, p) < this.r + p.r + 4) { this.dashHit = true; g.damage(this.dashDamage); }
     if (this.dashT <= 0) { this.dvx = this.dvy = 0; }
+  }
+
+  // Shade Priest: every few seconds restores nearby regular foes (never bosses).
+  updateHeal(dt, g, h) {
+    if ((this.healCD = (this.healCD ?? h.cd) - dt) > 0) return;
+    this.healCD = h.cd;
+    let healed = false;
+    g.forEachEnemyNear(this.x, this.y, h.radius, o => {
+      if (o === this || o.dead || o.boss || o.mini || o.hp >= o.maxHp) return;
+      o.hp = Math.min(o.maxHp, o.hp + o.maxHp * h.pct); healed = true;
+    });
+    if (healed) { g.fx.shockwave(this.x, this.y, h.radius, .45, '#9fe8b0'); g.burst(this.x, this.y, '#c9ffd6', 6); }
+  }
+
+  // Wisp: vanishes and reappears closer to the mage.
+  updateBlink(dt, g, b, d) {
+    if ((this.blinkCD = (this.blinkCD ?? rand(1, b.cd)) - dt) > 0 || d < 110) return;
+    this.blinkCD = b.cd;
+    const p = g.player, a = Math.atan2(p.y - this.y, p.x - this.x), step = Math.min(b.dist, d - 70);
+    g.burst(this.x, this.y, this.color, 6);
+    this.x = clamp(this.x + Math.cos(a) * step, -ARENA_X, ARENA_X); this.y = clamp(this.y + Math.sin(a) * step, -ARENA_Y, ARENA_Y);
+    g.burst(this.x, this.y, '#ffffff', 6);
   }
 
   bossThink(dt, g) {

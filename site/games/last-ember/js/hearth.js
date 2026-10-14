@@ -38,7 +38,7 @@ mixin(Game, {
     this.fx.shockwave(h.x, h.y, r, .55, '#ff8a3d');
     this.burst(h.x, h.y, '#ffb064', 30);
     Sound.play(k > .6 ? 'bigboom' : 'boom'); this.shake(4 + 6 * k);
-    if (k >= 1) this.toast('FULL HEARTH NOVA');
+    if (k >= 1) { this.toast('FULL HEARTH NOVA'); this.achieve('hearthNova'); }
     this.hearth = null; this.hearthCD = HEARTH.recallCD * (this.mut('ember') ? .5 : 1);
   },
 

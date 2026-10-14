@@ -141,6 +141,37 @@ const STAGES = [
       {type: 'charge', windup: .6, speed: 660, distance: 660, damage: 60},
       {type: 'summon', windup: .5, add: 'bomber', count: 5},
     ], phase2: {cooldown: 2.1, speed: 1.3, extra: {type: 'ring', windup: .45, kind: 'warlock', count: 24, waves: 3}}},
+
+  // Act III: The Ember Throne. The source of the dark; new foes (priest, ironclad, wisp).
+  {act: 3, name: 'Ember Wastes', boss: 'The Cinder Knight', seconds: 360, floor: '#22140f', line: '#6e3420', accent: '#ff7a3a', motif: 'spikes',
+    roster: {ghoul: 20, skeleton: 18, ironclad: 14, charger: 14, bomber: 10, priest: 8, warlock: 8, wisp: 8}, minis: [0, 4, 2],
+    cooldown: 3.4, moves: [
+      {type: 'charge', windup: .6, speed: 700, distance: 700, damage: 60},
+      {type: 'slam', windup: .85, radius: 190, damage: 65, shots: {kind: 'warlock', count: 12, ring: true}},
+      {type: 'zones', windup: .5, count: 4, radius: 75, delay: 1, damage: 55, spread: 200, linger: 4, dps: 22, color: '#ff7a3a'},
+    ], phase2: {cooldown: 2.2, speed: 1.3, extra: {type: 'charge', windup: .45, speed: 760, distance: 760, damage: 60}}},
+  {act: 3, name: 'Hall of Mirrors', boss: 'The Mirror Queen', seconds: 360, floor: '#1c1a26', line: '#5a5470', accent: '#e6dcff', motif: 'diamond',
+    roster: {wisp: 18, sentinel: 16, warlock: 14, priest: 10, splitter: 12, ghoul: 16, ironclad: 8}, minis: [2, 5, 3],
+    cooldown: 3.2, moves: [
+      {type: 'blink', windup: .6, radius: 150, damage: 60},
+      {type: 'fan', windup: .4, kind: 'sentinel', count: 11, spread: .14},
+      {type: 'ring', windup: .5, kind: 'warlock', count: 20, waves: 3},
+    ], phase2: {cooldown: 2.1, speed: 1.3, extra: {type: 'summon', windup: .5, add: 'wisp', count: 6}}},
+  {act: 3, name: 'Starless Sea', boss: 'The Drowned God', seconds: 375, floor: '#0c1a20', line: '#1f4a55', accent: '#7fe3ff', motif: 'waves',
+    roster: {spitter: 16, splitter: 14, ghoul: 18, brood: 10, priest: 10, ironclad: 12, wisp: 10, sentinel: 10}, minis: [3, 1, 4],
+    cooldown: 3.3, moves: [
+      {type: 'zones', windup: .5, count: 6, radius: 70, delay: 1.2, damage: 60, spread: 260, linger: 3, slow: true, color: '#7fe3ff'},
+      {type: 'ring', windup: .6, kind: 'spitter', count: 18, waves: 2},
+      {type: 'summon', windup: .5, add: ['brood', 'splitter'], count: 4},
+    ], phase2: {cooldown: 2.2, speed: 1.25, extra: {type: 'slam', windup: .8, radius: 220, damage: 70, summon: {type: 'priest', count: 2}}}},
+  {act: 3, name: 'The Ember Throne', boss: 'The Hollow Flame', seconds: 390, floor: '#140c14', line: '#4a2238', accent: '#ff9a4c', motif: 'flame',
+    roster: {ghoul: 14, skeleton: 14, ironclad: 12, priest: 10, wisp: 12, charger: 12, bomber: 10, warlock: 10, splitter: 8}, minis: [0, 5, 2, 3],
+    cooldown: 3, moves: [
+      {type: 'blink', windup: .55, radius: 170, damage: 70},
+      {type: 'zones', windup: .45, count: 6, radius: 80, delay: 1, damage: 65, spread: 240, linger: 4, dps: 28, color: '#ff9a4c'},
+      {type: 'slam', windup: .85, radius: 210, damage: 75, shots: {kind: 'warlock', count: 20, ring: true}},
+      {type: 'charge', windup: .5, speed: 760, distance: 760, damage: 70},
+    ], phase2: {cooldown: 1.9, speed: 1.35, extra: {type: 'ring', windup: .4, kind: 'warlock', count: 28, waves: 3}}},
 ];
 const STAGE_COUNT = STAGES.length;
 
@@ -157,8 +188,9 @@ const ROUTES = {
 const BOSS_LINES = ['WAKES BENEATH THE GRAVES', 'MARCHES WITH THE BONE LEGION', 'TEARS THROUGH THE RIFT', 'RISES FROM THE ASHES',
   'HEAVES OUT OF THE MIRE', 'WINDS ITS DREADFUL CLOCK', 'SURGES FROM THE DEEP', 'DARKENS THE SKY',
   'FREEZES THE HOLLOW', 'HUNGERS FOR GOLD', 'CREEPS FROM THE THORNS', 'STOKES THE FORGE',
-  'COMMANDS THE DEAD', 'SHATTERS INTO LIGHT', 'EMPTIES THE STARS', 'BURNS ALL THAT REMAINS'];
-const ACT_NAMES = {1: 'Act I · The Rift', 2: 'Act II · Beyond the Rift', 3: 'Endless · The Pyre Beyond'};
+  'COMMANDS THE DEAD', 'SHATTERS INTO LIGHT', 'EMPTIES THE STARS', 'BURNS ALL THAT REMAINS',
+  'RIDES OUT OF THE ASH', 'STEPS FROM EVERY MIRROR', 'RISES FROM THE STARLESS SEA', 'WAITS UPON THE EMBER THRONE'];
+const ACT_NAMES = {1: 'Act I · The Rift', 2: 'Act II · Beyond the Rift', 3: 'Act III · The Ember Throne', 4: 'Endless · The Pyre Beyond'};
 // art: boss portrait index. artifactTier: which ARTIFACTS pool its chest uses.
 STAGES.forEach((s, i) => { s.art = i; s.artifactTier = i + 1; });
 
@@ -169,14 +201,14 @@ const endlessCache = new Map();
 function stageInfo(n) {
   if (n <= STAGE_COUNT) return STAGES[clamp(n - 1, 0, STAGE_COUNT - 1)];
   if (!endlessCache.has(n)) {
-    const depth = n - STAGE_COUNT, base = STAGES[8 + (depth - 1) % 8];
-    endlessCache.set(n, {...base, act: 3, endless: depth, name: `Endless ${depth} · ${base.name}`, seconds: ENDLESS_SECONDS});
+    const depth = n - STAGE_COUNT, base = STAGES[8 + (depth - 1) % (STAGE_COUNT - 8)]; // cycles Acts II and III
+    endlessCache.set(n, {...base, act: 4, endless: depth, name: `Endless ${depth} · ${base.name}`, seconds: ENDLESS_SECONDS});
   }
   return endlessCache.get(n);
 }
 const chestName = tier => tier > STAGE_COUNT ? `ENDLESS ${tier - STAGE_COUNT}` : CHEST_TIER_NAMES[tier];
 const CHEST_TIER_NAMES = ['', 'COMMON', 'RARE', 'LEGENDARY', 'MYTHIC', 'RELIC', 'ANCIENT', 'CELESTIAL', 'ASCENDANT',
-  'GLACIAL', 'GILDED', 'BRAMBLE', 'FORGED', 'SPECTRAL', 'PRISMATIC', 'VOIDBORN', 'PRIMORDIAL'];
+  'GLACIAL', 'GILDED', 'BRAMBLE', 'FORGED', 'SPECTRAL', 'PRISMATIC', 'VOIDBORN', 'PRIMORDIAL', 'CINDER', 'MIRRORED', 'ABYSSAL', 'THRONE'];
 
 // ---------- Enemies ----------
 // shot: ranged attack fired when the player is within 520px.
@@ -193,6 +225,10 @@ const ENEMY_TYPES = {
   bomber:    {hp: 30, speed: 72, r: 11, damage: 6,  xp: 5, color: '#f2d14b', fuse: {range: 62, time: .9, radius: 78, damage: 22}},
   splitter:  {hp: 70, speed: 40, r: 16, damage: 10, xp: 6, color: '#c77dff', splitInto: {type: 'splitling', count: 2}},
   splitling: {hp: 18, speed: 88, r: 9,  damage: 6,  xp: 2, color: '#e0b3ff'},
+  // Act III foes. heals: restores nearby foes; armor: damage taken ×armor until below half HP; blink: hops toward the mage.
+  priest:    {hp: 60, speed: 38, r: 12, damage: 8, xp: 9, color: '#9fe8b0', heals: {radius: 150, pct: .08, cd: 3}},
+  ironclad:  {hp: 160, speed: 34, r: 16, damage: 16, xp: 12, color: '#9aa3ad', armor: .35, coins: 3},
+  wisp:      {hp: 30, speed: 60, r: 10, damage: 10, xp: 5, color: '#b9a6ff', blink: {cd: 3.2, dist: 150}},
   goblin:    {hp: 140, speed: 125, r: 12, damage: 0, xp: 0, color: '#e6c34a', flee: 14}, // stage event: runs away, escapes after `flee` s
 };
 // Mini bosses. skill runs every `cd` seconds.
@@ -383,6 +419,18 @@ const ARTIFACTS = {
   16: [['Tyrant Ember', 'fire', 'Fireball +2 ranks; attack +70%.', fx => { fx.spell('fire', 2); fx.p.atk *= 1.7; }],
       ['Pyre Crown', 'starfall', 'Ultimate damage +100%; cast 20% faster.', fx => { fx.p.ultimatePower *= 2; fx.p.castCooldown *= .8; }],
       ['Last Light', 'heart', 'Max HP +80%; heal to full.', fx => { fx.healHp(.8); fx.p.hp = fx.p.maxHp; }]],
+  17: [['Cinder Lance', 'attack', 'Attack +70%; dash recharges 20% faster.', fx => { fx.p.atk *= 1.7; fx.p.dashBonus = (fx.p.dashBonus || 0) + .2; }],
+      ['Knight’s Oath', 'shield', 'Shield and capacity +160% max HP.', fx => fx.ward(1.6)],
+      ['Ashen Heart', 'heart', 'Max HP +80%; Crimson Siphon +2 ranks.', fx => { fx.healHp(.8); fx.passive('leech', 2); }]],
+  18: [['Shard Crown', 'keen', 'Critical chance +12%; critical damage +50%.', fx => { fx.p.critChance += .12; fx.p.critMult += .5; }],
+      ['Glass Mantle', 'ward', 'Mirror Ward +2 ranks; attack +50%.', fx => { fx.spell('ward', 2); fx.p.atk *= 1.5; }],
+      ['Silver Vein', 'heart', 'Max HP +90%.', fx => fx.healHp(.9)]],
+  19: [['Tide Heart', 'heartGrowth', 'Max HP +90%; Living Heart +2 ranks.', fx => { fx.healHp(.9); fx.passive('heartGrowth', 2); }],
+      ['Abyssal Pearl', 'attack', 'Attack +80%.', fx => { fx.p.atk *= 1.8; }],
+      ['Lantern of the Deep', 'lodestone', 'Cast 25% faster; Lodestone +2 ranks.', fx => { fx.p.castCooldown *= .75; fx.passive('lodestone', 2); }]],
+  20: [['Hollow Crown', 'starfall', 'Ultimate damage +120%; attack +60%.', fx => { fx.p.ultimatePower *= 2.2; fx.p.atk *= 1.6; }],
+      ['Last Ember', 'fire', 'Attack +100%.', fx => { fx.p.atk *= 2; }],
+      ['Throne Ward', 'shield', 'Max HP +100%; shield and capacity +100% max HP.', fx => { fx.healHp(1); fx.ward(1); }]],
 };
 
 // In-run market. Costs grow by `growth` per purchase; `max` caps investments.

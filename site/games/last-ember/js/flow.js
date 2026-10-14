@@ -52,7 +52,7 @@ mixin(Game, {
       // A fresh run on a later stage starts near the build a continued run would have:
       // stats at about 80% of the measured curve (tools/sim.js) plus level ups to spend.
       const boost = stage - 1, p = this.player;
-      p.atk *= .8 * Math.pow(1.28, boost); p.maxHp *= .8 * Math.pow(1.3, boost); p.hp = p.maxHp; p.shield += boost * 12;
+      p.atk *= .8 * Math.pow(1.28, boost); p.maxHp *= .8 * Math.pow(1.38, boost); p.hp = p.maxHp; p.shield += boost * 12;
       const levels = Math.min(14, boost * 2);
       for (let i = 0; i < levels; i++) { p.level++; p.nextXp = Math.floor(p.nextXp * 1.35 + 5); }
       this.levelQueue = levels;
@@ -108,6 +108,7 @@ mixin(Game, {
     else if (!st.fastest[this.stage] || t < st.fastest[this.stage]) st.fastest[this.stage] = t;
     st.highestHeat = Math.max(st.highestHeat, this.heat || 0);
     this.unlockHeat();
+    this.stageAchievements();
     this.saveMeta();
     this.saveRun(true);
     if (this.levelQueue) this.levelUp(); else this.showStageClear();
@@ -121,7 +122,7 @@ mixin(Game, {
     const st = stageInfo(this.stage), last = this.stage === STAGE_COUNT, endless = this.stage > STAGE_COUNT, final = last || endless;
     const actEnd = !final && stageInfo(this.stage + 1).act !== st.act;
     $('stagePortrait').src = `assets/boss-${st.art}.webp`;
-    $('stageTitle').textContent = last ? 'THE LAST PYRE FALLS' : endless ? `DEPTH ${st.endless} CLEARED`
+    $('stageTitle').textContent = last ? 'THE EMBER THRONE FALLS' : endless ? `DEPTH ${st.endless} CLEARED`
       : actEnd ? `${ACT_NAMES[st.act].split(' · ')[0].toUpperCase()} COMPLETE` : `STAGE ${this.stage} CLEAR`;
     $('continueStage').textContent = last ? 'ENTER ENDLESS · DEPTH 1' : endless ? `DESCEND · DEPTH ${st.endless + 1}`
       : `CONTINUE TO STAGE ${this.stage + 1} · ${stageInfo(this.stage + 1).name.toUpperCase()}`;
@@ -138,6 +139,8 @@ mixin(Game, {
     }
     requestAnimationFrame(() => I18N.localize($('stageOverlay')));
     $('stageSummary').textContent = `${stageInfo(this.stage).boss} defeated. ${this.stageLootCollected || 0} remaining drops collected · Level ${this.player.level} · ${this.souls} souls earned · ${this.gemsCount} gems · ${this.coins} gold. Artifact: ${this.lastArtifact.replace(/\.$/, '')}.`;
+    // The artifact text is stored in English; translate each description piece on its own.
+    if (I18N.lang !== 'en') $('stageSummary').textContent = tr($('stageSummary').textContent.replace(/ · Artifact: .*$/s, '')) + ' · ' + this.lastArtifact.split(' · ').map(t => { const [n, d] = t.split(' — '); return d ? `${n} — ${tr(d)}` : n; }).join(' · ');
   },
 
   // Clearing a stage at your highest unlocked Heat unlocks the next level, as long as the
@@ -209,6 +212,7 @@ mixin(Game, {
   endRun(won) {
     this.leaveDaily();
     const daily = this.recordDaily();
+    if (daily) this.achieve('daily');
     this.running = false;
     this.setPaused(true);
     Sound.play(won ? 'victory' : 'death');

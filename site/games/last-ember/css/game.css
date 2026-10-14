@@ -280,12 +280,19 @@ canvas{display:block;width:100vw;height:100vh}
 .pips i{width:12px;height:5px;background:#3a3440;border-radius:2px}
 .pips i.on{background:#ff9a4c;box-shadow:0 0 6px #ff7a2a88}
 .rerollBtn{margin-top:14px}
-.menuStats{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;max-width:500px;margin:18px auto;text-align:left}
+.menuStats{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;max-width:640px;max-height:min(58dvh,520px);margin:18px auto;overflow:auto;text-align:left}
 .menuStats div{padding:12px;color:#a8bfd2;background:#0c1e31;border:1px solid #48647c;border-radius:8px}
 .menuStats strong{display:block;margin-top:4px;font-size:18px;color:#ffe2a7}
 .menuStats .statsWide{grid-column:1/-1}
 .menuStats .fastest{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3px 14px;font-size:12px;color:#c9d8e6}
 .menuStats .fastest b{color:#ffe2a7}
+.achList{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-top:8px}
+.achList span{position:relative;padding:7px 40px 7px 9px;background:#14121a;border:1px solid #3a3440;border-radius:7px;opacity:.55}
+.achList span.got{opacity:1;border-color:#a8775a;background:#2a1a14}
+.achList b{display:block;font-size:12px;color:#fff1df}
+.achList small{display:block;font-size:10.5px;line-height:1.3;color:#c9bfb6}
+.achList i{position:absolute;right:8px;top:8px;font-style:normal;font-size:11px;font-weight:800;color:#d7baff}
+@media (max-width:520px){.achList{grid-template-columns:1fr}}
 .menuSetting{display:flex;align-items:center;justify-content:space-between;gap:15px;max-width:510px;margin:12px auto;padding:12px;text-align:left;background:#0d2032;border:1px solid #52708a;border-radius:8px}
 .menuSetting .button{min-width:96px;margin:0;font-size:12px}
 .difficultyLegend{display:grid;gap:6px;max-width:540px;margin:8px auto 16px;text-align:left}

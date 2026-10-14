@@ -72,6 +72,7 @@ mixin(Game, {
     const boon = SHRINE_BOONS[Math.floor(Math.random() * SHRINE_BOONS.length)];
     boon.take(this);
     if (this.route === 'shrine') boon.take(this);
+    this.achieve('shrine');
     Sound.play('chest');
     this.toast(`SURGE SURVIVED · ${boon.text}`);
   },
@@ -79,6 +80,7 @@ mixin(Game, {
   // Extra loot for event enemies; returns true if the kill was handled here.
   eventLoot(e, drop) {
     if (e.type === 'goblin') {
+      this.achieve('goblin');
       drop(0, 0, 'xp', 30 + this.stage * 4);
       drop(-14, 0, 'gems', this.dropValue('gems', 12 + this.stage));
       drop(14, 0, 'coins', this.dropValue('coins', 16 + this.stage * 2));
