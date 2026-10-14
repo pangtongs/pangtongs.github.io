@@ -1,0 +1,182 @@
+'use strict';
+// Game methods: damage, kills, loot, experience and level ups. Mixed into Game.
+
+mixin(Game, {
+  burst(x, y, color, n) { if (this.settings.particles) this.fx.particles.burst(x, y, color, n); },
+
+  damage(n) {
+    const p = this.player;
+    if (p.invuln > 0) return;
+    p.invuln = .55;
+    if (p.shield > 0) { const s = Math.min(p.shield, n); p.shield -= s; n -= s; }
+    if (n > 0) p.hp -= n;
+    Sound.play('hurt');
+    this.shake(4);
+    if (this.settings.damageNumbers) this.fx.texts.add(p.x, p.y - 18, `-${Math.ceil(n)}`, '#ff718b');
+    if (p.hp <= 0) this.endRun(false);
+  },
+
+  hit(e, n, color) {
+    if (e.dead) return;
+    const p = this.player;
+    const crit = Math.random() < this.critChance;
+    const dealt = (n * p.atk + p.maxHp * p.hpDamage) * this.damageMultiplier(e) * (crit ? this.critMult : 1);
+    const actual = Math.min(Math.max(0, e.hp), dealt);
+    e.hp -= dealt;
+    const rank = p.passiveRanks.leech;
+    if (rank && p.hp < p.maxHp) {
+      const cap = p.maxHp * (.015 + .005 * rank);
+      const heal = Math.min(actual * .008 * rank * this.heatDef.heal, Math.max(0, cap - p.lifeHealUsed), p.maxHp - p.hp);
+      p.hp += heal; p.lifeHealUsed += heal;
+    }
+    e.hit = .08;
+    if (this.settings.damageNumbers) this.fx.texts.add(e.x, e.y - e.r, crit ? Math.round(dealt) + '!' : String(Math.round(dealt)), crit ? '#ffd34d' : color, crit);
+    Sound.play(crit ? 'crit' : 'hit');
+    if (p.path === 'frost') e.slow = Math.max(e.slow, 1.5);
+    this.burst(e.x, e.y, color, 2);
+    if (e.hp <= 0) this.kill(e);
+  },
+
+  // noLoot: the enemy removed itself (a bomber blowing up), so it drops nothing.
+  kill(e, noLoot = false) {
+    if (e.dead) return;
+    e.dead = true;
+    if (noLoot) return;
+    this.meta.stats.kills++;
+    if (e.boss) this.meta.stats.bosses++;
+    const drop = (dx, dy, type, value) => this.addDrop(e.x + dx, e.y + dy, type, value);
+    if (e.boss) {
+      this.boss = null;
+      drop(0, 0, 'xp', 55 + e.tier * 35);
+      drop(-22, 0, 'soul', 12 + e.tier * 10);
+      drop(22, 0, 'gems', this.dropValue('gems', 5 + e.tier * 3));
+      drop(0, 22, 'coins', this.dropValue('coins', 9 + e.tier * 5));
+      this.chests.push(new Chest(e.x, e.y, e.tier));
+      this.stageClearPending = true;
+      Sound.play('bigboom'); this.shake(14); this.freeze(.3);
+      this.toast(`TIER ${e.tier} CHEST DROPPED · COLLECT IT`);
+    } else if (e.mini) {
+      this.minisDefeated++;
+      Sound.play('boom'); this.shake(6); this.freeze(.06);
+      drop(0, 0, 'xp', 32 + this.stage * 6);
+      drop(-15, 0, 'soul', 3 + this.stage);
+      drop(15, 0, 'gems', this.dropValue('gems', 4 + this.stage));
+      drop(0, 15, 'coins', this.dropValue('coins', 5 + this.stage));
+      this.toast(e.name.toUpperCase() + ' DEFEATED · BONUS LOOT');
+    } else {
+      const def = ENEMY_TYPES[e.type];
+      Sound.play('kill');
+      if (this.eventLoot(e, drop)) return;
+      drop(0, 0, 'xp', def.xp);
+      if (e.type === 'brood') for (let j = 0; j < 3; j++) this.addEnemy('ghoul', e.x + rand(-32, 32), e.y + rand(-32, 32));
+      if (def.splitInto) for (let j = 0; j < def.splitInto.count; j++) this.addEnemy(def.splitInto.type, e.x + rand(-20, 20), e.y + rand(-20, 20));
+      const roll = Math.random();
+      if (roll < (def.soulChance || .22)) drop(8, 0, 'soul', 1);
+      else if (roll < .58) drop(8, 0, 'gems', this.dropValue('gems', 1));
+      else if (roll < .9) drop(8, 0, 'coins', this.dropValue('coins', def.coins || 1));
+      if (e.type === 'skeleton' && Math.random() < .12) drop(-8, 0, 'coins', this.dropValue('coins', 1));
+    }
+    this.burst(e.x, e.y, e.color, e.boss ? 24 : 8);
+    if (this.player.bargains.volatile && !e.boss) this.explode(e);
+    // Contagion: a poisoned foe passes its poison to everything around it.
+    if (e.poisonTime > 0 && this.player.evolved.venom === 'contagion') {
+      this.fx.shockwave(e.x, e.y, 90, .35, '#81dc9a');
+      this.forEachEnemyNear(e.x, e.y, 90, o => { o.poisonTime = 3; o.poisonDps = Math.max(o.poisonDps, e.poisonDps); });
+    }
+  },
+
+  // Runs fn after `seconds` of game time (Tempest Ring's second pulse). Not saved.
+  after(seconds, fn) { this.timers.push({t: seconds, fn}); },
+
+  // Critical hits: 5% base, Keen Eye adds 4% chance and 10% damage per rank.
+  get critChance() { return this.player.critChance + .04 * this.player.passiveRanks.keen; },
+  get critMult() { return this.player.critMult + .1 * this.player.passiveRanks.keen; },
+  get pickupRange() { return this.player.pickupRange * (1 + .25 * this.player.passiveRanks.lodestone); },
+
+  // Situational damage bonuses: Path of Frost, Static Field shock, Berserker's Oath, Close Quarters.
+  damageMultiplier(e) {
+    const p = this.player, b = p.bargains;
+    let m = p.path === 'frost' && e.slow > 0 ? 1.2 : 1;
+    if (e.shock > 0) m *= 1.3;
+    if (b.berserker) m *= 1 + (1 - clamp(p.hp / p.maxHp, 0, 1)) * .8;
+    if (b.closeQuarters) m *= dist2(p.x, p.y, e.x, e.y) < CLOSE_QUARTERS_RANGE * CLOSE_QUARTERS_RANGE ? 1.6 : .6;
+    return m;
+  },
+
+  // Volatile Core: a slain foe bursts, hurting nearby foes and the player if too close.
+  // Chains are intended; each enemy can only die (and burst) once.
+  explode(e) {
+    const p = this.player, radius = 70;
+    this.fx.shockwave(e.x, e.y, radius, .3, '#ff8a4c');
+    this.forEachEnemyNear(e.x, e.y, radius, o => this.hit(o, e.maxHp * .5 / p.atk, '#ffae6b'));
+    if (this.running && dist(e, p) < radius + p.r) this.damage(e.damage * .6);
+  },
+
+  // Past MAX_GEMS, new XP folds into the nearest XP drop so the floor never floods.
+  addDrop(x, y, type, value) {
+    if (type === 'xp' && this.drops.length >= MAX_GEMS) {
+      let best = null, bd = Infinity;
+      for (const d of this.drops) {
+        if (d.type !== 'xp') continue;
+        const dd = dist2(x, y, d.x, d.y);
+        if (dd < bd) { bd = dd; best = d; }
+      }
+      if (best) { best.value += value; best.life = Math.max(best.life, 20); return; }
+    }
+    this.drops.push(new Drop(x, y, type, value));
+  },
+
+  dropValue(type, base) {
+    const raw = base * this.yields[type] + (this.dropRemainders[type] || 0), amount = Math.floor(raw);
+    this.dropRemainders[type] = raw - amount;
+    return Math.max(1, amount);
+  },
+
+  collect(d) {
+    if (d.type === 'xp') this.gainXP(d.value * this.xpMultiplier);
+    else if (d.type === 'soul') { const v = Math.round(d.value * this.heatDef.souls); this.souls += v; this.wallet += v; }
+    else if (d.type === 'gems') this.gemsCount += d.value;
+    else this.coins += d.value;
+    if (d.type === 'gems' || d.type === 'coins') this.runAutoBuy(d.type);
+    if (d.type === 'xp') { this.pickupCombo = this.time - (this.lastPickup || 0) < .4 ? (this.pickupCombo || 0) + 1 : 0; this.lastPickup = this.time; Sound.play('pickup', {combo: this.pickupCombo}); }
+    else Sound.play(d.type === 'soul' ? 'soul' : 'coin');
+    this.burst(d.x, d.y, DROP_COLORS[d.type], 5);
+  },
+
+  gainXP(n) {
+    const p = this.player;
+    p.xp += n;
+    while (p.xp >= p.nextXp) { p.xp -= p.nextXp; p.level++; p.nextXp = Math.floor(p.nextXp * 1.35 + 5); this.levelQueue++; }
+    if (this.levelQueue && !this.paused) this.levelUp();
+  },
+
+  levelUp() { this.setPaused(true); Sound.play('levelup'); UI.showLevelUp(this); },
+
+  takeLevelChoice(o) {
+    o.take();
+    this.levelQueue = Math.max(0, this.levelQueue - 1);
+    hide('levelOverlay');
+    this.setPaused(false);
+    if (this.levelQueue) this.levelUp();
+    else if (this.stageComplete) { this.saveRun(true); this.showStageClear(); }
+  },
+
+  // The open chest is part of the run state, so a save taken while choosing (tab hidden,
+  // page closed) reopens it on load instead of losing it.
+  openChest(x, y, tier) {
+    Sound.play('chest');
+    this.pendingChest = {tier, x, y, picks: this.earlySummon ? 2 : 1};
+    this.setPaused(true);
+    UI.showChest(this);
+  },
+
+  openChestAgain() { this.setPaused(true); UI.showChest(this); },
+
+  toast(s) {
+    const t = $('toast');
+    t.textContent = s;
+    t.classList.add('on');
+    clearTimeout(this.toastTimer);
+    this.toastTimer = setTimeout(() => t.classList.remove('on'), 2100);
+  },
+});

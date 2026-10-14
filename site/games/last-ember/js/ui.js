@@ -58,10 +58,17 @@ const UI = {
     this.renderMetaShop(g);
     $('menuAtkRank').textContent = g.meta.atk || 0;
     $('menuHpRank').textContent = g.meta.hp || 0;
+    const st = g.meta.stats, fav = Object.entries(st.origins).sort((a, b) => b[1] - a[1])[0];
+    const fastest = Object.entries(st.fastest).sort((a, b) => a[0] - b[0]);
     $('menuStatsGrid').innerHTML = [
-      ['Stages unlocked', `${unlocked} / ${STAGE_COUNT}`], ['Base attack bonus', `+${(g.meta.atk || 0) * 10}%`],
-      ['Max HP bonus', `+${(g.meta.hp || 0) * 20}%`], ['Attack upgrades', g.meta.atk || 0], ['HP upgrades', g.meta.hp || 0],
-    ].map(([label, value]) => `<div>${label}<strong>${value}</strong></div>`).join('');
+      ['Runs started', st.runs], ['Victories', st.wins], ['Deaths', st.deaths], ['Foes slain', st.kills.toLocaleString('en-US')],
+      ['Bosses defeated', st.bosses], ['Best stage', st.bestStage > STAGE_COUNT ? `Endless ${st.bestStage - STAGE_COUNT}` : st.bestStage || '—'],
+      ['Best endless depth', st.endlessBest || '—'], ['Highest Heat cleared', st.highestHeat || '—'],
+      ['Time played', formatDuration(st.playTime)],
+      ['Favourite origin', fav ? `${ORIGINS[fav[0]].name} (${fav[1]})` : '—'],
+      ['Stages unlocked', `${unlocked} / ${STAGE_COUNT}`], ['Soul bonuses', `ATK +${(g.meta.atk || 0) * 10}% · HP +${(g.meta.hp || 0) * 20}%`],
+    ].map(([label, value]) => `<div>${label}<strong>${value}</strong></div>`).join('') +
+      (fastest.length ? `<div class="statsWide">Fastest clears<strong class="fastest">${fastest.map(([s, t]) => `<span>${s}. ${STAGES[s - 1].name} <b>${formatTime(t)}</b></span>`).join('')}</strong></div>` : '');
 
     document.querySelectorAll('[data-setting]').forEach(b => {
       const on = !!g.settings[b.dataset.setting];
@@ -69,9 +76,13 @@ const UI = {
       b.setAttribute('aria-pressed', String(on));
     });
     $('qualitySetting').textContent = g.settings.quality.toUpperCase();
-    $('difficultySetting').textContent = g.settings.difficulty.toUpperCase();
-    $('difficultyLegend').innerHTML = Object.entries(DIFFICULTIES).map(([key, d]) =>
-      `<div class="${key === g.settings.difficulty ? 'active' : ''}"><b>${key.toUpperCase()}</b><span>${d.legend}</span></div>`).join('');
+    const heat = g.settings.heat || 0, unlockedHeat = g.meta.heatUnlocked || 0;
+    $('difficultySetting').textContent = heat ? `HEAT ${heat}` : 'HEAT 0';
+    $('difficultyLegend').innerHTML = `<div class="${heat === 0 ? 'active' : ''}"><b>HEAT 0</b><span>Baseline. Clear a stage to unlock Heat 1.</span></div>` +
+      HEAT_LEVELS.slice(1).map((h, i) => {
+        const level = i + 1, cls = level > unlockedHeat ? 'locked' : level <= heat ? 'active' : '';
+        return `<div class="${cls}"><b>HEAT ${level} · ${h.name}</b><span>${level > unlockedHeat ? 'Locked: clear a stage at Heat ' + (level - 1) + '.' : h.rule}</span></div>`;
+      }).join('') + `<p class="menuNote">Each Heat level adds 10% souls. Rules stack.</p>`;
   },
 
   // Both the menu and the game-over screen sell permanent upgrades.
@@ -118,7 +129,7 @@ const UI = {
       $('levelDesc').textContent = `${SPELLS[evolving].name} reached rank ${SPELL_MAX_RANK}. Choose its final form; it changes how the spell works for the rest of the run.`;
       options = Object.entries(EVOLUTIONS[evolving]).map(([form, f]) => ({
         name: f.name, icon: SPELLS[evolving].icon, tone: 'EVOLVE', label: `EVOLUTION · ${SPELLS[evolving].name}`, desc: f.desc,
-        take: () => { p.evolved[evolving] = form; g.toast(`${f.name.toUpperCase()} AWAKENED`); },
+        take: () => { p.evolved[evolving] = form; Sound.play('evolve'); g.toast(`${f.name.toUpperCase()} AWAKENED`); },
       }));
     } else {
       $('levelDesc').textContent = 'Evolve a spell, build a passive power, or strike a bargain. Growth triggers every minute while you survive.';
@@ -219,12 +230,12 @@ const UI = {
     // pending.taken survives saves, so a reopened two-pick chest cannot give the same artifact twice.
     const pending = g.pendingChest;
     pending.taken = pending.taken || [];
-    $('chestTitle').textContent = `TIER ${tier} ${CHEST_TIER_NAMES[tier]} CHEST`;
+    $('chestTitle').textContent = `TIER ${tier} ${chestName(tier)} CHEST`;
     $('chestDesc').textContent = pending.picks > 1 ? 'Called early: choose TWO artifacts. Their bonuses last for this run.'
       : pending.taken.length ? 'Choose one more artifact.' : 'Choose one stat artifact. Its bonus lasts for this run.';
     const box = $('chestChoices');
     box.innerHTML = '';
-    for (const [name, icon, desc, take] of ARTIFACTS[tier]) {
+    for (const [name, icon, desc, take] of ARTIFACTS[stageInfo(tier).artifactTier]) {
       const b = choiceButton({icon, tone: 'ARTIFACT', name, desc}, () => {
         take(fx);
         b.disabled = true;

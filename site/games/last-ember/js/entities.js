@@ -11,14 +11,16 @@ class Player {
     this.lifeHealWindow = 0; this.lifeHealUsed = 0;
     this.speed = 178; this.atk = 1; this.hpDamage = 0;
     this.level = 1; this.xp = 0; this.nextXp = 10;
-    this.skills = {bolt: 1, echo: 0, orb: 0, fire: 0, lightning: 0, ice: 0, venom: 0, nova: 0, blades: 0, starfall: 0};
-    this.passiveRanks = {leech: 0, heartGrowth: 0, emberGrowth: 0, aegisGrowth: 0};
+    this.skills = {bolt: 1, echo: 0, orb: 0, fire: 0, lightning: 0, ice: 0, venom: 0, nova: 0, blades: 0, starfall: 0, ward: 0, whip: 0, disc: 0, wolves: 0};
+    this.passiveRanks = {leech: 0, heartGrowth: 0, emberGrowth: 0, aegisGrowth: 0, keen: 0, lodestone: 0, fleet: 0};
+    this.critChance = .05; this.critMult = 1.75;
     this.bargains = {}; // keys of BARGAINS taken this run
     this.evolved = {};  // spell -> chosen EVOLUTIONS form
     this.ultimatePower = 1; this.ultimateHaste = 1; this.castCooldown = 1;
     this.pickupRange = 100;
     this.origin = null; this.path = null; this.ultimate = null;
-    this.cool = {basic: 0, fire: 0, lightning: 0, ice: 0, venom: 0, nova: 0, blades: 0, starfall: 0, ult: 15};
+    this.cool = {basic: 0, fire: 0, lightning: 0, ice: 0, venom: 0, nova: 0, blades: 0, starfall: 0, ward: 0, whip: 0, disc: 0, ult: 15};
+    this.wardTime = 0; // seconds the Mirror Ward stays up
     this.invuln = 0;
     this.slowTime = 0; // slowed by frost hazards
   }
@@ -37,7 +39,7 @@ class Enemy {
     this.miniKind = this.mini ? stage.minis[g.miniCount % stage.minis.length] : 0;
     this.tier = this.boss ? g.stage : 0;
     this.level = (g.stage - 1) * 3 + 1 + Math.floor(g.stageTime / 20);
-    const diff = DIFFICULTIES[g.difficulty] || DIFFICULTIES.standard;
+    const diff = g.heatDef;
     const def = ENEMY_TYPES[type], mini = MINI_BOSSES[this.miniKind];
     this.name = this.boss ? stage.boss : this.mini ? mini.name : type;
 
@@ -47,9 +49,9 @@ class Enemy {
     const actHp = Math.pow(1.22, beyond), actDamage = Math.pow(1.12, beyond);
     const stagePressure = 1 + (g.stage - 1) * .28;
     const scale = (1 + (this.level - 1) * .15) * stagePressure * diff.hp;
-    const bossAct = beyond ? 3.5 * Math.pow(1.36, beyond - 1) : 1;
+    const bossAct = (beyond ? 3.5 * Math.pow(1.36, beyond - 1) : 1) * diff.bossHp;
     this.maxHp = this.boss ? 650 * Math.pow(1.48, Math.min(this.tier, 8) - 1) * bossAct * diff.hp * (1 + Math.floor(g.stageTime / 20) * .055)
-      : this.mini ? 210 * (1 + g.stage * .4) * actHp * diff.hp * (1 + g.stageTime / 300)
+      : this.mini ? 210 * (1 + g.stage * .4) * actHp * diff.hp * diff.miniHp * (1 + g.stageTime / 300)
       : def.hp * scale * actHp;
     if (g.player.bargains.cursedHoard) this.maxHp *= 1.3;
     this.hp = this.maxHp;
@@ -77,14 +79,17 @@ class Enemy {
     if (this.slow > 0) this.slow -= dt;
     if (this.poisonTime > 0) {
       this.poisonTime -= dt; this.poisonTick += dt;
-      if (this.poisonTick >= .5) { this.poisonTick -= .5; g.hit(this, this.poisonDps * .5, '#8af1a1'); }
+      if (this.poisonTick >= .5) { this.poisonTick -= .5; g.hit(this, this.poisonDps * .5, this.burning ? '#ffb15e' : '#8af1a1'); }
     }
     if (this.dead) return;
     const p = g.player;
     this.hit = Math.max(0, this.hit - dt);
     if (this.shock > 0) this.shock -= dt;
     if (this.frozen > 0) { this.frozen -= this.boss ? dt * 3 : dt; return; } // bosses thaw three times faster
-    const a = Math.atan2(p.y - this.y, p.x - this.x);
+    const def0 = !this.boss && !this.mini && this.def;
+    // Treasure goblins run away from the player and escape after a while.
+    if (def0 && def0.flee && (this.fleeT = (this.fleeT || 0) + dt) > def0.flee) { g.kill(this, true); g.toast('THE GOBLIN ESCAPED'); return; }
+    const a = Math.atan2(p.y - this.y, p.x - this.x) + (def0 && def0.flee ? Math.PI : 0);
 
     if (this.dashT > 0) this.dash(dt, g);
     else {
@@ -102,13 +107,13 @@ class Enemy {
       this.shotCD -= dt;
       if (this.shotCD <= 0 && d < 520) {
         for (let i = 0; i < def.shot.count; i++) g.enemyShots.push(new EnemyShot(this.x, this.y, a + (i - (def.shot.count - 1) / 2) * def.shot.spread, this.type, this.damage));
-        this.shotCD = def.shot.cd;
+        this.shotCD = def.shot.cd * g.heatDef.shotCD;
       }
     }
     if (def && def.fuse && this.updateFuse(dt, g, d)) return;
 
     this.attackCD -= dt;
-    if (d < this.r + p.r && this.attackCD <= 0) { g.damage(this.damage); this.attackCD = this.boss ? .75 : .85; }
+    if (this.damage > 0 && d < this.r + p.r && this.attackCD <= 0) { g.damage(this.damage); this.attackCD = this.boss ? .75 : .85; }
 
     if (this.windup > 0) {
       this.windup -= dt;
@@ -128,6 +133,7 @@ class Enemy {
     const p = g.player;
     this.move = m;
     this.windup = this.windupMax = m.windup || .6;
+    if (this.boss) Sound.play('warn');
     if (m.type === 'slam') this.tele = {type: 'circle', x: this.x, y: this.y, r: m.radius, follow: true};
     else if (m.type === 'charge') {
       const a = angle(this, p);
@@ -153,6 +159,7 @@ class Enemy {
         const r = m.radius;
         g.fx.shockwave(this.x, this.y, r, .5, this.boss && this.tier >= 3 ? this.color : '#ff6f85');
         g.burst(this.x, this.y, this.color, 24);
+        if (this.boss) { Sound.play('slam'); g.shake(9); }
         if (dist(this, p) < r + p.r) g.damage(m.damage * scale);
         if (m.summon) for (let i = 0; i < m.summon.count; i++) g.addEnemy(m.summon.type, this.x + rand(-55, 55), this.y + rand(-55, 55));
         if (m.shots) {
@@ -167,7 +174,7 @@ class Enemy {
         this.dashHit = false; this.dashDamage = m.damage * scale;
         break;
       case 'zones':
-        for (let i = 0; i < m.count; i++) {
+        for (let i = 0; i < m.count + g.heatDef.hazards; i++) {
           const off = i === 0 ? 0 : m.spread, a = rand(0, TAU);
           g.hazards.push(new Hazard(p.x + Math.cos(a) * rand(off * .4, off), p.y + Math.sin(a) * rand(off * .4, off), m, m.damage * scale));
         }
@@ -214,9 +221,10 @@ class Enemy {
 
   bossThink(dt, g) {
     const st = stageInfo(this.tier), ph = st.phase2;
-    if (ph && !this.enraged && this.hp < this.maxHp * .5) {
+    if (ph && !this.enraged && this.hp < this.maxHp * g.heatDef.phase2At) {
       this.enraged = true;
       g.toast(`${this.name.toUpperCase()} ENRAGES!`);
+      Sound.play('boss'); g.shake(8); g.freeze(.15);
       g.fx.shockwave(this.x, this.y, 120, .6, this.color);
     }
     if (this.windup > 0 || this.dashT > 0 || this.waves) return;
@@ -224,7 +232,7 @@ class Enemy {
     if (this.skillCD > 0) return;
     const moves = this.enraged && ph && ph.extra ? [...st.moves, ph.extra] : st.moves;
     this.startMove(moves[this.moveIndex++ % moves.length], g);
-    this.skillCD = this.enraged && ph ? ph.cooldown : st.cooldown;
+    this.skillCD = (this.enraged && ph ? ph.cooldown : st.cooldown) * g.heatDef.bossCD;
   }
 
   miniThink(dt, g) {
@@ -252,6 +260,7 @@ class Enemy {
     if (this.fuseT > 0) return false;
     g.fx.shockwave(this.x, this.y, f.radius, .45, '#ffb347');
     g.burst(this.x, this.y, '#ffd36b', 22);
+    Sound.play('boom'); g.shake(6);
     if (dist(this, p) < f.radius + p.r) g.damage(this.damage * f.damage / this.def.damage);
     g.kill(this, true);
     return true;
@@ -275,6 +284,7 @@ class Hazard {
       this.erupted = true;
       g.fx.shockwave(this.x, this.y, this.r, .4, this.color);
       g.burst(this.x, this.y, this.color, 14);
+      Sound.play('boom');
       if (inside) { g.damage(this.damage); if (this.slow) p.slowTime = 2; }
     } else if (inside) {
       if (this.slow) p.slowTime = Math.max(p.slowTime, .35);
@@ -315,10 +325,11 @@ class Projectile {
     if (this.kind === 'fire' || this.kind === 'venom') {
       const venom = this.kind === 'venom', radius = this.blast || (venom ? 72 : 54), color = venom ? '#8bea9b' : '#ffb15e';
       g.burst(this.x, this.y, venom ? '#8bea9b' : '#ff9860', 24);
+      Sound.play('boom');
       g.fx.shockwave(this.x, this.y, radius, venom ? .38 : .32, venom ? '#81dc9a' : '#ff9c46');
       g.forEachEnemyNear(this.x, this.y, radius, e => {
         g.hit(e, this.damage, color);
-        if (venom) { e.poisonTime = 3; e.poisonDps = this.damage * .35; }
+        if (venom) { e.poisonTime = 3; e.poisonDps = this.damage * .35; e.burning = false; }
       }, true);
       if (this.cloud) g.zones.push(new PoisonCloud(this.x, this.y, 80, 4, this.damage * .5));
       return false;
@@ -364,12 +375,62 @@ class PoisonCloud {
   }
 }
 
+// Sun Disc: flies out toward a foe, then curves back to the player, hitting every foe
+// once on each pass.
+class SunDisc {
+  constructor(x, y, a, damage, scale = 1) {
+    this.x = x; this.y = y; this.vx = Math.cos(a); this.vy = Math.sin(a);
+    this.damage = damage; this.scale = scale; this.r = 16 * scale;
+    this.out = 0; this.returning = false; this.hitIds = new Set(); this.spin = 0;
+  }
+  update(dt, g) {
+    const p = g.player;
+    this.spin += dt * 14;
+    if (!this.returning) {
+      this.x += this.vx * 420 * dt; this.y += this.vy * 420 * dt; this.out += 420 * dt;
+      if (this.out >= 280) { this.returning = true; this.hitIds.clear(); }
+    } else {
+      const a = Math.atan2(p.y - this.y, p.x - this.x);
+      this.x += Math.cos(a) * 500 * dt; this.y += Math.sin(a) * 500 * dt;
+      if (dist(this, p) < 20) return false;
+    }
+    g.forEachEnemyNear(this.x, this.y, this.r, e => {
+      if (this.hitIds.has(e.id)) return;
+      this.hitIds.add(e.id);
+      g.hit(e, this.damage, '#ffd36b');
+    });
+    return true;
+  }
+}
+
+// Spirit Wolf: hunts the foe nearest the player, bites, and returns to heel when idle.
+class Wolf {
+  constructor(x, y, slot) { this.x = x; this.y = y; this.slot = slot; this.target = null; this.biteCD = 0; this.face = 1; this.scale = 1; }
+  update(dt, g, damage, alpha) {
+    const p = g.player;
+    this.biteCD -= dt;
+    if (!this.target || this.target.dead || dist(this.target, p) > 360) this.target = g.nearby[this.slot % Math.max(1, g.nearby.length)] || null;
+    let tx, ty;
+    if (this.target) { tx = this.target.x; ty = this.target.y; }
+    else { const a = g.time + this.slot * 2.1; tx = p.x + Math.cos(a) * 46; ty = p.y + Math.sin(a) * 46; }
+    const dx = tx - this.x, dy = ty - this.y, d = Math.hypot(dx, dy);
+    const reach = this.target ? this.target.r + 10 * this.scale : 6;
+    if (d > reach) { const v = Math.min(d - reach, 270 * dt); this.x += dx / d * v; this.y += dy / d * v; if (Math.abs(dx) > 2) this.face = dx > 0 ? 1 : -1; }
+    if (this.target && d <= reach + 2 && this.biteCD <= 0) {
+      this.biteCD = .9;
+      g.hit(this.target, damage, '#bfe9ff');
+      if (alpha) { this.target.slow = Math.max(this.target.slow, 1.5); p.hp = Math.min(p.maxHp, p.hp + p.maxHp * .005 * g.heatDef.heal); }
+    }
+  }
+}
+
 class EnemyShot {
   constructor(x, y, a, kind, damage) {
     this.x = x; this.y = y; this.vx = Math.cos(a) * 170; this.vy = Math.sin(a) * 170;
     this.kind = kind; this.damage = damage; this.life = 3; this.r = kind === 'spitter' ? 9 : 6;
   }
   update(dt, g) {
+    if (this.dead) return false; // destroyed by Mirror Ward
     this.x += this.vx * dt; this.y += this.vy * dt; this.life -= dt;
     const p = g.player, rr = this.r + p.r;
     if (dist2(this.x, this.y, p.x, p.y) < rr * rr) {
@@ -390,7 +451,7 @@ class Drop {
   update(dt, g) {
     this.life -= dt; this.phase += dt * 5;
     const p = g.player, dx = p.x - this.x, dy = p.y - this.y;
-    const range = p.pickupRange;
+    const range = g.pickupRange;
     if (Math.abs(dx) > range || Math.abs(dy) > range) return this.life > 0; // cheap reject
     const d = Math.hypot(dx, dy);
     if (d < range) {
@@ -424,6 +485,9 @@ class Meteor {
     this.t += dt;
     if (!this.struck && this.t >= this.delay) {
       this.struck = true;
+      const big = this.kind !== 'starfall';
+      Sound.play(big ? 'bigboom' : 'boom');
+      if (big) g.shake(this.kind === 'comet' ? 10 : 6);
       g.burst(this.x, this.y, this.kind === 'armageddon' ? '#ff934b' : '#ffce8b', this.kind === 'armageddon' ? 28 : 18);
       g.fx.shockwave(this.x, this.y, this.r, .52, '#ff9e58', 'meteor');
       g.forEachEnemyNear(this.x, this.y, this.r, e => g.hit(e, this.damage, '#ffc57b'));

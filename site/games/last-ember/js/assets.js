@@ -145,6 +145,35 @@ const Sprites = {
     }));
   },
 
+  // Sun Disc: a golden ring of rays, spun at draw time.
+  disc() {
+    return this.get('disc', () => makeSprite(56, 56, c => {
+      c.shadowColor = '#ffcf5a'; c.shadowBlur = 14;
+      c.fillStyle = '#ffb83d';
+      c.beginPath();
+      for (let i = 0; i < 24; i++) { const a = i * Math.PI / 12, r = i % 2 ? 11 : 19; const x = Math.cos(a) * r, y = Math.sin(a) * r; if (i) c.lineTo(x, y); else c.moveTo(x, y); }
+      c.closePath(); c.fill();
+      c.shadowBlur = 0;
+      c.fillStyle = '#fff2b0'; c.beginPath(); c.arc(0, 0, 8, 0, TAU); c.fill();
+      c.strokeStyle = '#c97a12'; c.lineWidth = 2; c.beginPath(); c.arc(0, 0, 8, 0, TAU); c.stroke();
+    }));
+  },
+
+  // Spirit Wolf, facing right; flipped at draw time.
+  wolf() {
+    return this.get('wolf', () => makeSprite(64, 44, c => {
+      c.shadowColor = '#7fd8ff'; c.shadowBlur = 12;
+      c.fillStyle = '#bfe9ffcc';
+      c.beginPath(); c.ellipse(-2, 2, 15, 8, 0, 0, TAU); c.fill();                 // body
+      c.beginPath(); c.ellipse(14, -4, 8, 6, -.3, 0, TAU); c.fill();                // head
+      c.beginPath(); c.moveTo(20, -4); c.lineTo(27, -1); c.lineTo(19, 1); c.fill(); // snout
+      c.beginPath(); c.moveTo(11, -9); c.lineTo(13, -16); c.lineTo(16, -9); c.fill(); // ear
+      c.beginPath(); c.moveTo(-16, 0); c.quadraticCurveTo(-27, -8, -24, -13); c.quadraticCurveTo(-20, -5, -14, -3); c.fill(); // tail
+      for (const x of [-10, -4, 5, 10]) c.fillRect(x, 7, 3, 9);                      // legs
+      c.shadowBlur = 0; c.fillStyle = '#ffffff'; c.fillRect(15, -6, 2, 2);         // eye
+    }));
+  },
+
   orb() {
     return this.get('orb', () => makeSprite(48, 48, c => {
       c.shadowColor = '#b77fff'; c.shadowBlur = 18;
@@ -210,6 +239,15 @@ function drawEnemyBody(c, type, body) {
     c.fillRect(-13, 4, 4, 5); c.fillRect(10, 5, 4, 5); c.fillRect(-5, -15, 3, 3); c.fillRect(3, -14, 3, 3);
     c.fillStyle = '#d9ff9d'; c.fillRect(-4, -10, 3, 3); c.fillRect(3, -10, 3, 3);
     c.fillStyle = '#243b35'; c.fillRect(-2, -3, 4, 2); c.fillRect(-9, 4, 4, 3);
+    return;
+  }
+  if (type === 'goblin') {
+    // Little thief with a bulging sack of loot
+    c.fillStyle = '#7a5a1c'; c.beginPath(); c.arc(-7, -2, 9, 0, TAU); c.fill();                 // sack
+    c.fillStyle = '#ffd36b'; c.fillRect(-10, -6, 3, 3); c.fillRect(-5, -9, 3, 3); c.fillRect(-8, 1, 3, 3); // coins
+    c.fillStyle = ink; c.fillRect(-1, -8, 12, 16); c.fillRect(1, 7, 4, 5); c.fillRect(7, 7, 4, 5);
+    c.fillStyle = '#8fd16a'; c.fillRect(0, -7, 10, 13); c.fillRect(2, -12, 7, 6); c.fillRect(9, -12, 4, 3); c.fillRect(-1, -11, 3, 2); // body, head, ears
+    c.fillStyle = '#ffef9a'; c.fillRect(6, -10, 2, 2);
     return;
   }
   if (type === 'charger') {

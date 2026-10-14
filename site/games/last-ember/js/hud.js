@@ -54,8 +54,8 @@ class Hud {
     this.text('stageGoal', g.stageComplete ? 'STAGE CLEARED · FINISH WHEN READY'
       : g.boss ? 'DEFEAT THE BOSS'
       : g.stageClearPending ? 'CLAIM THE CHEST'
-      : `Mini bosses ${g.minisDefeated}/${g.miniGoal} · final boss in ${Math.max(0, Math.ceil(g.bossCD))}s`);
-    this.text('wave', `STAGE ${g.stage}/${STAGE_COUNT} · LV ${p.level} · FOE LV ${(g.stage - 1) * 3 + 1 + Math.floor(g.stageTime / 20)} · ${g.difficulty.toUpperCase()}`);
+      : g.eventStatus || `Mini bosses ${g.minisDefeated}/${g.miniGoal} · final boss in ${Math.max(0, Math.ceil(g.bossCD))}s`);
+    this.text('wave', `${g.stage > STAGE_COUNT ? `ENDLESS ${g.stage - STAGE_COUNT}` : `STAGE ${g.stage}/${STAGE_COUNT}`} · LV ${p.level} · FOE LV ${(g.stage - 1) * 3 + 1 + Math.floor(g.stageTime / 20)} · HEAT ${g.heat || 0}`);
     this.text('timer', formatTime(g.time));
     this.updateBoss(g);
     this.updateTray(p);
@@ -67,7 +67,7 @@ class Hud {
     if (!b) return;
     this.bar('bossBar', b.hp / b.maxHp);
     this.text('bossName', `TIER ${b.tier} · ${b.name.toUpperCase()}`);
-    const src = `assets/boss-${b.tier - 1}.webp`;
+    const src = `assets/boss-${stageInfo(b.tier).art}.webp`;
     if (this.cache.get('bossPortrait') !== src) { this.cache.set('bossPortrait', src); this.el.bossPortrait.src = src; }
   }
 

@@ -57,10 +57,10 @@ class FloatTextPool {
   }
   clear() { for (const t of this.items) t.life = 0; }
   // When full, the oldest number is recycled.
-  add(x, y, text, color = '#fff') {
+  add(x, y, text, color = '#fff', big = false) {
     const t = this.items[this.next];
     this.next = (this.next + 1) % this.items.length;
-    t.x = x; t.y = y; t.text = text; t.color = color; t.life = .7;
+    t.x = x; t.y = y; t.text = text; t.color = color; t.life = .7; t.big = big;
   }
   update(dt) {
     for (const t of this.items) if (t.life > 0) { t.life -= dt; t.y -= 32 * dt; }
@@ -71,8 +71,10 @@ class FloatTextPool {
     for (const t of this.items) {
       if (t.life <= 0 || t.x < view.x0 || t.x > view.x1 || t.y < view.y0 || t.y > view.y1) continue;
       c.globalAlpha = clamp(t.life / .7, 0, 1);
+      if (t.big) c.font = 'bold 16px monospace';
       c.fillStyle = '#17142b'; c.fillText(t.text, t.x + 1, t.y + 1);
       c.fillStyle = t.color; c.fillText(t.text, t.x, t.y);
+      if (t.big) c.font = 'bold 12px monospace';
     }
     c.globalAlpha = 1;
   }
@@ -86,20 +88,22 @@ class Effects {
     this.shockwaves = [];
     this.arcs = [];
     this.beams = [];
+    this.swings = [];
   }
   clear() {
     this.particles.clear(); this.texts.clear();
-    this.shockwaves.length = 0; this.arcs.length = 0; this.beams.length = 0;
+    this.shockwaves.length = 0; this.arcs.length = 0; this.beams.length = 0; this.swings.length = 0;
   }
   shockwave(x, y, r, life, color, type) {
     if (this.shockwaves.length < 48) this.shockwaves.push({x, y, r, life, max: life, color, type});
   }
   arc(x1, y1, x2, y2) { this.arcs.push({x1, y1, x2, y2, life: .2, max: .2}); }
+  swing(x, y, a, half, r) { this.swings.push({x, y, a, half, r, life: .22, max: .22}); }
   beam(x1, y1, x2, y2) { this.beams.push({x1, y1, x2, y2, life: .45, max: .45}); }
   update(dt) {
     this.particles.update(dt);
     this.texts.update(dt);
-    for (const list of [this.shockwaves, this.arcs, this.beams]) {
+    for (const list of [this.shockwaves, this.arcs, this.beams, this.swings]) {
       for (const s of list) s.life -= dt;
       compact(list, s => s.life > 0);
     }

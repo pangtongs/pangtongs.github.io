@@ -8,11 +8,36 @@ const MAX_GEMS = 260;          // extra XP merges into existing gems beyond this
 const SIM_STEP = 1 / 60;       // fixed simulation timestep (seconds)
 const SAVE_VERSION = 2;
 
-const DIFFICULTIES = {
-  standard: {hp: 1, damage: 1, speed: 1, spawns: 1, legend: 'Enemy HP, damage, speed, spawn rate: baseline'},
-  veteran: {hp: 1.3, damage: 1.14, speed: 1.04, spawns: 1.16, legend: 'HP +30% · damage +14% · speed +4% · regular spawns +16%'},
-  nightmare: {hp: 1.7, damage: 1.30, speed: 1.08, spawns: 1.35, legend: 'HP +70% · damage +30% · speed +8% · regular spawns +35%'},
-};
+// Heat: optional difficulty, 0-10. Each level adds its rule on top of all lower levels,
+// and every level adds 10% souls. Clearing a stage at your highest unlocked Heat
+// unlocks the next one.
+const HEAT_LEVELS = [
+  null,
+  {name: 'Swarm', rule: 'Regular enemies spawn 15% faster.', mod: h => { h.spawns *= 1.15; }},
+  {name: 'Hardened', rule: 'Enemies have 20% more HP.', mod: h => { h.hp *= 1.2; }},
+  {name: 'Sharp Fangs', rule: 'Enemies deal 15% more damage.', mod: h => { h.damage *= 1.15; }},
+  {name: 'Elite Blood', rule: 'Mini bosses have 50% more HP and arrive 20% sooner.', mod: h => { h.miniHp *= 1.5; h.miniCD *= .8; }},
+  {name: 'Hasted', rule: 'Enemies move 8% faster.', mod: h => { h.speed *= 1.08; }},
+  {name: 'Volleys', rule: 'Ranged enemies fire 25% more often.', mod: h => { h.shotCD *= .75; }},
+  {name: 'Tyrants', rule: 'Bosses have 30% more HP and enrage at 60% HP.', mod: h => { h.bossHp *= 1.3; h.phase2At = .6; }},
+  {name: 'Embers Fade', rule: 'Your shield regenerates 40% slower.', mod: h => { h.shieldRegen *= .6; }},
+  {name: 'Scorched Earth', rule: 'Hazard attacks add one more zone; bosses attack 15% more often.', mod: h => { h.hazards += 1; h.bossCD *= .85; }},
+  {name: 'Last Light', rule: 'Healing is halved; enemies deal another 15% damage.', mod: h => { h.heal *= .5; h.damage *= 1.15; }},
+];
+const MAX_HEAT = HEAT_LEVELS.length - 1;
+const heatCache = [];
+function heatDef(level) {
+  if (!heatCache[level]) {
+    const h = {hp: 1, damage: 1, speed: 1, spawns: 1, miniHp: 1, miniCD: 1, shotCD: 1, bossHp: 1, phase2At: .5,
+      shieldRegen: 1, heal: 1, hazards: 0, bossCD: 1, souls: 1 + .1 * level};
+    for (let i = 1; i <= level; i++) HEAT_LEVELS[i].mod(h);
+    heatCache[level] = h;
+  }
+  return heatCache[level];
+}
+// Saves and settings from before Heat used named difficulties.
+const LEGACY_HEAT = {standard: 0, veteran: 3, nightmare: 6};
+
 
 // ---------- Bosses ----------
 // A boss cycles through its moves. Each move winds up (telegraphed), then resolves:
@@ -112,8 +137,23 @@ const STAGES = [
     ], phase2: {cooldown: 2.1, speed: 1.3, extra: {type: 'ring', windup: .45, kind: 'warlock', count: 24, waves: 3}}},
 ];
 const STAGE_COUNT = STAGES.length;
-const ACT_NAMES = {1: 'Act I · The Rift', 2: 'Act II · Beyond the Rift'};
-const stageInfo = n => STAGES[clamp(n - 1, 0, STAGE_COUNT - 1)];
+const ACT_NAMES = {1: 'Act I · The Rift', 2: 'Act II · Beyond the Rift', 3: 'Endless · The Pyre Beyond'};
+// art: boss portrait index. artifactTier: which ARTIFACTS pool its chest uses.
+STAGES.forEach((s, i) => { s.art = i; s.artifactTier = i + 1; });
+
+// Endless: after the last stage, depth d replays the Act II arenas and bosses in turn,
+// with enemy scaling still rising (it is driven by the stage number).
+const ENDLESS_SECONDS = 240;
+const endlessCache = new Map();
+function stageInfo(n) {
+  if (n <= STAGE_COUNT) return STAGES[clamp(n - 1, 0, STAGE_COUNT - 1)];
+  if (!endlessCache.has(n)) {
+    const depth = n - STAGE_COUNT, base = STAGES[8 + (depth - 1) % 8];
+    endlessCache.set(n, {...base, act: 3, endless: depth, name: `Endless ${depth} · ${base.name}`, seconds: ENDLESS_SECONDS});
+  }
+  return endlessCache.get(n);
+}
+const chestName = tier => tier > STAGE_COUNT ? `ENDLESS ${tier - STAGE_COUNT}` : CHEST_TIER_NAMES[tier];
 const CHEST_TIER_NAMES = ['', 'COMMON', 'RARE', 'LEGENDARY', 'MYTHIC', 'RELIC', 'ANCIENT', 'CELESTIAL', 'ASCENDANT',
   'GLACIAL', 'GILDED', 'BRAMBLE', 'FORGED', 'SPECTRAL', 'PRISMATIC', 'VOIDBORN', 'PRIMORDIAL'];
 
@@ -132,6 +172,7 @@ const ENEMY_TYPES = {
   bomber:    {hp: 30, speed: 72, r: 11, damage: 6,  xp: 5, color: '#f2d14b', fuse: {range: 62, time: .9, radius: 78, damage: 22}},
   splitter:  {hp: 70, speed: 40, r: 16, damage: 10, xp: 6, color: '#c77dff', splitInto: {type: 'splitling', count: 2}},
   splitling: {hp: 18, speed: 88, r: 9,  damage: 6,  xp: 2, color: '#e0b3ff'},
+  goblin:    {hp: 140, speed: 125, r: 12, damage: 0, xp: 0, color: '#e6c34a', flee: 14}, // stage event: runs away, escapes after `flee` s
 };
 // Mini bosses. skill runs every `cd` seconds.
 const MINI_BOSSES = [
@@ -155,6 +196,10 @@ const SPELLS = {
   venom:     {name: 'Venom Bloom', icon: 'venom', path: 'void', desc: 'Stronger poison explosion and damage over time.', book: 'Poison area explosion.'},
   nova:      {name: 'Thunder Nova', icon: 'nova', path: 'storm', desc: 'Wider, stronger shock ring.', book: 'Close range shock ring.'},
   blades:    {name: 'Spirit Blades', icon: 'blades', path: 'void', desc: 'Stronger volley of three seeking blades.', book: 'Three seeking missiles.'},
+  ward:      {name: 'Mirror Ward', icon: 'ward', path: 'void', desc: 'Raise a ward that destroys enemy shots and fires them back; longer and more often per rank.', book: 'Defensive: shots that touch the ward are reflected at your foes.'},
+  whip:      {name: 'Ember Whip', icon: 'whip', path: 'demon', desc: 'A stronger, faster burning lash toward the nearest foe.', book: 'Sweeps a wide burning arc in front of you.'},
+  disc:      {name: 'Sun Disc', icon: 'disc', path: 'storm', desc: 'A stronger, faster boomerang that cuts on the way out and back.', book: 'A golden boomerang that hits everything on both passes.'},
+  wolves:    {name: 'Spirit Wolves', icon: 'wolves', path: 'frost', desc: 'Another spirit wolf every two ranks; stronger bites.', book: 'Companion wolves that hunt the foes nearest you.'},
   starfall:  {name: 'Starfall', icon: 'starfall', path: 'demon', desc: 'More and stronger targeted falling stars.', book: 'Targeted falling stars.'},
 };
 const SPELL_MAX_RANK = 5;
@@ -178,6 +223,14 @@ const EVOLUTIONS = {
               static: {name: 'Static Field', desc: 'Foes hit are shocked: they take 30% more damage from everything for 3s.'}},
   blades:    {storm: {name: 'Blade Storm', desc: 'Six blades per volley instead of three, each at 65% damage.'},
               reaper: {name: 'Reaper’s Edge', desc: 'Blades pierce two more foes and deal 50% more damage.'}},
+  ward:      {bulwark: {name: 'Bulwark', desc: 'The ward lasts twice as long, and every shot it blocks restores shield equal to 3% max HP.'},
+              retort: {name: 'Retort', desc: 'Reflected shots deal double damage and pierce two foes.'}},
+  whip:      {lash: {name: 'Cyclone Lash', desc: 'The whip spins a full circle around you.'},
+              brand: {name: 'Searing Brand', desc: 'Foes struck burn for 40% of the hit each second for 3s.'}},
+  disc:      {twin: {name: 'Twin Suns', desc: 'Throws two discs in opposite directions.'},
+              eclipse: {name: 'Eclipse Disc', desc: 'A disc 60% larger that deals 50% more damage.'}},
+  wolves:    {pack: {name: 'Wolf Pack', desc: 'Two more wolves join the pack, each at 75% bite damage.'},
+              alpha: {name: 'Alpha', desc: 'One giant wolf with triple bite damage; its bites slow foes and heal you 0.5% max HP.'}},
   starfall:  {shower: {name: 'Meteor Shower', desc: 'Five stars fall per cast, each at 60% damage.'},
               comet: {name: 'Comet', desc: 'One comet with 3.5× damage and a far wider impact.'}},
 };
@@ -243,6 +296,9 @@ const PASSIVES = {
   leech:       {name: 'Crimson Siphon', desc: 'Heal 0.8% of damage dealt per rank (capped each second).', book: 'Heal for a portion of damage dealt, capped each second.'},
   heartGrowth: {name: 'Living Heart', desc: 'Each minute, max HP grows by 6% of the stage’s base HP per rank; heal the gain.', book: 'Max HP +6% of base per rank each minute; heal the gain.'},
   emberGrowth: {name: 'Ember Ascension', desc: 'Each minute, attack grows by 4% of the stage’s base attack per rank.', book: 'Attack +4% of base per rank each minute.'},
+  keen:        {name: 'Keen Eye', desc: 'Critical chance +4% and critical damage +10% per rank (base 5% for 175%).', book: 'Critical hits: +4% chance and +10% damage per rank.'},
+  lodestone:   {name: 'Lodestone', desc: 'Pickup range +25% per rank.', book: 'Gems, gold and souls are pulled in from farther away.'},
+  fleet:       {name: 'Fleetfoot', desc: 'Move speed +6% per rank.', book: 'Move faster.'},
   aegisGrowth: {name: 'Growing Aegis', desc: 'Each minute, gain shield and capacity equal to 8% of the stage’s base HP per rank; +0.1% max HP/sec regeneration per rank.', book: 'Shield and capacity +8% of base HP per rank each minute; regen +0.1% max HP/sec.'},
 };
 

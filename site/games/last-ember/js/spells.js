@@ -46,6 +46,7 @@ function castSpells(g, dt) {
       }
       g.hit(e, dmg, '#9df8ff');
     });
+    Sound.play('zap');
     cd.lightning = Math.max(1.3, 4.3 - s.lightning * .45) * haste;
     bloodCost(p);
   }
@@ -104,7 +105,66 @@ function castSpells(g, dt) {
       });
     }
   }
+  castNewSpells(g, dt, target, near);
   if (p.ultimate && cd.ult <= 0) castUltimate(g, p, target, near);
+}
+
+const WARD_RADIUS = 72, WHIP_RANGE = 150;
+
+// Mirror Ward, Ember Whip, Sun Disc and Spirit Wolves.
+function castNewSpells(g, dt, target, near) {
+  const p = g.player, s = p.skills, cd = p.cool, haste = p.castCooldown, ev = p.evolved;
+
+  if (s.ward) {
+    if (cd.ward <= 0) {
+      p.wardTime = (.9 + s.ward * .15) * (ev.ward === 'bulwark' ? 2 : 1);
+      cd.ward = Math.max(3.5, 7 - s.ward * .6) * haste;
+      Sound.play('ward');
+      bloodCost(p);
+    }
+    if (p.wardTime > 0) {
+      p.wardTime -= dt;
+      const dmg = (15 + s.ward * 8) * (ev.ward === 'retort' ? 2 : 1);
+      for (const q of g.enemyShots) {
+        if (q.dead || dist2(q.x, q.y, p.x, p.y) > (WARD_RADIUS + q.r) * (WARD_RADIUS + q.r)) continue;
+        q.dead = true;
+        g.burst(q.x, q.y, '#e8f4ff', 4);
+        const foe = g.grid.nearest(q.x, q.y);
+        if (foe) g.projectiles.push(new Projectile(q.x, q.y, foe, dmg, 'arcane', ev.ward === 'retort' ? {pierce: 2} : {}));
+        if (ev.ward === 'bulwark') p.shield = Math.min(p.shieldCap, p.shield + p.maxHp * .03);
+      }
+    }
+  }
+
+  if (s.whip && cd.whip <= 0 && target && dist(target, p) < WHIP_RANGE + 40) {
+    const dmg = 20 + s.whip * 10, a = angle(p, target), full = ev.whip === 'lash', half = full ? Math.PI : Math.PI / 3;
+    g.forEachEnemyNear(p.x, p.y, WHIP_RANGE, e => {
+      let da = Math.abs(Math.atan2(e.y - p.y, e.x - p.x) - a);
+      if (da > Math.PI) da = TAU - da;
+      if (da > half) return;
+      g.hit(e, dmg, '#ffb15e');
+      if (ev.whip === 'brand') { e.poisonTime = 3; e.poisonDps = Math.max(e.poisonDps, dmg * .4); e.burning = true; }
+    });
+    g.fx.swing(p.x, p.y, a, half, WHIP_RANGE);
+    Sound.play('hit');
+    cd.whip = Math.max(1.2, 2.6 - s.whip * .25) * haste;
+    bloodCost(p);
+  }
+
+  if (s.disc && cd.disc <= 0 && target) {
+    const dmg = (18 + s.disc * 9) * (ev.disc === 'eclipse' ? 1.5 : 1), a = angle(p, target), scale = ev.disc === 'eclipse' ? 1.6 : 1;
+    g.discs.push(new SunDisc(p.x, p.y, a, dmg, scale));
+    if (ev.disc === 'twin') g.discs.push(new SunDisc(p.x, p.y, a + Math.PI, dmg, scale));
+    cd.disc = Math.max(1.6, 3.4 - s.disc * .3) * haste;
+    bloodCost(p);
+  }
+
+  // Wolves are kept in sync with the spell rank every step; they are not saved.
+  const want = !s.wolves ? 0 : ev.wolves === 'alpha' ? 1 : Math.min(3, 1 + Math.floor(s.wolves / 2)) + (ev.wolves === 'pack' ? 2 : 0);
+  while (g.allies.length < want) g.allies.push(new Wolf(p.x, p.y, g.allies.length));
+  g.allies.length = want;
+  const bite = (6 + s.wolves * 4) * (ev.wolves === 'alpha' ? 3 : ev.wolves === 'pack' ? .75 : 1);
+  for (const w of g.allies) { w.scale = ev.wolves === 'alpha' ? 1.8 : 1; w.update(dt, g, bite, ev.wolves === 'alpha'); }
 }
 
 // Where every orb is right now; Twin Halo adds two on a wider ring turning the other way.

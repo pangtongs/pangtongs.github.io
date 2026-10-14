@@ -28,7 +28,19 @@ function compact(arr, keep) {
   return arr;
 }
 
+// "1h 05m" or "12m 30s", for long totals.
+const formatDuration = seconds => {
+  const s = Math.floor(seconds), h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60;
+  return h ? `${h}h ${String(m).padStart(2, '0')}m` : `${m}m ${String(s % 60).padStart(2, '0')}s`;
+};
+
 const formatTime = seconds => {
   const s = Math.floor(seconds);
   return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 };
+
+// Adds methods (and getters) to a class from another file, so one class can be split
+// across several classic scripts.
+function mixin(cls, members) {
+  Object.defineProperties(cls.prototype, Object.getOwnPropertyDescriptors(members));
+}

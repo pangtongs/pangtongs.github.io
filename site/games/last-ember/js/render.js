@@ -63,7 +63,8 @@ class Renderer {
 
   draw(g) {
     const c = this.ctx, p = g.player;
-    this.camX = p.x; this.camY = p.y;
+    const shake = g.shakeAmt || 0;
+    this.camX = p.x + (shake ? rand(-shake, shake) : 0); this.camY = p.y + (shake ? rand(-shake, shake) : 0);
     const v = this.view;
     v.x0 = p.x - this.W / 2; v.x1 = p.x + this.W / 2; v.y0 = p.y - this.H / 2; v.y1 = p.y + this.H / 2;
 
@@ -78,6 +79,7 @@ class Renderer {
     for (const ch of g.chests) this.drawChest(ch);
     this.drawHazards(g);
     this.drawClouds(g);
+    this.drawShrines(g);
     for (const m of g.meteors) this.drawMeteor(m);
     for (const q of g.projectiles) if (this.visible(q.x, q.y, 40)) this.sprite(Sprites.projectile(q.kind), q.x, q.y, Math.atan2(q.vy, q.vx), q.scale || 1);
     for (const q of g.enemyShots) if (this.visible(q.x, q.y, 30)) this.sprite(Sprites.enemyShot(q.kind), q.x, q.y, Math.atan2(q.vy, q.vx));
@@ -89,6 +91,7 @@ class Renderer {
     this.drawBeams(g);
     if (g.settings.particles) g.fx.particles.draw(c, v);
     this.drawOrbs(g);
+    this.drawNewSpells(g);
     this.drawAura(g);
     this.drawPlayer(g);
     this.worldTransform();
@@ -205,6 +208,20 @@ class Renderer {
     c.globalAlpha = 1;
   }
 
+  // Cursed shrines: a rune circle that fills while the player stands in it.
+  drawShrines(g) {
+    const c = this.ctx;
+    for (const s of g.shrines) {
+      if (!this.visible(s.x, s.y, s.r)) continue;
+      c.globalAlpha = .18 + .08 * Math.sin(g.time * 4); c.fillStyle = '#9a5cff';
+      c.beginPath(); c.arc(s.x, s.y, s.r, 0, TAU); c.fill();
+      c.globalAlpha = .9; c.strokeStyle = '#d6b3ff'; c.lineWidth = 2; c.setLineDash([10, 6]); c.stroke(); c.setLineDash([]);
+      c.beginPath(); for (let i = 0; i < 5; i++) { const a = g.time * .6 + i * TAU * 2 / 5, x = s.x + Math.cos(a) * s.r * .7, y = s.y + Math.sin(a) * s.r * .7; if (i) c.lineTo(x, y); else c.moveTo(x, y); } c.closePath(); c.stroke();
+      if (s.charge > 0) { c.strokeStyle = '#fff'; c.lineWidth = 5; c.beginPath(); c.arc(s.x, s.y, s.r + 6, -Math.PI / 2, -Math.PI / 2 + TAU * s.charge / 2.5); c.stroke(); }
+    }
+    c.globalAlpha = 1;
+  }
+
   // Plague Cloud patches.
   drawClouds(g) {
     const c = this.ctx;
@@ -297,7 +314,12 @@ class Renderer {
         c.beginPath(); c.arc(e.x, e.y, f.radius, 0, TAU); c.stroke(); c.setLineDash([]); c.globalAlpha = 1;
       }
       const flash = e.hit > 0 || (e.fuseT > 0 && Math.floor(e.fuseT * 12) % 2 === 0);
-      this.sprite(Sprites.enemy(e.type, flash), x, y);
+      if (e.elite) { // champions: gold ring and a larger body
+        this.place(x, y);
+        c.strokeStyle = '#ffd36b'; c.lineWidth = 3; c.globalAlpha = .85;
+        c.beginPath(); c.arc(0, 0, e.r + 6, 0, TAU); c.stroke(); c.globalAlpha = 1;
+      }
+      this.sprite(Sprites.enemy(e.type, flash), x, y, 0, e.elite ? 1.25 : 1);
       this.drawStatus(e);
       if (e.hp < e.maxHp) {
         const w = e.r * 2;
@@ -307,7 +329,7 @@ class Renderer {
       return;
     }
 
-    const px = e.boss ? 1.7 : 1, kind = e.mini ? 'mini' : 'boss', art = e.mini ? e.miniKind : e.tier - 1;
+    const px = e.boss ? 1.7 : 1, kind = e.mini ? 'mini' : 'boss', art = e.mini ? e.miniKind : stageInfo(e.tier).art;
     this.place(x, y);
     // A blinking boss fades out over its windup.
     const fade = e.tele && e.tele.type === 'blink' ? Math.max(.15, e.windup / e.windupMax) : 1;
@@ -384,6 +406,34 @@ class Renderer {
       c.strokeStyle = '#e5c2ff'; c.lineWidth = 2;
       c.beginPath(); c.arc(x, y, 10, g.time * 3, g.time * 3 + Math.PI * 1.15); c.stroke();
     }
+  }
+
+  // Sun Discs, Spirit Wolves, the Mirror Ward and Ember Whip swings.
+  drawNewSpells(g) {
+    const c = this.ctx, p = g.player;
+    for (const d of g.discs) if (this.visible(d.x, d.y, 40)) this.sprite(Sprites.disc(), d.x, d.y, d.spin, d.scale);
+    for (const w of g.allies) {
+      if (!this.visible(w.x, w.y, 40)) continue;
+      const s = Sprites.wolf();
+      this.place(w.x, w.y);
+      c.scale(w.face * w.scale, w.scale);
+      c.drawImage(s.img, -s.hw, -s.hh, s.w, s.h);
+    }
+    this.worldTransform();
+    if (p.wardTime > 0) {
+      c.globalAlpha = .18 + .1 * Math.sin(g.time * 18); c.fillStyle = '#d8ecff';
+      c.beginPath(); c.arc(p.x, p.y, WARD_RADIUS, 0, TAU); c.fill();
+      c.globalAlpha = .85; c.strokeStyle = '#f2f8ff'; c.lineWidth = 3; c.stroke();
+    }
+    for (const s of g.fx.swings) {
+      const k = s.life / s.max;
+      c.globalAlpha = k; c.lineCap = 'round';
+      c.strokeStyle = '#ff8a3d'; c.lineWidth = 14;
+      c.beginPath(); c.arc(s.x, s.y, s.r * .8, s.a - s.half, s.a + s.half); c.stroke();
+      c.strokeStyle = '#ffe09a'; c.lineWidth = 4; c.stroke();
+      c.lineCap = 'butt';
+    }
+    c.globalAlpha = 1;
   }
 
   drawAura(g) {
