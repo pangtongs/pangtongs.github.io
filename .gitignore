@@ -1,5 +1,5 @@
-freqtrade/
 
 **/.env
 
 .DS_Store
+.sass-cache/
