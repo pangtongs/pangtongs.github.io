@@ -9,6 +9,8 @@ const loadImage = src => { const im = new Image(); im.src = src; return im; };
 const mageImages = ['mage-0', 'mage-1', 'mage-2', 'mage-north'].map(n => loadImage(`assets/${n}.webp`));
 const bossImages = STAGES.map((_, i) => loadImage(`assets/boss-${i}.webp`));
 const miniImages = MINI_BOSSES.map((_, i) => loadImage(`assets/mini-${i}.webp`));
+// Painted regular enemies (128px). Until one loads, its old hand-drawn body is used.
+const enemyImages = Object.fromEntries(Object.keys(ENEMY_TYPES).map(k => [k, loadImage(`assets/enemy-${k}.webp`)]));
 const imageReady = im => im.complete && im.naturalWidth > 0;
 
 const SPRITE_RES = 2; // offscreen pixels per world unit, so sprites stay sharp on 2x screens
@@ -217,6 +219,14 @@ const Sprites = {
   enemy(type, flash = false) {
     const key = `enemy:${type}:${flash}`;
     return this.get(key, () => makeSprite(64, 64, c => drawEnemyBody(c, type, flash ? '#fff' : ENEMY_TYPES[type].color)));
+  },
+
+  // Painted regular enemy art and its white hit-flash copy. Null until loaded.
+  enemyArt(type, flash = false) {
+    const im = enemyImages[type];
+    if (!im || !imageReady(im)) return null;
+    const base = this.get('enemyArt:' + type, () => ({img: im, w: im.naturalWidth, h: im.naturalHeight}));
+    return flash ? this.get('enemyArt:' + type + ':flash', () => whiteSilhouette(im, base.w, base.h)) : base;
   },
 
   // Boss or mini-boss portrait art, plus a white copy for the hit flash. Null until loaded.

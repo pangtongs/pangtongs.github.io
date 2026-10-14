@@ -59,13 +59,20 @@ mixin(Game, {
     this.hud.update(this, performance.now(), true);
   },
 
+  // Den of Magic. perk(key): owned rank; perkCost: next rank's price, or null when maxed.
+  perk(key) { return key === 'atk' || key === 'hp' ? this.meta[key] || 0 : (this.meta.perks || {})[key] || 0; },
+  perkCost(key) { return META_PERKS[key].costs[this.perk(key)] ?? null; },
+  perkLocked(key) { return (META_PERKS[key].stage || 0) > (this.meta.stats.bestStage || 0); },
   buyMeta(key) {
-    const cost = metaCost(this.meta[key] || 0);
+    const def = META_PERKS[key], cost = this.perkCost(key);
+    if (cost === null || this.perkLocked(key)) return;
     if (this.wallet < cost) { this.toast('Not enough souls'); return; }
     this.wallet -= cost;
-    this.meta[key] = (this.meta[key] || 0) + 1;
+    if (key === 'atk' || key === 'hp') this.meta[key] = this.perk(key) + 1;
+    else (this.meta.perks || (this.meta.perks = {}))[key] = this.perk(key) + 1;
     this.saveMeta();
+    Sound.play('levelup');
     UI.renderMenu(this);
-    this.toast(key === 'atk' ? 'Base ATK increased!' : 'Max HP increased!');
+    this.toast(`${def.name.toUpperCase()} · ${def.desc(this.perk(key)).toUpperCase()}`);
   },
 });

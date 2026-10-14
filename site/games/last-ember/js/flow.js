@@ -65,7 +65,7 @@ mixin(Game, {
     const p = this.player, o = ORIGINS[key];
     p.origin = key;
     this.meta.stats.origins[key] = (this.meta.stats.origins[key] || 0) + 1;
-    p.skills[o.spell] = Math.max(2, p.skills[o.spell]);
+    p.skills[o.spell] = Math.max(2 + (this.perk('origin') ? 1 : 0), p.skills[o.spell]);
     p.cool[o.spell] = 0;
     hide('originOverlay');
     this.setPaused(false);
@@ -79,7 +79,7 @@ mixin(Game, {
     const found = this.drops.length;
     for (const d of this.drops) {
       if (d.type === 'xp') xp += d.value;
-      else if (d.type === 'soul') { const v = Math.round(d.value * this.heatDef.souls); this.souls += v; this.wallet += v; }
+      else if (d.type === 'soul') { const v = Math.round(d.value * this.soulMult); this.souls += v; this.wallet += v; }
       else if (d.type === 'gems') this.gemsCount += d.value;
       else this.coins += d.value;
     }

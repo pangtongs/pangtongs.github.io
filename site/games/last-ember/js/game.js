@@ -37,16 +37,19 @@ class Game {
   get viewH() { return this.renderer.H; }
   get xpMultiplier() { return this.player.bargains.hunted ? 1.5 : 1; }
   get heatDef() { return heatDef(this.heat || 0); }
+  get soulMult() { return this.heatDef.souls * (1 + .1 * this.perk('souls')); }
+  get dashCooldown() { return DASH.cooldown / (1 + .08 * this.player.passiveRanks.fleet) / (1 + .15 * this.perk('dash')); }
 
   reset() {
     const p = this.player = new Player();
     p.atk *= 1 + (this.meta.atk || 0) * META_UPGRADES.atk.per;
     p.maxHp *= 1 + (this.meta.hp || 0) * META_UPGRADES.hp.per;
     p.hp = p.maxHp;
+    p.rerolls = this.perk('reroll'); p.secondWind = this.perk('revive') > 0;
     this.time = 0; this.stage = 1; this.stageTime = 0; this.growthClock = 0;
     this.heat = clamp(this.settings.heat || 0, 0, this.meta.heatUnlocked || 0);
     this.stageClearPending = false; this.stageComplete = false; this.stageLootCollected = 0; this.lastArtifact = '';
-    this.souls = 0; this.gemsCount = 0; this.coins = 0;
+    this.souls = 0; this.gemsCount = this.coins = 25 * this.perk('purse');
     this.yields = {gems: 1, coins: 1};
     this.dropRemainders = {gems: 0, coins: 0};
     this.marketRanks = Object.fromEntries(Object.keys(MARKET).map(k => [k, 0]));
@@ -68,6 +71,7 @@ class Game {
       this.keys[k] = true;
       if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' ', 'escape'].includes(k)) e.preventDefault();
       if ((k === ' ' || k === 'shift') && !e.repeat) this.requestDash();
+      if (k === 'r' && !e.repeat) this.reroll();
       // Number keys pick the matching card on any open choice screen.
       if (/^[1-9]$/.test(e.key) && !e.repeat) {
         const box = ['levelOverlay', 'chestOverlay', 'originOverlay'].filter(isOpen).map(id => $(id).querySelector('.choices'))[0];
@@ -96,7 +100,8 @@ class Game {
 
     const on = (id, fn) => { $(id).onclick = fn; };
     document.querySelectorAll('[data-menu]').forEach(b => { b.onclick = () => this.openMenuPanel(b.dataset.menu); });
-    document.querySelectorAll('[data-meta-buy]').forEach(b => { b.onclick = () => this.buyMeta(b.dataset.metaBuy); });
+    on('rerollBtn', () => this.reroll());
+    on('denBtn', () => { this.showMenu(); this.openMenuPanel('upgrades'); });
     document.querySelectorAll('[data-setting]').forEach(b => {
       b.onclick = () => {
         const k = b.dataset.setting;
@@ -303,6 +308,14 @@ class Game {
     p.y = clamp(p.y, -ARENA_Y, ARENA_Y);
   }
 
+  // Second Thoughts: redraw the current level-up cards.
+  reroll() {
+    const p = this.player;
+    if (!isOpen('levelOverlay') || $('choices').dataset.tier !== 'SPELL' || !(p.rerolls > 0)) return;
+    p.rerolls--;
+    UI.showLevelUp(this);
+  }
+
   // One-time hints, remembered across runs.
   tip(key, text) {
     const tips = this.meta.tips || (this.meta.tips = {});
@@ -316,7 +329,7 @@ class Game {
     const p = this.player;
     if (!dx && !dy) { const f = [[0, 1], [-1, 0], [1, 0], [0, -1]][p.facing] || [0, 1]; dx = f[0]; dy = f[1]; }
     p.dashX = dx; p.dashY = dy; p.dashT = DASH.time;
-    p.dashCD = DASH.cooldown / (1 + .08 * p.passiveRanks.fleet);
+    p.dashCD = this.dashCooldown;
     p.invuln = Math.max(p.invuln, DASH.time + .1);
     Sound.play('dash');
   }

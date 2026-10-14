@@ -56,7 +56,7 @@ class Hud {
       : g.stageClearPending ? 'CLAIM THE CHEST'
       : g.eventStatus || `Boss in ${Math.max(0, Math.ceil(g.bossCD))}s · mini bosses slain ${g.minisDefeated} (−20s each)`);
     this.text('wave', `${g.stage > STAGE_COUNT ? `ENDLESS ${g.stage - STAGE_COUNT}` : `STAGE ${g.stage}/${STAGE_COUNT}`} · ${stageInfo(g.stage).name.toUpperCase()} · LV ${p.level}${g.heat ? ` · HEAT ${g.heat}` : ''}`);
-    const dash = p.dashCD / (DASH.cooldown / (1 + .08 * p.passiveRanks.fleet));
+    const dash = p.dashCD / g.dashCooldown;
     const dashKey = dash.toFixed(2);
     if (this.cache.get('dash') !== dashKey) { this.cache.set('dash', dashKey); this.el.dashFill.style.transform = `scaleY(${dashKey})`; }
     this.text('timer', formatTime(g.time));

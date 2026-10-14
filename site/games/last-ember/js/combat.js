@@ -17,6 +17,13 @@ mixin(Game, {
     if (hadShield && p.shield <= 0) { Sound.play('shieldBreak'); this.fx.shockwave(p.x, p.y, 60, .35, '#7fd8ff'); }
     if (this.settings.damageNumbers && n >= .5) this.fx.texts.add(p.x, p.y - 18, `-${Math.ceil(n)}`, '#ff718b');
     if (n > 0 && !tick) this.hurtFlash = .25;
+    if (p.hp <= 0 && p.secondWind) { // Second Wind: survive once, blast foes back
+      p.secondWind = false; p.hp = p.maxHp * .4; p.invuln = 2;
+      this.fx.shockwave(p.x, p.y, 220, .6, '#ffb064');
+      this.forEachEnemyNear(p.x, p.y, 220, e => { if (!e.boss && !e.mini) { const a = Math.atan2(e.y - p.y, e.x - p.x); e.x += Math.cos(a) * 120; e.y += Math.sin(a) * 120; } });
+      Sound.play('evolve'); this.shake(10); this.freeze(.15);
+      this.toast('SECOND WIND · THE EMBER REFUSES TO DIE');
+    }
     if (p.hp <= 0) this.endRun(false);
   },
 
@@ -98,7 +105,7 @@ mixin(Game, {
   // Critical hits: 5% base, Keen Eye adds 4% chance and 10% damage per rank.
   get critChance() { return this.player.critChance + .04 * this.player.passiveRanks.keen; },
   get critMult() { return this.player.critMult + .1 * this.player.passiveRanks.keen; },
-  get pickupRange() { return this.player.pickupRange * (1 + .25 * this.player.passiveRanks.lodestone); },
+  get pickupRange() { return this.player.pickupRange * (1 + .25 * this.player.passiveRanks.lodestone) * (1 + .2 * this.perk('magnet')); },
 
   // Situational damage bonuses: Path of Frost, Static Field shock, Berserker's Oath, Close Quarters.
   damageMultiplier(e) {
@@ -141,7 +148,7 @@ mixin(Game, {
 
   collect(d) {
     if (d.type === 'xp') this.gainXP(d.value * this.xpMultiplier);
-    else if (d.type === 'soul') { const v = Math.round(d.value * this.heatDef.souls); this.souls += v; this.wallet += v; }
+    else if (d.type === 'soul') { const v = Math.round(d.value * this.soulMult); this.souls += v; this.wallet += v; }
     else if (d.type === 'gems') this.gemsCount += d.value;
     else this.coins += d.value;
     if (d.type === 'gems' || d.type === 'coins') this.runAutoBuy(d.type);
@@ -172,7 +179,7 @@ mixin(Game, {
   // page closed) reopens it on load instead of losing it.
   openChest(x, y, tier) {
     Sound.play('chest');
-    this.pendingChest = {tier, x, y, picks: this.earlySummon ? 2 : 1};
+    this.pendingChest = {tier, x, y, picks: (this.earlySummon ? 2 : 1) + (this.perk('treasure') ? 1 : 0)};
     this.setPaused(true);
     UI.showChest(this);
   },

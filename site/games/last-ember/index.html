@@ -12,7 +12,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="apple-touch-icon" href="assets/icon-192.png">
-<link rel="stylesheet" href="css/game.css?v=20261014145255">
+<link rel="stylesheet" href="css/game.css?v=20261014152745">
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -87,12 +87,9 @@
   </section>
   <section id="menuUpgrades" class="menuPanel hidden">
     <h2>DEN OF MAGIC</h2>
-    <p>Spend permanent souls to strengthen future runs.</p>
+    <p>Spend souls on permanent perks. Deeper perks open as you clear deeper stages.</p>
     <div class="menuBalance"><svg class="soulGlyph" viewBox="0 0 32 32" aria-hidden="true"><path d="M17 2C14 8 9 10 9 17c0 5 3 10 8 12-2-4 1-6 4-9 3-4 2-10-4-18Z" fill="#b888f1"/><path d="M14 11c0 5 6 6 5 11-1 2-3 4-4 4-5-6-2-11-1-15Z" fill="#efe2ff"/></svg> SOULS AVAILABLE <span id="menuSouls">0</span></div>
-    <div class="upgradeList">
-      <div class="upgradeCard"><h3>EMBER FOCUS</h3><p>Base attack +10% per rank. Rank <span id="menuAtkRank">0</span></p><button id="menuAtkBuy" class="button" data-meta-buy="atk">BUY · <span>30</span> SOULS</button></div>
-      <div class="upgradeCard"><h3>LIVING VIGOR</h3><p>Max HP +20% per rank. Rank <span id="menuHpRank">0</span></p><button id="menuHpBuy" class="button" data-meta-buy="hp">BUY · <span>30</span> SOULS</button></div>
-    </div>
+    <div id="perkList" class="perkList"></div>
     <button class="button secondary menuBack" data-menu="home">BACK</button>
   </section>
   <section id="menuStats" class="menuPanel hidden">
@@ -111,7 +108,7 @@
     <div class="menuSetting"><span>Render quality</span><button id="qualitySetting" class="button secondary">AUTO</button></div>
     <div class="menuSetting"><span>Heat for new runs</span><button id="difficultySetting" class="button secondary">HEAT 0</button></div>
     <div id="difficultyLegend" class="difficultyLegend"></div>
-    <p>Move with WASD, arrow keys, or by dragging a thumb anywhere on the left of the screen. Space or Shift dashes through enemies and attacks. Spells cast automatically. Press P or Escape to pause.</p>
+    <p>Move with WASD, arrow keys, or by dragging a thumb anywhere on the left of the screen. Space or Shift dashes through enemies and attacks. R rerolls level-up cards when you own Second Thoughts. Spells cast automatically. Press P or Escape to pause.</p>
     <button class="button secondary menuBack" data-menu="home">BACK</button>
   </section>
 </div></div>
@@ -127,6 +124,7 @@
   <h1 id="levelTitle">LEVEL UP!</h1><p id="levelDesc">Choose a spell</p>
   <div id="levelWallet" class="levelWallet"></div>
   <div id="choices" class="choices"></div>
+  <button id="rerollBtn" class="button secondary rerollBtn hidden">↻ REROLL</button>
 </div></div>
 
 <div id="chestOverlay" class="overlay hidden"><div class="modal">
@@ -167,16 +165,13 @@
   <h1 id="gameOverTitle">THE EMBERS FADE</h1><p id="runSummary"></p>
   <div class="endWallet">
     <div><strong id="endSouls">0</strong><small>SOULS AVAILABLE</small></div>
-    <div><strong id="endAtk">0</strong><small>ATK UPGRADES BOUGHT</small></div>
-    <div><strong id="endHp">0</strong><small>HP UPGRADES BOUGHT</small></div>
+    <div><strong id="endPerks">0</strong><small>PERKS AFFORDABLE NOW</small></div>
   </div>
-  <h3>DEN OF MAGIC</h3><p>Spend souls to strengthen your next run.</p>
+  <p id="endNext" class="menuNote"></p>
   <div class="shop">
-    <button id="atkBuy" class="button" data-meta-buy="atk">ATK +10% · <span>30</span> souls</button>
-    <button id="hpBuy" class="button" data-meta-buy="hp">MAX HP +20% · <span>30</span> souls</button>
+    <button id="denBtn" class="button">DEN OF MAGIC</button>
+    <button id="restartBtn" class="button secondary">MAIN MENU</button>
   </div>
-  <p id="bonusText" class="menuNote"></p>
-  <button id="restartBtn" class="button">MAIN MENU</button>
 </div></div>
 
 <div id="spellBookOverlay" class="overlay hidden"><div class="modal">
@@ -188,23 +183,23 @@
 
 <!-- Classic scripts share one global scope, so the game runs from file:// with no build step. Order matters.
      ?v= is stamped by tools/stamp-version.sh so updates never mix cached old files with new ones. -->
-<script src="js/util.js?v=20261014145255"></script>
-<script src="js/config.js?v=20261014145255"></script>
-<script src="js/audio.js?v=20261014145255"></script>
-<script src="js/assets.js?v=20261014145255"></script>
-<script src="js/grid.js?v=20261014145255"></script>
-<script src="js/effects.js?v=20261014145255"></script>
-<script src="js/entities.js?v=20261014145255"></script>
-<script src="js/spells.js?v=20261014145255"></script>
-<script src="js/render.js?v=20261014145255"></script>
-<script src="js/hud.js?v=20261014145255"></script>
-<script src="js/storage.js?v=20261014145255"></script>
-<script src="js/ui.js?v=20261014145255"></script>
-<script src="js/game.js?v=20261014145255"></script>
-<script src="js/combat.js?v=20261014145255"></script>
-<script src="js/economy.js?v=20261014145255"></script>
-<script src="js/flow.js?v=20261014145255"></script>
-<script src="js/events.js?v=20261014145255"></script>
-<script src="js/main.js?v=20261014145255"></script>
+<script src="js/util.js?v=20261014152745"></script>
+<script src="js/config.js?v=20261014152745"></script>
+<script src="js/audio.js?v=20261014152745"></script>
+<script src="js/assets.js?v=20261014152745"></script>
+<script src="js/grid.js?v=20261014152745"></script>
+<script src="js/effects.js?v=20261014152745"></script>
+<script src="js/entities.js?v=20261014152745"></script>
+<script src="js/spells.js?v=20261014152745"></script>
+<script src="js/render.js?v=20261014152745"></script>
+<script src="js/hud.js?v=20261014152745"></script>
+<script src="js/storage.js?v=20261014152745"></script>
+<script src="js/ui.js?v=20261014152745"></script>
+<script src="js/game.js?v=20261014152745"></script>
+<script src="js/combat.js?v=20261014152745"></script>
+<script src="js/economy.js?v=20261014152745"></script>
+<script src="js/flow.js?v=20261014152745"></script>
+<script src="js/events.js?v=20261014152745"></script>
+<script src="js/main.js?v=20261014152745"></script>
 </body>
 </html>

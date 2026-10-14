@@ -369,9 +369,24 @@ const MARKET = {
 };
 const YIELD_STEP = 1.35;
 
-// Permanent soul upgrades bought from the menu.
+// Permanent soul upgrades (the Den of Magic). Each perk has a few ranks with set costs;
+// deeper perks open once you have cleared a given stage, so every run works toward one.
+// atk and hp keep their old save keys (meta.atk, meta.hp); the rest live in meta.perks.
 const META_UPGRADES = {atk: {per: .10}, hp: {per: .20}};
-const metaCost = rank => Math.ceil(30 * Math.pow(1.55, rank));
+const META_PERKS = {
+  atk:      {name: 'Ember Focus', icon: 'emberGrowth', costs: [30, 50, 80, 120, 170], desc: n => `Attack +${n * 10}%`},
+  hp:       {name: 'Living Vigor', icon: 'heartGrowth', costs: [30, 50, 80, 120, 170], desc: n => `Max HP +${n * 20}%`},
+  magnet:   {name: 'Lodestar', icon: 'lodestone', costs: [35, 80], desc: n => `Pickup range +${n * 20}%`},
+  reroll:   {name: 'Second Thoughts', icon: 'keen', costs: [40, 90, 160], stage: 1, desc: n => `Reroll level-up cards ${n} time${n > 1 ? 's' : ''} per run (R)`},
+  dash:     {name: 'Quickstep', icon: 'fleet', costs: [50, 110], stage: 1, desc: n => `Dash recharges ${n * 15}% faster`},
+  purse:    {name: 'Golden Start', icon: 'coin', costs: [60, 140], stage: 2, desc: n => `Start each run with ${n * 25} gems and ${n * 25} gold`},
+  origin:   {name: 'Deep Roots', icon: 'fire', costs: [120], stage: 3, desc: () => 'Your first spell starts at rank 3'},
+  revive:   {name: 'Second Wind', icon: 'aegisGrowth', costs: [200], stage: 4, desc: () => 'Once per run, a lethal hit leaves you at 40% HP'},
+  souls:    {name: 'Soul Harvest', icon: 'soul', costs: [80, 160, 260], stage: 6, desc: n => `Souls +${n * 10}%`},
+  treasure: {name: 'Treasure Sense', icon: 'gems', costs: [260], stage: 8, desc: () => 'Every boss chest grants one extra artifact'},
+};
+// Pre-Den saves could buy attack and HP without limit; ranks above the cap are refunded.
+const legacyMetaCost = rank => Math.ceil(30 * Math.pow(1.55, rank));
 
 const DROP_COLORS = {xp: '#71efff', soul: '#c478ff', gems: '#63e4c9', coins: '#ffd374'};
 

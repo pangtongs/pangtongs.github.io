@@ -23,6 +23,7 @@ class Player {
     this.wardTime = 0; // seconds the Mirror Ward stays up
     this.invuln = 0;
     this.slowTime = 0; // slowed by frost hazards
+    this.rerolls = 0; this.secondWind = false; // Den of Magic perks, set at run start
     this.dashT = 0; this.dashCD = 0; this.dashX = 0; this.dashY = 1; // dash: seconds left, cooldown, direction
   }
   get shieldCap() { return this.bargains.glassWick ? 0 : this.maxHp * .5 + this.shieldBonusCap; }

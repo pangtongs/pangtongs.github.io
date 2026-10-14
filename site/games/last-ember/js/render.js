@@ -4,6 +4,7 @@
 
 const QUALITY_LEVELS = {high: 2, low: 1};
 const VIEW_MIN = 600, VIEW_MAX = 960; // world units across the screen's short side
+const ENEMY_ART_SCALE = 3.3; // painted enemy size as a multiple of its collision radius
 const PROJECTILE_GLOW = {arcane: '#6fb6ff', fire: '#ff8a2a', ice: '#8fe6ff', venom: '#66e08e', blade: '#d58cff'};
 
 class Renderer {
@@ -70,6 +71,7 @@ class Renderer {
 
   draw(g) {
     const c = this.ctx, p = g.player;
+    this.t = g.time; this.faceX = p.x;
     const shake = g.shakeAmt || 0;
     this.camX = p.x + (shake ? rand(-shake, shake) : 0); this.camY = p.y + (shake ? rand(-shake, shake) : 0);
     const v = this.view;
@@ -221,7 +223,7 @@ class Renderer {
     const red = Math.max(hpLow * .6, (g.hurtFlash || 0) * 4);
     lc.globalCompositeOperation = 'copy';
     lc.globalAlpha = 1;
-    lc.fillStyle = red ? `rgba(${3 + red * 110 | 0},4,10,${.7 + red * .08})` : 'rgba(3,5,12,.7)';
+    lc.fillStyle = red ? `rgba(${3 + red * 110 | 0},4,10,${.64 + red * .1})` : 'rgba(3,5,12,.64)';
     lc.fillRect(0, 0, w, h);
     lc.globalCompositeOperation = 'destination-out';
     const light = (x, y, r, a = 1) => {
@@ -471,12 +473,21 @@ class Renderer {
         c.strokeStyle = '#ffd36b'; c.lineWidth = 3; c.globalAlpha = .85;
         c.beginPath(); c.arc(0, 0, e.r + 6, 0, TAU); c.stroke(); c.globalAlpha = 1;
       }
-      this.sprite(Sprites.enemy(e.type, flash), x, y, 0, e.elite ? 1.25 : 1);
+      const art = Sprites.enemyArt(e.type, flash), k = e.elite ? 1.25 : 1;
+      if (art) {
+        // Painted art: a soft shadow, a little walking bob, and facing toward the mage.
+        const size = e.r * ENEMY_ART_SCALE * k, bob = ENEMY_TYPES[e.type].speed ? Math.sin(this.t * 9 + e.id) * .05 : 0;
+        this.place(x, y);
+        c.fillStyle = '#0007'; c.beginPath(); c.ellipse(0, e.r * .8, e.r * .95 * k, e.r * .32 * k, 0, 0, TAU); c.fill();
+        c.scale(this.faceX > x ? -1 : 1, 1 + bob);
+        c.drawImage(art.img, -size / 2, -size * .62, size, size);
+        this.place(x, y);
+      } else this.sprite(Sprites.enemy(e.type, flash), x, y, 0, k);
       this.drawStatus(e);
       if (e.hp < e.maxHp) {
-        const w = e.r * 2;
-        c.fillStyle = '#111a25'; c.fillRect(-w / 2, -e.r - 7, w, 3);
-        c.fillStyle = '#ff8b71'; c.fillRect(-w / 2, -e.r - 7, w * Math.max(0, e.hp) / e.maxHp, 3);
+        const w = e.r * 2, top = art ? -e.r * ENEMY_ART_SCALE * k * .62 - 4 : -e.r - 7;
+        c.fillStyle = '#111a25'; c.fillRect(-w / 2, top, w, 3);
+        c.fillStyle = '#ff8b71'; c.fillRect(-w / 2, top, w * Math.max(0, e.hp) / e.maxHp, 3);
       }
       return;
     }
@@ -612,7 +623,7 @@ class Renderer {
     this.place(Math.round(p.x), Math.round(p.y));
     // Dash recharge: a thin arc at the feet that fills as the dash comes back.
     if (p.dashCD > 0 && g.running) {
-      const k = 1 - p.dashCD / (DASH.cooldown / (1 + .08 * p.passiveRanks.fleet));
+      const k = 1 - p.dashCD / g.dashCooldown;
       c.strokeStyle = '#ffb064'; c.globalAlpha = .7; c.lineWidth = 2.5;
       c.beginPath(); c.ellipse(0, 15, 22, 8, 0, -Math.PI / 2, -Math.PI / 2 + TAU * k); c.stroke(); c.globalAlpha = 1;
     }

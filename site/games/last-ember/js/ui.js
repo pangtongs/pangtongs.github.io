@@ -63,8 +63,6 @@ const UI = {
       : 'No saved run yet. Pause during a run to save. Progress stays in this browser.';
 
     this.renderMetaShop(g);
-    $('menuAtkRank').textContent = g.meta.atk || 0;
-    $('menuHpRank').textContent = g.meta.hp || 0;
     const st = g.meta.stats, fav = Object.entries(st.origins).sort((a, b) => b[1] - a[1])[0];
     const fastest = Object.entries(st.fastest).sort((a, b) => a[0] - b[0]);
     $('menuStatsGrid').innerHTML = [
@@ -73,7 +71,7 @@ const UI = {
       ['Best endless depth', st.endlessBest || '—'], ['Highest Heat cleared', st.highestHeat || '—'],
       ['Time played', formatDuration(st.playTime)],
       ['Favourite origin', fav ? `${ORIGINS[fav[0]].name} (${fav[1]})` : '—'],
-      ['Stages unlocked', `${unlocked} / ${STAGE_COUNT}`], ['Soul bonuses', `ATK +${(g.meta.atk || 0) * 10}% · HP +${(g.meta.hp || 0) * 20}%`],
+      ['Stages unlocked', `${unlocked} / ${STAGE_COUNT}`], ['Den perks', `${Object.keys(META_PERKS).reduce((n, k) => n + g.perk(k), 0)} / ${Object.values(META_PERKS).reduce((n, d) => n + d.costs.length, 0)} ranks`],
     ].map(([label, value]) => `<div>${label}<strong>${value}</strong></div>`).join('') +
       (fastest.length ? `<div class="statsWide">Fastest clears<strong class="fastest">${fastest.map(([s, t]) => `<span>${s}. ${STAGES[s - 1].name} <b>${formatTime(t)}</b></span>`).join('')}</strong></div>` : '');
 
@@ -95,17 +93,27 @@ const UI = {
       }).join('') + `<p class="menuNote">Each Heat level adds 10% souls. Rules stack.</p>`;
   },
 
-  // Both the menu and the game-over screen sell permanent upgrades.
+  // The Den of Magic: one card per perk with rank pips, its current and next effect, and
+  // a buy button (or what it takes to unlock). The game-over screen shows a summary.
   renderMetaShop(g) {
-    document.querySelectorAll('[data-meta-buy]').forEach(b => {
-      const cost = metaCost(g.meta[b.dataset.metaBuy] || 0);
-      b.querySelector('span').textContent = cost;
-      b.disabled = g.wallet < cost;
-    });
+    const affordable = Object.keys(META_PERKS).filter(k => !g.perkLocked(k) && g.perkCost(k) !== null && g.perkCost(k) <= g.wallet);
+    $('perkList').innerHTML = Object.entries(META_PERKS).map(([key, d]) => {
+      const rank = g.perk(key), cost = g.perkCost(key), locked = g.perkLocked(key), max = d.costs.length;
+      const pips = d.costs.map((_, i) => `<i class="${i < rank ? 'on' : ''}"></i>`).join('');
+      const now = rank ? d.desc(rank) : 'Not owned';
+      const next = cost === null ? 'Fully mastered' : locked ? `Clear stage ${d.stage} to unlock` : `Next: ${d.desc(rank + 1)}`;
+      const btn = cost === null ? '<button class="button secondary" disabled>MAXED</button>'
+        : locked ? '<button class="button secondary" disabled>LOCKED</button>'
+        : `<button class="button" data-meta-buy="${key}" ${g.wallet < cost ? 'disabled' : ''}>BUY · ${cost} SOULS</button>`;
+      return `<div class="perkCard${locked ? ' locked' : ''}${cost === null ? ' maxed' : ''}">
+        <span class="choiceIcon icon icon-${d.icon}">${iconMarkup(d.icon)}</span>
+        <div><b>${d.name}</b><span class="pips" title="${rank}/${max}">${pips}</span><small>${now}</small><small class="next">${next}</small></div>${btn}</div>`;
+    }).join('');
+    $('perkList').querySelectorAll('[data-meta-buy]').forEach(b => { b.onclick = () => g.buyMeta(b.dataset.metaBuy); });
     $('endSouls').textContent = g.wallet;
-    $('endAtk').textContent = g.meta.atk || 0;
-    $('endHp').textContent = g.meta.hp || 0;
-    $('bonusText').textContent = `Permanent bonuses: ATK +${(g.meta.atk || 0) * 10}% · Max HP +${(g.meta.hp || 0) * 20}%`;
+    $('endPerks').textContent = affordable.length;
+    $('endNext').textContent = affordable.length ? 'Spend them in the Den of Magic before your next run.'
+      : `Cheapest perk you can't afford yet: ${Math.min(...Object.keys(META_PERKS).filter(k => !g.perkLocked(k) && g.perkCost(k) !== null).map(k => g.perkCost(k)))} souls.`;
   },
 
   showOrigins(g) {
@@ -149,6 +157,8 @@ const UI = {
       ['gems', 'coins'].filter(c => g.autoBuy[c]).map(c => `<span class="auto">AUTO ${MARKET[g.autoBuy[c]].short} ${g.balance(c)}/${g.marketCost(g.autoBuy[c])}</span>`).join('');
     const box = $('choices');
     box.dataset.tier = tier;
+    $('rerollBtn').classList.toggle('hidden', tier !== 'SPELL' || !p.rerolls);
+    $('rerollBtn').textContent = `↻ REROLL · ${p.rerolls} LEFT`;
     box.innerHTML = '';
     for (const o of options) box.appendChild(choiceButton(o, () => g.takeLevelChoice(o)));
     show('levelOverlay');
@@ -245,7 +255,7 @@ const UI = {
     const pending = g.pendingChest;
     pending.taken = pending.taken || [];
     $('chestTitle').textContent = `TIER ${tier} ${chestName(tier)} CHEST`;
-    $('chestDesc').textContent = pending.picks > 1 ? 'Called early: choose TWO artifacts. Their bonuses last for this run.'
+    $('chestDesc').textContent = pending.picks > 1 && !pending.taken.length ? `Choose ${pending.picks} artifacts. Their bonuses last for this run.`
       : pending.taken.length ? 'Choose one more artifact.' : 'Choose one stat artifact. Its bonus lasts for this run.';
     const box = $('chestChoices');
     box.innerHTML = '';

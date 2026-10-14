@@ -13,7 +13,7 @@ const SHRINE_BOONS = [
   {text: 'ATTACK +10%', take: g => { g.player.atk *= 1.1; }},
   {text: 'MAX HP +12%', take: g => { const p = g.player, gain = p.maxHp * .12; p.maxHp += gain; p.hp = Math.min(p.maxHp, p.hp + gain); }},
   {text: 'A FREE LEVEL', take: g => g.gainXP(g.player.nextXp - g.player.xp)},
-  {text: 'SOULS', take: g => { const v = Math.round((10 + g.stage * 2) * g.heatDef.souls); g.souls += v; g.wallet += v; }},
+  {text: 'SOULS', take: g => { const v = Math.round((10 + g.stage * 2) * g.soulMult); g.souls += v; g.wallet += v; }},
 ];
 
 class Shrine {
