@@ -44,7 +44,7 @@ class Game {
     this.dropRemainders = {gems: 0, coins: 0};
     this.marketRanks = Object.fromEntries(Object.keys(MARKET).map(k => [k, 0]));
     this.autoBuy = {gems: null, coins: null}; // market item bought automatically per currency
-    this.enemies = []; this.drops = []; this.projectiles = []; this.enemyShots = []; this.chests = []; this.meteors = [];
+    this.enemies = []; this.drops = []; this.projectiles = []; this.enemyShots = []; this.chests = []; this.meteors = []; this.hazards = [];
     this.nearby = [];
     this.fx.clear();
     this.spawnCD = 0; this.bossCD = stageInfo(1).seconds;
@@ -161,6 +161,7 @@ class Game {
     this.time += dt; this.stageTime += dt; this.growthClock += dt;
     this.spawnCD -= dt; this.bossCD -= dt; this.miniCD -= dt;
     p.invuln = Math.max(0, p.invuln - dt);
+    p.slowTime = Math.max(0, p.slowTime - dt);
     p.lifeHealWindow += dt;
     if (p.lifeHealWindow >= 1) { p.lifeHealWindow %= 1; p.lifeHealUsed = 0; }
     this.passiveGrowth();
@@ -197,6 +198,8 @@ class Game {
     compact(this.enemyShots, q => q.update(dt, this));
     if (!this.running) return;
     compact(this.meteors, m => m.update(dt, this));
+    compact(this.hazards, h => h.update(dt, this));
+    if (!this.running) return;
     this.fx.update(dt);
     castSpells(this, dt);
 
@@ -204,13 +207,19 @@ class Game {
     if (this.autoSaveCD <= 0) { this.autoSaveCD = 20; this.persist(); }
   }
 
+  // Base HP and attack a fresh run would have on this stage. Growth passives add a share
+  // of these each minute rather than a share of current stats, so long runs grow steadily
+  // instead of compounding without limit.
+  get baseHp() { return 100 * (1 + (this.meta.hp || 0) * META_UPGRADES.hp.per) * (1 + (this.stage - 1) * .22); }
+  get baseAtk() { return (1 + (this.meta.atk || 0) * META_UPGRADES.atk.per) * (1 + (this.stage - 1) * .14); }
+
   passiveGrowth() {
     const p = this.player, r = p.passiveRanks;
     while (this.growthClock >= 60) {
       this.growthClock -= 60;
-      if (r.heartGrowth) { const gain = p.maxHp * .06 * r.heartGrowth; p.maxHp += gain; p.hp = Math.min(p.maxHp, p.hp + gain); }
-      if (r.emberGrowth) p.atk *= 1 + .04 * r.emberGrowth;
-      if (r.aegisGrowth) { const gain = p.maxHp * .08 * r.aegisGrowth; p.shieldBonusCap += gain; p.shield += gain; }
+      if (r.heartGrowth) { const gain = this.baseHp * .06 * r.heartGrowth; p.maxHp += gain; p.hp = Math.min(p.maxHp, p.hp + gain); }
+      if (r.emberGrowth) p.atk += this.baseAtk * .04 * r.emberGrowth;
+      if (r.aegisGrowth) { const gain = this.baseHp * .08 * r.aegisGrowth; p.shieldBonusCap += gain; p.shield += gain; }
       if (r.heartGrowth || r.emberGrowth || r.aegisGrowth) this.toast('PASSIVE GROWTH · POWER INCREASED');
     }
   }
@@ -221,7 +230,8 @@ class Game {
     const sy = (k.s || k.arrowdown ? 1 : 0) - (k.w || k.arrowup ? 1 : 0) + this.stick.y;
     const m = Math.hypot(sx, sy);
     if (m) {
-      p.x += sx / m * p.speed * dt; p.y += sy / m * p.speed * dt;
+      const speed = p.speed * (p.slowTime > 0 ? .6 : 1);
+      p.x += sx / m * speed * dt; p.y += sy / m * speed * dt;
       p.facing = Math.abs(sx) > Math.abs(sy) ? (sx > 0 ? 2 : 1) : (sy > 0 ? 0 : 3);
     }
     p.x = clamp(p.x, -ARENA_X, ARENA_X);
@@ -281,12 +291,20 @@ class Game {
     let y = edge === 2 ? top - 28 : edge === 3 ? top + H + 28 : top + rand(0, H);
     x = clamp(x, -ARENA_X + 25, ARENA_X - 25);
     y = clamp(y, -ARENA_Y + 25, ARENA_Y - 25);
-    const roll = Math.random(), type = SPAWN_TABLE.find(([, w]) => roll < w)[0];
+    const type = this.rollEnemyType();
     if (type === 'sentinel') { // turrets appear in a ring around the player instead
       const a = rand(0, TAU), r = rand(250, 390);
       x = p.x + Math.cos(a) * r; y = p.y + Math.sin(a) * r;
     }
     this.addEnemy(type, x, y);
+  }
+
+  // Picks a regular enemy from the stage's roster weights.
+  rollEnemyType() {
+    const roster = stageInfo(this.stage).roster;
+    let roll = Math.random() * Object.values(roster).reduce((a, b) => a + b, 0);
+    for (const [type, w] of Object.entries(roster)) if ((roll -= w) < 0) return type;
+    return 'ghoul';
   }
 
   spawnMiniBoss() {
@@ -339,9 +357,11 @@ class Game {
     if (e.hp <= 0) this.kill(e);
   }
 
-  kill(e) {
+  // noLoot: the enemy removed itself (a bomber blowing up), so it drops nothing.
+  kill(e, noLoot = false) {
     if (e.dead) return;
     e.dead = true;
+    if (noLoot) return;
     const drop = (dx, dy, type, value) => this.addDrop(e.x + dx, e.y + dy, type, value);
     if (e.boss) {
       this.boss = null;
@@ -363,6 +383,7 @@ class Game {
       const def = ENEMY_TYPES[e.type];
       drop(0, 0, 'xp', def.xp);
       if (e.type === 'brood') for (let j = 0; j < 3; j++) this.addEnemy('ghoul', e.x + rand(-32, 32), e.y + rand(-32, 32));
+      if (def.splitInto) for (let j = 0; j < def.splitInto.count; j++) this.addEnemy(def.splitInto.type, e.x + rand(-20, 20), e.y + rand(-20, 20));
       const roll = Math.random();
       if (roll < (def.soulChance || .22)) drop(8, 0, 'soul', 1);
       else if (roll < .58) drop(8, 0, 'gems', this.dropValue('gems', 1));
@@ -557,9 +578,14 @@ class Game {
     this.stage = stage;
     this.bossCD = stageInfo(stage).seconds;
     this.miniGoal = Math.max(3, Math.floor((this.bossCD - 20) / 55));
-    if (stage > 1) { // later stages start with a head start matching the expected build
+    if (stage > 1) {
+      // A fresh run on a later stage starts near the build a continued run would have:
+      // stats at about 80% of the measured curve (tools/sim.js) plus level ups to spend.
       const boost = stage - 1, p = this.player;
-      p.atk *= 1 + boost * .14; p.maxHp *= 1 + boost * .22; p.hp = p.maxHp; p.shield += boost * 12;
+      p.atk *= .8 * Math.pow(1.28, boost); p.maxHp *= .8 * Math.pow(1.3, boost); p.hp = p.maxHp; p.shield += boost * 12;
+      const levels = Math.min(14, boost * 2);
+      for (let i = 0; i < levels; i++) { p.level++; p.nextXp = Math.floor(p.nextXp * 1.35 + 5); }
+      this.levelQueue = levels;
     }
     this.running = true;
     this.setPaused(true);
@@ -576,6 +602,7 @@ class Game {
     this.setPaused(false);
     this.saveRun(true);
     this.toast(`${o.name.toUpperCase()} SPELL AWAKENED`);
+    if (this.levelQueue) this.levelUp(); // head-start level ups on later stages
   }
 
   collectStageLoot() {
@@ -602,7 +629,8 @@ class Game {
     if (this.stage < STAGE_COUNT) this.meta.unlocked = Math.max(this.meta.unlocked || 1, this.stage + 1);
     this.saveMeta();
     $('stagePortrait').src = `assets/boss-${this.stage - 1}.webp`;
-    $('stageTitle').textContent = this.stage === STAGE_COUNT ? 'RIFT CONQUERED' : `STAGE ${this.stage} CLEAR`;
+    const actEnd = this.stage < STAGE_COUNT && stageInfo(this.stage + 1).act !== stageInfo(this.stage).act;
+    $('stageTitle').textContent = this.stage === STAGE_COUNT ? 'THE LAST PYRE FALLS' : actEnd ? `${ACT_NAMES[stageInfo(this.stage).act].split(' · ')[0].toUpperCase()} COMPLETE` : `STAGE ${this.stage} CLEAR`;
     this.saveRun(true);
     if (this.levelQueue) this.levelUp(); else this.showStageClear();
   }

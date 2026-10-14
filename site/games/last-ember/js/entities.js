@@ -19,6 +19,7 @@ class Player {
     this.origin = null; this.path = null; this.ultimate = null;
     this.cool = {basic: 0, fire: 0, lightning: 0, ice: 0, venom: 0, nova: 0, blades: 0, starfall: 0, ult: 15};
     this.invuln = 0;
+    this.slowTime = 0; // slowed by frost hazards
   }
   get shieldCap() { return this.bargains.glassWick ? 0 : this.maxHp * .5 + this.shieldBonusCap; }
 }
@@ -30,35 +31,45 @@ class Enemy {
     this.type = type; this.x = x; this.y = y;
     this.hit = 0; this.slow = 0; this.poisonTime = 0; this.poisonDps = 0; this.poisonTick = 0;
     this.boss = type === 'boss'; this.mini = type === 'mini';
-    this.miniKind = this.mini ? g.miniCount % MINI_BOSSES.length : 0;
+    const stage = stageInfo(g.stage);
+    this.miniKind = this.mini ? stage.minis[g.miniCount % stage.minis.length] : 0;
     this.tier = this.boss ? g.stage : 0;
     this.level = (g.stage - 1) * 3 + 1 + Math.floor(g.stageTime / 20);
     const diff = DIFFICULTIES[g.difficulty] || DIFFICULTIES.standard;
     const def = ENEMY_TYPES[type], mini = MINI_BOSSES[this.miniKind];
-    this.name = this.boss ? stageInfo(this.tier).boss : this.mini ? mini.name : type;
+    this.name = this.boss ? stage.boss : this.mini ? mini.name : type;
 
+    // Act I curves are unchanged. Act II multiplies on top so enemies keep pace with a
+    // build that has been growing for eight stages (tuned with tools/sim.js).
+    const beyond = Math.max(0, g.stage - 8);
+    const actHp = Math.pow(1.22, beyond), actDamage = Math.pow(1.12, beyond);
     const stagePressure = 1 + (g.stage - 1) * .28;
     const scale = (1 + (this.level - 1) * .15) * stagePressure * diff.hp;
-    this.maxHp = this.boss ? 650 * Math.pow(1.48, this.tier - 1) * diff.hp * (1 + Math.floor(g.stageTime / 20) * .055)
-      : this.mini ? 210 * (1 + g.stage * .4) * diff.hp * (1 + g.stageTime / 300)
-      : def.hp * scale;
+    const bossAct = beyond ? 3.5 * Math.pow(1.36, beyond - 1) : 1;
+    this.maxHp = this.boss ? 650 * Math.pow(1.48, Math.min(this.tier, 8) - 1) * bossAct * diff.hp * (1 + Math.floor(g.stageTime / 20) * .055)
+      : this.mini ? 210 * (1 + g.stage * .4) * actHp * diff.hp * (1 + g.stageTime / 300)
+      : def.hp * scale * actHp;
     if (g.player.bargains.cursedHoard) this.maxHp *= 1.3;
     this.hp = this.maxHp;
-    this.speed = (this.boss ? 28 + this.tier * 2 : this.mini ? mini.speed : def.speed)
-      * (1 + (this.level - 1) * .055) * (1 + (g.stage - 1) * .045) * diff.speed;
-    this.r = this.boss ? 27 + this.tier * 3 : this.mini ? 23 : def.r;
+    this.speed = (this.boss ? 28 + Math.min(this.tier, 10) * 2 : this.mini ? mini.speed : def.speed)
+      * (1 + (this.level - 1) * .055) * (1 + (Math.min(g.stage, 10) - 1) * .045) * diff.speed;
+    this.r = this.boss ? 27 + Math.min(this.tier, 8) * 3 : this.mini ? 23 : def.r;
     this.damage = (this.boss ? 14 + this.tier * 4 : this.mini ? 13 + g.stage * 2 : def.damage)
-      * (1 + (this.level - 1) * (this.boss ? .035 : .085)) * (1 + (g.stage - 1) * .1) * diff.damage;
-    this.color = this.boss ? stageInfo(this.tier).accent : this.mini ? mini.color : def.color;
-    this.attackCD = 0; this.chargeTime = 0; this.skillCD = 4; this.windup = 0; this.enraged = false;
+      * (1 + (this.level - 1) * (this.boss ? .035 : .085)) * (1 + (g.stage - 1) * .1) * diff.damage * actDamage;
+    // Damage multiplier for Act II boss moves (Act I moves use their original fixed numbers).
+    this.moveScale = this.boss && beyond ? 1.15 * Math.pow(1.14, beyond) * diff.damage : diff.damage;
+    this.color = this.boss ? stage.accent : this.mini ? mini.color : def.color;
+    this.attackCD = 0; this.chargeTime = 0; this.skillCD = 4; this.enraged = false;
+    this.windup = 0; this.windupMax = 0; this.move = null; this.tele = null;
+    this.dashT = 0; this.dvx = 0; this.dvy = 0; this.dashHit = false; this.dashDamage = 0;
+    this.moveIndex = 0; this.waves = null; this.fuseT = 0; this.actCD = rand(.5, 2);
     this.shotCD = rand(1, 3);
     this.dead = false;
     this.id = Enemy.nextId++;
   }
-  static restore(g, data) { return Object.assign(new Enemy(g, data.type, data.x, data.y), data, {dead: false, id: Enemy.nextId++}); }
+  static restore(g, data) { return Object.assign(new Enemy(g, data.type, data.x, data.y), data, {dead: false, id: Enemy.nextId++, move: null, windup: 0, tele: null, dashT: 0, waves: null}); }
 
-  // Radius of the boss slam, also drawn as its telegraph.
-  get slamRadius() { return 65 + Math.min(this.tier, 5) * 20; }
+  get def() { return ENEMY_TYPES[this.type]; }
 
   update(dt, g) {
     if (this.slow > 0) this.slow -= dt;
@@ -69,67 +80,203 @@ class Enemy {
     if (this.dead) return;
     const p = g.player;
     this.hit = Math.max(0, this.hit - dt);
-    this.enraged = this.boss && this.tier >= 3 && this.hp < this.maxHp * .5;
     const a = Math.atan2(p.y - this.y, p.x - this.x);
-    const v = this.speed * (this.slow > 0 ? .7 : 1) * (this.enraged ? 1.3 : 1) * (this.chargeTime > 0 ? 2.1 : 1) * (this.windup > 0 ? .3 : 1);
-    this.chargeTime = Math.max(0, this.chargeTime - dt);
-    this.x = clamp(this.x + Math.cos(a) * v * dt, -ARENA_X, ARENA_X);
-    this.y = clamp(this.y + Math.sin(a) * v * dt, -ARENA_Y, ARENA_Y);
+
+    if (this.dashT > 0) this.dash(dt, g);
+    else {
+      // Rooted while winding up a charge, blink or fuse; slowed during other windups.
+      const rooted = this.fuseT > 0 || (this.windup > 0 && this.move && (this.move.type === 'charge' || this.move.type === 'blink'));
+      const v = rooted ? 0 : this.speed * (this.slow > 0 ? .7 : 1) * (this.enraged ? this.phaseSpeed : 1) * (this.chargeTime > 0 ? 2.1 : 1) * (this.windup > 0 ? .3 : 1);
+      this.chargeTime = Math.max(0, this.chargeTime - dt);
+      this.x = clamp(this.x + Math.cos(a) * v * dt, -ARENA_X, ARENA_X);
+      this.y = clamp(this.y + Math.sin(a) * v * dt, -ARENA_Y, ARENA_Y);
+    }
     const d = Math.hypot(p.x - this.x, p.y - this.y);
 
-    const shot = !this.boss && !this.mini && ENEMY_TYPES[this.type].shot;
-    this.shotCD -= dt;
-    if (shot && this.shotCD <= 0 && d < 520) {
-      for (let i = 0; i < shot.count; i++) g.enemyShots.push(new EnemyShot(this.x, this.y, a + (i - (shot.count - 1) / 2) * shot.spread, this.type, this.damage));
-      this.shotCD = shot.cd;
+    const def = !this.boss && !this.mini && this.def;
+    if (def && def.shot) {
+      this.shotCD -= dt;
+      if (this.shotCD <= 0 && d < 520) {
+        for (let i = 0; i < def.shot.count; i++) g.enemyShots.push(new EnemyShot(this.x, this.y, a + (i - (def.shot.count - 1) / 2) * def.shot.spread, this.type, this.damage));
+        this.shotCD = def.shot.cd;
+      }
     }
+    if (def && def.fuse && this.updateFuse(dt, g, d)) return;
 
     this.attackCD -= dt;
     if (d < this.r + p.r && this.attackCD <= 0) { g.damage(this.damage); this.attackCD = this.boss ? .75 : .85; }
 
-    if (this.mini) this.miniSkill(dt, g, a);
-    if (this.boss) this.bossSkill(dt, g);
-  }
-
-  miniSkill(dt, g, a) {
-    this.skillCD -= dt;
-    if (this.skillCD > 0) return;
-    if (this.miniKind === 0) {
-      this.chargeTime = 1.1;
-      g.fx.shockwave(this.x, this.y, 45, .4, this.color);
-    } else if (this.miniKind === 1) {
-      for (let i = 0; i < 2; i++) g.addEnemy(i ? 'skeleton' : 'ghoul', this.x + rand(-48, 48), this.y + rand(-48, 48));
-    } else {
-      for (let i = -2; i <= 2; i++) g.enemyShots.push(new EnemyShot(this.x, this.y, a + i * .18, 'warlock', this.damage * .55));
-    }
-    this.skillCD = this.miniKind === 2 ? 3.4 : 5.2;
-  }
-
-  bossSkill(dt, g) {
-    this.skillCD -= dt;
     if (this.windup > 0) {
       this.windup -= dt;
-      if (this.windup > 0) return;
-      const radius = this.slamRadius, p = g.player;
-      g.fx.shockwave(this.x, this.y, radius, .5, this.tier >= 3 ? stageInfo(this.tier).accent : '#ff6f85');
-      g.burst(this.x, this.y, this.color, 24);
-      if (dist(this, p) < radius + p.r) g.damage(12 + this.tier * 7);
-      if (this.tier >= 2) {
-        const n = Math.min(5, 1 + Math.floor(this.tier / 2));
-        for (let i = 0; i < n; i++) g.addEnemy(this.tier === 5 ? 'brood' : 'skeleton', this.x + rand(-55, 55), this.y + rand(-55, 55));
-      }
-      if (this.tier >= 4) {
-        const n = this.tier >= 7 ? 8 : this.tier === 6 ? 5 : 3;
-        const kind = this.tier === 5 ? 'spitter' : this.tier === 7 ? 'sentinel' : 'warlock';
-        for (let i = 0; i < n; i++) {
-          const a = angle(this, p) + (i - (n - 1) / 2) * (this.tier >= 7 ? TAU / n : .24);
-          g.enemyShots.push(new EnemyShot(this.x, this.y, a, kind, Math.max(8, this.damage * .42)));
-        }
-      }
-    } else if (this.skillCD <= 0) {
-      this.windup = .85;
-      this.skillCD = this.enraged ? 3 : 6 - this.tier * .5;
+      if (this.windup <= 0) { const m = this.move, tele = this.tele; this.tele = null; this.resolveMove(m, g, tele); }
     }
+    if (this.waves) this.updateWaves(dt, g);
+
+    if (this.boss) this.bossThink(dt, g);
+    else if (this.mini) this.miniThink(dt, g);
+    else if (def && def.charge) this.chargerThink(dt, g, d);
+  }
+
+  // ---------- Moves (bosses, mini bosses and chargers share these) ----------
+  get phaseSpeed() { const ph = this.boss && stageInfo(this.tier).phase2; return ph ? ph.speed : 1; }
+
+  startMove(m, g) {
+    const p = g.player;
+    this.move = m;
+    this.windup = this.windupMax = m.windup || .6;
+    if (m.type === 'slam') this.tele = {type: 'circle', x: this.x, y: this.y, r: m.radius, follow: true};
+    else if (m.type === 'charge') {
+      const a = angle(this, p);
+      this.dvx = Math.cos(a); this.dvy = Math.sin(a);
+      this.tele = {type: 'line', a, len: m.distance, w: this.r * 2};
+    } else if (m.type === 'blink') {
+      const a = rand(0, TAU), r = 150;
+      const tx = clamp(p.x + Math.cos(a) * r, -ARENA_X, ARENA_X), ty = clamp(p.y + Math.sin(a) * r, -ARENA_Y, ARENA_Y);
+      this.tele = {type: 'blink', x: tx, y: ty, r: m.radius};
+    } else this.tele = {type: 'glow'};
+  }
+
+  resolveMove(m, g, tele) {
+    if (!m) return;
+    const p = g.player, scale = this.moveScale;
+    const shot = (kind, a, mult = .42) => g.enemyShots.push(new EnemyShot(this.x, this.y, a, kind, Math.max(8, this.damage * mult)));
+    switch (m.type) {
+      case 'blink':
+        g.burst(this.x, this.y, this.color, 16);
+        if (tele) { this.x = tele.x; this.y = tele.y; }
+        // fall through: arrive with a slam
+      case 'slam': {
+        const r = m.radius;
+        g.fx.shockwave(this.x, this.y, r, .5, this.boss && this.tier >= 3 ? this.color : '#ff6f85');
+        g.burst(this.x, this.y, this.color, 24);
+        if (dist(this, p) < r + p.r) g.damage(m.damage * scale);
+        if (m.summon) for (let i = 0; i < m.summon.count; i++) g.addEnemy(m.summon.type, this.x + rand(-55, 55), this.y + rand(-55, 55));
+        if (m.shots) {
+          const n = m.shots.count;
+          for (let i = 0; i < n; i++) shot(m.shots.kind, angle(this, p) + (i - (n - 1) / 2) * (m.shots.ring ? TAU / n : m.shots.spread));
+        }
+        break;
+      }
+      case 'charge':
+        this.dashT = m.distance / m.speed;
+        this.dvx *= m.speed; this.dvy *= m.speed;
+        this.dashHit = false; this.dashDamage = m.damage * scale;
+        break;
+      case 'zones':
+        for (let i = 0; i < m.count; i++) {
+          const off = i === 0 ? 0 : m.spread, a = rand(0, TAU);
+          g.hazards.push(new Hazard(p.x + Math.cos(a) * rand(off * .4, off), p.y + Math.sin(a) * rand(off * .4, off), m, m.damage * scale));
+        }
+        break;
+      case 'ring':
+        this.waves = {kind: m.kind, count: m.count, left: m.waves || 1, timer: 0, offset: rand(0, TAU)};
+        break;
+      case 'fan':
+        for (let i = 0; i < m.count; i++) shot(m.kind, angle(this, p) + (i - (m.count - 1) / 2) * m.spread);
+        break;
+      case 'summon': {
+        const adds = Array.isArray(m.add) ? m.add : [m.add];
+        for (let i = 0; i < (m.count || adds.length); i++) g.addEnemy(adds[i % adds.length], this.x + rand(-60, 60), this.y + rand(-60, 60));
+        g.fx.shockwave(this.x, this.y, 60, .4, this.color);
+        break;
+      }
+      case 'rush':
+        this.chargeTime = 1.1;
+        g.fx.shockwave(this.x, this.y, 45, .4, this.color);
+        break;
+    }
+    this.move = null;
+  }
+
+  // Ring attacks fire in waves a quarter second apart, each rotated half a step.
+  updateWaves(dt, g) {
+    const w = this.waves;
+    w.timer -= dt;
+    if (w.timer > 0) return;
+    for (let i = 0; i < w.count; i++) g.enemyShots.push(new EnemyShot(this.x, this.y, w.offset + i * TAU / w.count, w.kind, Math.max(8, this.damage * .42)));
+    w.offset += Math.PI / w.count;
+    w.timer = .28;
+    if (--w.left <= 0) this.waves = null;
+  }
+
+  dash(dt, g) {
+    const p = g.player;
+    this.dashT -= dt;
+    this.x = clamp(this.x + this.dvx * dt, -ARENA_X, ARENA_X);
+    this.y = clamp(this.y + this.dvy * dt, -ARENA_Y, ARENA_Y);
+    if (!this.dashHit && dist(this, p) < this.r + p.r + 4) { this.dashHit = true; g.damage(this.dashDamage); }
+    if (this.dashT <= 0) { this.dvx = this.dvy = 0; }
+  }
+
+  bossThink(dt, g) {
+    const st = stageInfo(this.tier), ph = st.phase2;
+    if (ph && !this.enraged && this.hp < this.maxHp * .5) {
+      this.enraged = true;
+      g.toast(`${this.name.toUpperCase()} ENRAGES!`);
+      g.fx.shockwave(this.x, this.y, 120, .6, this.color);
+    }
+    if (this.windup > 0 || this.dashT > 0 || this.waves) return;
+    this.skillCD -= dt;
+    if (this.skillCD > 0) return;
+    const moves = this.enraged && ph && ph.extra ? [...st.moves, ph.extra] : st.moves;
+    this.startMove(moves[this.moveIndex++ % moves.length], g);
+    this.skillCD = this.enraged && ph ? ph.cooldown : st.cooldown;
+  }
+
+  miniThink(dt, g) {
+    if (this.windup > 0 || this.waves) return;
+    this.skillCD -= dt;
+    if (this.skillCD > 0) return;
+    const mini = MINI_BOSSES[this.miniKind];
+    this.startMove({windup: .5, ...mini.skill}, g);
+    this.skillCD = mini.cd;
+  }
+
+  chargerThink(dt, g, d) {
+    const c = this.def.charge;
+    this.actCD -= dt;
+    if (this.windup > 0 || this.dashT > 0 || this.actCD > 0 || d > c.range) return;
+    this.startMove({type: 'charge', windup: c.windup, speed: c.speed, distance: c.speed * c.time, damage: this.damage * 1.5}, g);
+    this.actCD = c.cd;
+  }
+
+  // Bomber: roots beside the player, flashes, then explodes. Returns true once it has blown up.
+  updateFuse(dt, g, d) {
+    const f = this.def.fuse, p = g.player;
+    if (this.fuseT <= 0) { if (d < f.range) this.fuseT = f.time; return false; }
+    this.fuseT -= dt;
+    if (this.fuseT > 0) return false;
+    g.fx.shockwave(this.x, this.y, f.radius, .45, '#ffb347');
+    g.burst(this.x, this.y, '#ffd36b', 22);
+    if (dist(this, p) < f.radius + p.r) g.damage(this.damage * f.damage / this.def.damage);
+    g.kill(this, true);
+    return true;
+  }
+}
+
+// A telegraphed ground hazard: a ring fills in for `delay` seconds, erupts, then may
+// linger as a slowing or burning field.
+class Hazard {
+  constructor(x, y, m, damage) {
+    this.x = clamp(x, -ARENA_X, ARENA_X); this.y = clamp(y, -ARENA_Y, ARENA_Y);
+    this.r = m.radius; this.delay = m.delay; this.damage = damage; this.color = m.color || '#ff6f85';
+    this.linger = m.linger || 0; this.slow = !!m.slow; this.dps = m.dps ? m.dps * damage / m.damage : 0;
+    this.t = 0; this.erupted = false; this.tick = 0;
+  }
+  update(dt, g) {
+    this.t += dt;
+    const p = g.player, inside = dist(this, p) < this.r + p.r * .5;
+    if (!this.erupted) {
+      if (this.t < this.delay) return true;
+      this.erupted = true;
+      g.fx.shockwave(this.x, this.y, this.r, .4, this.color);
+      g.burst(this.x, this.y, this.color, 14);
+      if (inside) { g.damage(this.damage); if (this.slow) p.slowTime = 2; }
+    } else if (inside) {
+      if (this.slow) p.slowTime = Math.max(p.slowTime, .35);
+      if (this.dps && (this.tick -= dt) <= 0) { this.tick = .5; g.damage(this.dps * .5); }
+    }
+    return this.t < this.delay + this.linger;
   }
 }
 

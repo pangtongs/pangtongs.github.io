@@ -76,6 +76,7 @@ class Renderer {
     for (const d of g.drops) if (this.visible(d.x, d.y, 20)) this.sprite(Sprites.gem(d.type), d.x, d.y + Math.sin(d.phase) * 2);
     this.worldTransform();
     for (const ch of g.chests) this.drawChest(ch);
+    this.drawHazards(g);
     for (const m of g.meteors) this.drawMeteor(m);
     for (const q of g.projectiles) if (this.visible(q.x, q.y, 40)) this.sprite(Sprites.projectile(q.kind), q.x, q.y, Math.atan2(q.vy, q.vx));
     for (const q of g.enemyShots) if (this.visible(q.x, q.y, 30)) this.sprite(Sprites.enemyShot(q.kind), q.x, q.y, Math.atan2(q.vy, q.vx));
@@ -122,43 +123,85 @@ class Renderer {
     c.strokeStyle = scene.accent; c.globalAlpha = .35; c.lineWidth = 2;
     c.strokeRect(-fx - 1, -fy - 1, fx * 2 + 2, fy * 2 + 2);
 
-    // Scattered stage decorations: rings everywhere, plus a stage motif from stage 2 on.
+    // Scattered stage decorations: rings everywhere, plus the stage's motif. Early stages
+    // draw their motif in the line colour, later ones in the accent colour.
+    const subtle = ['slash', 'triangle'].includes(scene.motif);
     c.strokeStyle = scene.line; c.globalAlpha = .35; c.lineWidth = 2; c.beginPath();
-    const motif = [];
+    const spots = [];
     for (let i = 0; i < 38; i++) {
       const x = (i * 397) % 2080 - 1040, y = (i * 613) % 1610 - 805;
       if (x < v.x0 - 25 || x > v.x1 + 25 || y < v.y0 - 25 || y > v.y1 + 25) continue;
       const r = 7 + (i % 3) * 6;
       c.moveTo(x + r, y); c.arc(x, y, r, 0, TAU);
-      if (g.stage === 2) { c.moveTo(x - 9, y + 8); c.lineTo(x + 8, y - 9); }
-      if (g.stage === 3) { c.moveTo(x, y - 15); c.lineTo(x + 13, y + 5); c.lineTo(x - 13, y + 5); c.closePath(); }
-      if (g.stage >= 4) motif.push(x, y);
+      if (subtle) this.motif(scene.motif, x, y, i); else spots.push(x, y, i);
     }
     c.stroke();
-    if (motif.length) {
+    if (spots.length && scene.motif !== 'none') {
       c.strokeStyle = scene.accent; c.fillStyle = scene.accent; c.globalAlpha = .25; c.beginPath();
-      for (let k = 0; k < motif.length; k += 2) this.motif(g.stage, motif[k], motif[k + 1]);
+      for (let k = 0; k < spots.length; k += 3) this.motif(scene.motif, spots[k], spots[k + 1], spots[k + 2]);
       c.stroke();
     }
     c.globalAlpha = 1;
   }
 
-  motif(stage, x, y) {
-    const c = this.ctx;
-    if (stage === 4) { c.moveTo(x - 10, y + 10); c.lineTo(x, y - 14); c.lineTo(x + 10, y + 10); }
-    else if (stage === 5) { c.moveTo(x + 18, y); c.ellipse(x, y, 18, 7, .4, 0, TAU); }
-    else if (stage === 6) {
-      c.moveTo(x + 13, y); c.arc(x, y, 13, 0, TAU);
-      for (let j = 0; j < 6; j++) { const a = j * Math.PI / 3; c.rect(x + Math.cos(a) * 15 - 2, y + Math.sin(a) * 15 - 2, 4, 4); }
-    } else if (stage === 7) {
-      for (let j = 0; j < 3; j++) { const x0 = x - 8 + j * 7; c.moveTo(x0 + Math.cos(j * .4) * 12, y + Math.sin(j * .4) * 12); c.arc(x0, y, 12, j * .4, Math.PI + j * .4); }
-    } else {
-      for (let j = 0; j < 8; j++) {
-        const a = j * Math.PI / 4, rad = j % 2 ? 7 : 19, px = x + Math.cos(a) * rad, py = y + Math.sin(a) * rad;
+  // Adds one decoration of the given motif to the current path at (x, y).
+  motif(name, x, y, i) {
+    const c = this.ctx, star = (n, r1, r2, rot = 0) => {
+      for (let j = 0; j < n * 2; j++) {
+        const a = rot + j * Math.PI / n, rad = j % 2 ? r2 : r1, px = x + Math.cos(a) * rad, py = y + Math.sin(a) * rad;
         if (j === 0) c.moveTo(px, py); else c.lineTo(px, py);
       }
       c.closePath();
+    };
+    switch (name) {
+      case 'slash': c.moveTo(x - 9, y + 8); c.lineTo(x + 8, y - 9); break;
+      case 'triangle': c.moveTo(x, y - 15); c.lineTo(x + 13, y + 5); c.lineTo(x - 13, y + 5); c.closePath(); break;
+      case 'spikes': c.moveTo(x - 10, y + 10); c.lineTo(x, y - 14); c.lineTo(x + 10, y + 10); break;
+      case 'ellipse': c.moveTo(x + 18, y); c.ellipse(x, y, 18, 7, .4, 0, TAU); break;
+      case 'gear':
+        c.moveTo(x + 13, y); c.arc(x, y, 13, 0, TAU);
+        for (let j = 0; j < 6; j++) { const a = j * Math.PI / 3; c.rect(x + Math.cos(a) * 15 - 2, y + Math.sin(a) * 15 - 2, 4, 4); }
+        break;
+      case 'waves':
+        for (let j = 0; j < 3; j++) { const x0 = x - 8 + j * 7; c.moveTo(x0 + Math.cos(j * .4) * 12, y + Math.sin(j * .4) * 12); c.arc(x0, y, 12, j * .4, Math.PI + j * .4); }
+        break;
+      case 'star': star(4, 19, 7); break;
+      case 'snow':
+        for (let j = 0; j < 3; j++) { const a = j * Math.PI / 3; c.moveTo(x - Math.cos(a) * 16, y - Math.sin(a) * 16); c.lineTo(x + Math.cos(a) * 16, y + Math.sin(a) * 16); }
+        break;
+      case 'coin': c.moveTo(x + 10, y + 4); c.ellipse(x, y + 4, 10, 4, 0, 0, TAU); c.moveTo(x + 10, y - 3); c.ellipse(x, y - 3, 10, 4, 0, 0, TAU); break;
+      case 'thorn':
+        c.moveTo(x - 18, y + 6); c.quadraticCurveTo(x, y - 14, x + 18, y + 4);
+        for (let j = -1; j <= 1; j++) { c.moveTo(x + j * 8, y - 3 + Math.abs(j) * 2); c.lineTo(x + j * 8 + 3, y - 10 + Math.abs(j) * 2); }
+        break;
+      case 'hex':
+        for (let j = 0; j <= 6; j++) { const a = j * Math.PI / 3, px = x + Math.cos(a) * 14, py = y + Math.sin(a) * 14; if (j === 0) c.moveTo(px, py); else c.lineTo(px, py); }
+        break;
+      case 'cross': c.moveTo(x, y - 16); c.lineTo(x, y + 14); c.moveTo(x - 8, y - 7); c.lineTo(x + 8, y - 7); c.rect(x - 11, y + 14, 22, 4); break;
+      case 'diamond': star(2, 18, 7, i % 2 ? 0 : Math.PI / 4); break;
+      case 'eye': c.moveTo(x - 18, y); c.quadraticCurveTo(x, y - 12, x + 18, y); c.quadraticCurveTo(x, y + 12, x - 18, y); c.moveTo(x + 4, y); c.arc(x, y, 4, 0, TAU); break;
+      case 'flame': c.moveTo(x, y + 12); c.quadraticCurveTo(x - 12, y, x - 2, y - 16); c.quadraticCurveTo(x + 2, y - 6, x + 6, y - 10); c.quadraticCurveTo(x + 12, y + 2, x, y + 12); break;
     }
+  }
+
+  // Ground hazards: a ring that fills toward eruption, then a pulsing pool while it lingers.
+  drawHazards(g) {
+    const c = this.ctx;
+    for (const h of g.hazards) {
+      if (!this.visible(h.x, h.y, h.r)) continue;
+      c.fillStyle = h.color; c.strokeStyle = h.color;
+      if (!h.erupted) {
+        const k = h.t / h.delay;
+        c.globalAlpha = .1 + k * .15; c.beginPath(); c.arc(h.x, h.y, h.r, 0, TAU); c.fill();
+        c.globalAlpha = .35 + k * .5; c.beginPath(); c.arc(h.x, h.y, h.r * k, 0, TAU); c.fill();
+        c.globalAlpha = .9; c.lineWidth = 2; c.setLineDash([7, 5]); c.beginPath(); c.arc(h.x, h.y, h.r, 0, TAU); c.stroke(); c.setLineDash([]);
+      } else {
+        const left = 1 - (h.t - h.delay) / Math.max(.01, h.linger);
+        c.globalAlpha = (.16 + .06 * Math.sin(g.time * 6)) * left; c.beginPath(); c.arc(h.x, h.y, h.r, 0, TAU); c.fill();
+        c.globalAlpha = .5 * left; c.lineWidth = 2; c.stroke();
+      }
+    }
+    c.globalAlpha = 1;
   }
 
   drawChest(ch) {
@@ -194,10 +237,43 @@ class Renderer {
     this.worldTransform();
   }
 
+  // Windup warnings: where a slam lands, a charge's path, a blink's arrival, a cast glow.
+  drawTelegraph(e) {
+    const t = e.tele, c = this.ctx;
+    if (!t || e.windup <= 0) return;
+    const k = 1 - e.windup / e.windupMax, color = e.boss || e.mini ? e.color : '#ff7a4d';
+    this.worldTransform();
+    c.fillStyle = color; c.strokeStyle = color;
+    if (t.type === 'circle') {
+      c.globalAlpha = .12 + k * .2; c.beginPath(); c.arc(e.x, e.y, t.r, 0, TAU); c.fill();
+      c.globalAlpha = 1; c.lineWidth = 2; c.stroke();
+    } else if (t.type === 'line') {
+      this.place(e.x, e.y, t.a);
+      c.globalAlpha = .14 + k * .22; c.fillRect(0, -t.w / 2, t.len, t.w);
+      c.globalAlpha = .9; c.fillRect(0, -1.5, t.len * k, 3);
+      this.worldTransform();
+    } else if (t.type === 'blink') {
+      c.globalAlpha = .15 + k * .25; c.beginPath(); c.arc(t.x, t.y, t.r, 0, TAU); c.fill();
+      c.globalAlpha = 1; c.lineWidth = 2; c.setLineDash([8, 6]); c.stroke(); c.setLineDash([]);
+    } else {
+      c.globalAlpha = .5 + .4 * Math.sin(k * 20); c.lineWidth = 3;
+      c.beginPath(); c.arc(e.x, e.y, e.r * (e.boss ? 1.9 : 1.3) + k * 10, 0, TAU); c.stroke();
+    }
+    c.globalAlpha = 1;
+  }
+
   drawEnemy(e) {
     const c = this.ctx, x = Math.round(e.x), y = Math.round(e.y);
+    this.drawTelegraph(e);
     if (!e.boss && !e.mini) {
-      this.sprite(Sprites.enemy(e.type, e.hit > 0), x, y);
+      if (e.fuseT > 0) { // bomber about to blow: blast radius and a flashing body
+        const f = ENEMY_TYPES[e.type].fuse;
+        this.worldTransform();
+        c.strokeStyle = '#ffb347'; c.globalAlpha = .7; c.lineWidth = 2; c.setLineDash([6, 5]);
+        c.beginPath(); c.arc(e.x, e.y, f.radius, 0, TAU); c.stroke(); c.setLineDash([]); c.globalAlpha = 1;
+      }
+      const flash = e.hit > 0 || (e.fuseT > 0 && Math.floor(e.fuseT * 12) % 2 === 0);
+      this.sprite(Sprites.enemy(e.type, flash), x, y);
       if (e.hp < e.maxHp) {
         const w = e.r * 2;
         c.fillStyle = '#111a25'; c.fillRect(-w / 2, -e.r - 7, w, 3);
@@ -206,24 +282,21 @@ class Renderer {
       return;
     }
 
-    const px = e.boss ? 1.7 : 1, art = e.mini ? e.miniKind : e.tier - 1;
+    const px = e.boss ? 1.7 : 1, kind = e.mini ? 'mini' : 'boss', art = e.mini ? e.miniKind : e.tier - 1;
     this.place(x, y);
-    if (e.boss && e.windup > 0) {
-      // Telegraph shows the real slam radius and fills in as the slam approaches.
-      const color = e.tier >= 3 ? stageInfo(e.tier).accent : '#ff8191';
-      c.globalAlpha = .12 + (1 - e.windup / .85) * .18; c.fillStyle = color;
-      c.beginPath(); c.arc(0, 0, e.slamRadius, 0, TAU); c.fill();
-      c.globalAlpha = 1; c.strokeStyle = color; c.lineWidth = 2; c.stroke();
-    }
+    // A blinking boss fades out over its windup.
+    const fade = e.tele && e.tele.type === 'blink' ? Math.max(.15, e.windup / e.windupMax) : 1;
+    c.globalAlpha = fade;
     c.fillStyle = '#0007'; c.beginPath(); c.ellipse(0, e.r * .85 * px, e.r * .95 * px, 4 * px, 0, 0, TAU); c.fill();
-    const portrait = Sprites.portrait(art);
+    const portrait = Sprites.portrait(kind, art);
     if (portrait) {
       const size = (e.mini ? 70 : 96) * px, ox = (e.mini ? -35 : -48) * px, oy = (e.mini ? -51 : -66) * px;
       c.drawImage(portrait.img, ox, oy, size, size);
-      if (e.hit > 0) { c.globalAlpha = .45; c.drawImage(Sprites.portrait(art, true).img, ox, oy, size, size); c.globalAlpha = 1; }
+      if (e.hit > 0) { c.globalAlpha = .45 * fade; c.drawImage(Sprites.portrait(kind, art, true).img, ox, oy, size, size); }
     } else {
       c.fillStyle = e.hit > 0 ? '#fff' : e.color; c.beginPath(); c.arc(0, 0, e.r, 0, TAU); c.fill();
     }
+    c.globalAlpha = 1;
     const w = 65;
     c.fillStyle = '#08131e'; c.fillRect(-w / 2, -54, w, 5);
     c.fillStyle = '#ff698d'; c.fillRect(-w / 2, -54, w * Math.max(0, e.hp) / e.maxHp, 5);

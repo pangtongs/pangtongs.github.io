@@ -8,6 +8,7 @@
 const loadImage = src => { const im = new Image(); im.src = src; return im; };
 const mageImages = ['mage-0', 'mage-1', 'mage-2', 'mage-north'].map(n => loadImage(`assets/${n}.webp`));
 const bossImages = STAGES.map((_, i) => loadImage(`assets/boss-${i}.webp`));
+const miniImages = MINI_BOSSES.map((_, i) => loadImage(`assets/mini-${i}.webp`));
 const imageReady = im => im.complete && im.naturalWidth > 0;
 
 const SPRITE_RES = 2; // offscreen pixels per world unit, so sprites stay sharp on 2x screens
@@ -188,12 +189,13 @@ const Sprites = {
     return this.get(key, () => makeSprite(64, 64, c => drawEnemyBody(c, type, flash ? '#fff' : ENEMY_TYPES[type].color)));
   },
 
-  // Boss portrait art, plus a white copy for the hit flash. Null until the image loads.
-  portrait(index, flash = false) {
-    const im = bossImages[index];
-    if (!imageReady(im)) return null;
-    const base = this.get('portrait:' + index, () => ({img: im, w: im.naturalWidth, h: im.naturalHeight}));
-    return flash ? this.get('portrait:' + index + ':flash', () => whiteSilhouette(im, base.w, base.h)) : base;
+  // Boss or mini-boss portrait art, plus a white copy for the hit flash. Null until loaded.
+  portrait(kind, index, flash = false) {
+    const im = (kind === 'mini' ? miniImages : bossImages)[index];
+    if (!im || !imageReady(im)) return null;
+    const key = `portrait:${kind}:${index}`;
+    const base = this.get(key, () => ({img: im, w: im.naturalWidth, h: im.naturalHeight}));
+    return flash ? this.get(key + ':flash', () => whiteSilhouette(im, base.w, base.h)) : base;
   },
 };
 
@@ -208,6 +210,37 @@ function drawEnemyBody(c, type, body) {
     c.fillRect(-13, 4, 4, 5); c.fillRect(10, 5, 4, 5); c.fillRect(-5, -15, 3, 3); c.fillRect(3, -14, 3, 3);
     c.fillStyle = '#d9ff9d'; c.fillRect(-4, -10, 3, 3); c.fillRect(3, -10, 3, 3);
     c.fillStyle = '#243b35'; c.fillRect(-2, -3, 4, 2); c.fillRect(-9, 4, 4, 3);
+    return;
+  }
+  if (type === 'charger') {
+    // Horned boar: low body, tusks, glowing eyes
+    c.fillStyle = ink; c.fillRect(-14, -6, 28, 15); c.fillRect(-11, 8, 5, 6); c.fillRect(6, 8, 5, 6);
+    c.fillStyle = body; c.fillRect(-12, -5, 24, 12); c.fillRect(-15, -2, 5, 7); c.fillRect(-9, 7, 4, 5); c.fillRect(7, 7, 4, 5);
+    c.fillStyle = '#5a2a14'; c.fillRect(-12, -8, 18, 4); c.fillRect(-4, -11, 5, 4);
+    c.fillStyle = '#fff3d6'; c.fillRect(-17, 0, 4, 2); c.fillRect(-17, -3, 2, 3); c.fillRect(-13, 4, 3, 2);
+    c.fillStyle = '#ffe36b'; c.fillRect(-10, -3, 3, 2);
+    return;
+  }
+  if (type === 'bomber') {
+    // Round powder keg with a fuse and a grin
+    c.fillStyle = ink; c.beginPath(); c.arc(0, 1, 12, 0, TAU); c.fill();
+    c.fillStyle = body; c.beginPath(); c.arc(0, 1, 10, 0, TAU); c.fill();
+    c.fillStyle = '#8a6a1c'; c.fillRect(-10, -2, 20, 3); c.fillRect(-10, 5, 20, 2);
+    c.fillStyle = ink; c.fillRect(-2, -14, 4, 5);
+    c.strokeStyle = '#d9c38c'; c.lineWidth = 2; c.beginPath(); c.moveTo(0, -13); c.quadraticCurveTo(5, -18, 3, -21); c.stroke();
+    c.fillStyle = '#ff6a2b'; c.fillRect(1, -24, 4, 4); c.fillStyle = '#fff2a8'; c.fillRect(2, -23, 2, 2);
+    c.fillStyle = '#2a1a06'; c.fillRect(-5, -4, 3, 3); c.fillRect(3, -4, 3, 3); c.fillRect(-4, 2, 8, 2);
+    return;
+  }
+  if (type === 'splitter' || type === 'splitling') {
+    // Wobbly slime; the big one carries two cores that become the splitlings
+    const R = type === 'splitter' ? 14 : 8;
+    c.fillStyle = ink; c.beginPath(); c.ellipse(0, 2, R + 2, R, 0, 0, TAU); c.fill();
+    c.fillStyle = body; c.beginPath(); c.ellipse(0, 1, R, R - 2, 0, 0, TAU); c.fill();
+    c.fillStyle = '#ffffff55'; c.beginPath(); c.ellipse(-R * .35, -R * .35, R * .35, R * .2, -.5, 0, TAU); c.fill();
+    c.fillStyle = '#6a2d9c';
+    if (type === 'splitter') { c.beginPath(); c.arc(-5, 3, 3.5, 0, TAU); c.arc(6, 3, 3.5, 0, TAU); c.fill(); }
+    else { c.fillRect(-3, -1, 2, 2); c.fillRect(2, -1, 2, 2); }
     return;
   }
   if (type === 'skeleton') {

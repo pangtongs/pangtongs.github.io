@@ -35,6 +35,12 @@ const UI = {
     const box = $('stageSelect');
     box.innerHTML = '';
     STAGES.forEach((stage, i) => {
+      if (i === 0 || STAGES[i - 1].act !== stage.act) {
+        const head = document.createElement('div');
+        head.className = 'actHeader';
+        head.textContent = ACT_NAMES[stage.act];
+        box.appendChild(head);
+      }
       const n = i + 1, b = document.createElement('button');
       b.className = 'stagePick' + (g.selectedStage === n ? ' selected' : '');
       b.disabled = n > unlocked;
@@ -196,6 +202,8 @@ const UI = {
       healHp(f) { const gain = p.maxHp * f; p.maxHp += gain; p.hp = Math.min(p.maxHp, p.hp + gain); },
       ward(f, regen = 0) { const gain = p.maxHp * f; p.shieldBonusCap += gain; p.shield += gain; p.shieldRegenPct += regen; },
       passive(key, n) { p.passiveRanks[key] = Math.min(5, p.passiveRanks[key] + n); },
+      spell(key, n) { p.skills[key] = Math.min(SPELL_MAX_RANK, p.skills[key] + n); },
+      yields(f) { g.yields.gems *= f; g.yields.coins *= f; },
     };
     $('chestTitle').textContent = `TIER ${tier} ${CHEST_TIER_NAMES[tier]} CHEST`;
     const box = $('chestChoices');
