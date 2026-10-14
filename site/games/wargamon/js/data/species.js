@@ -3,19 +3,15 @@ const SPECIES = [
   {
     name: 'Cabrawit',
     type: 'Api',
-    move: 'Sambal Meledak',
     desc: 'Naga cabai rawit: kecil, pedas, pantang menyerah.',
-    strong: ['Daun', 'Logam'],
     base: 58,
     types: ['Api'],
-    role: 'Pembakar: bonus damage Api ke lawan yang sudah Terbakar',
+    role: 'Pembakar: serangan Api lebih sakit ke lawan yang sudah Terbakar',
   },
   {
     name: 'Muspandan',
     type: 'Daun',
-    move: 'Pandan Wangi',
     desc: 'Musang kebun warung dengan ekor daun pandan.',
-    strong: ['Air', 'Batu'],
     base: 57,
     types: ['Daun'],
     role: 'Penguras HP & pengantar tidur',
@@ -23,9 +19,7 @@ const SPECIES = [
   {
     name: 'Galomang',
     type: 'Air',
-    move: 'Galon Guling',
     desc: 'Kelomang penghuni galon isi ulang.',
-    strong: ['Api', 'Batu'],
     base: 66,
     types: ['Air'],
     role: 'Pembasah & pemulih diri',
@@ -33,9 +27,7 @@ const SPECIES = [
   {
     name: 'Trenggiling Perak',
     type: 'Logam',
-    move: 'Kilau Recehan',
     desc: 'Trenggiling penggemar pertunjukan manusia silver.',
-    strong: ['Listrik', 'Batu'],
     base: 64,
     types: ['Logam'],
     role: 'Penembus resistansi & pemantul',
@@ -43,9 +35,7 @@ const SPECIES = [
   {
     name: 'Parkiram',
     type: 'Normal',
-    move: 'Priiit! Mundur!',
     desc: 'Ayam peluit parkir yang gesit. Menghentikan giliran dan menyita jurus besar lawan.',
-    strong: ['Angin'],
     base: 59,
     types: ['Normal', 'Angin'],
     role: 'Pengganggu: interupsi & mengunci jurus',
@@ -53,9 +43,7 @@ const SPECIES = [
   {
     name: 'Tokekorslet',
     type: 'Listrik',
-    move: 'Token Habis',
     desc: 'Tokek meteran listrik dengan suara pengingat isi token.',
-    strong: ['Air', 'Angin'],
     base: 58,
     types: ['Listrik'],
     role: 'Penuntas lawan Basah',
@@ -63,9 +51,7 @@ const SPECIES = [
   {
     name: 'Baksobanteng',
     type: 'Batu',
-    move: 'Urat Beton',
     desc: 'Banteng bakso urat. Badannya sekeras mangkuk langganan.',
-    strong: ['Api', 'Listrik'],
     base: 66,
     types: ['Batu'],
     role: 'Pemukul keras dengan risiko meleset',
@@ -73,9 +59,7 @@ const SPECIES = [
   {
     name: 'Pepeskatak',
     type: 'Daun',
-    move: 'Bungkus Daun',
     desc: 'Katak berjaket daun pisang. Suka tempat lembap.',
-    strong: ['Air', 'Batu'],
     base: 63,
     types: ['Daun'],
     role: 'Penguras lewat Racun',
@@ -83,9 +67,7 @@ const SPECIES = [
   {
     name: 'Tempurayap',
     type: 'Batu',
-    move: 'Kriuk Berlapis',
     desc: 'Kumbang berzirah tempe goreng yang renyah namun tangguh.',
-    strong: ['Api', 'Listrik'],
     base: 59,
     types: ['Batu', 'Daun'],
     role: 'Penembus zirah dengan recoil',
@@ -93,9 +75,7 @@ const SPECIES = [
   {
     name: 'Angkura',
     type: 'Logam',
-    move: 'Ngetem Deras',
     desc: 'Kura-kura bercangkang angkot. Jalan kalau sudah penuh.',
-    strong: ['Listrik', 'Batu', 'Normal'],
     base: 58,
     types: ['Logam', 'Api'],
     role: 'Pemulih mandiri untuk laga panjang',
@@ -103,9 +83,7 @@ const SPECIES = [
   {
     name: 'Wifilawar',
     type: 'Angin',
-    move: 'Sinyal Menghilang',
     desc: 'Kelelawar awan yang muncul saat Wi-Fi tinggal satu bar.',
-    strong: ['Daun'],
     base: 61,
     types: ['Angin', 'Listrik'],
     role: 'Tidur & penguras lintas elemen',
@@ -113,9 +91,7 @@ const SPECIES = [
   {
     name: 'Badaklapa',
     type: 'Batu',
-    move: 'Batok Banting',
     desc: 'Badak berhelm kelapa: keras di luar, adem di hati.',
-    strong: ['Api', 'Listrik'],
     base: 66,
     types: ['Batu', 'Daun'],
     role: 'Petarung tangguh dengan recoil',
@@ -123,20 +99,16 @@ const SPECIES = [
   {
     name: 'Nagarawit',
     type: 'Api',
-    move: 'Sambal Meledak',
     desc: 'Naga rawit dewasa. Sayapnya mengaduk udara panas seperti wajan sambal.',
-    strong: ['Daun', 'Logam'],
     base: 86,
     from: 0,
     types: ['Api'],
-    role: 'Pembakar: bonus damage Api ke lawan yang sudah Terbakar',
+    role: 'Pembakar: serangan Api lebih sakit ke lawan yang sudah Terbakar',
   },
   {
     name: 'Muspanrimba',
     type: 'Daun',
-    move: 'Pandan Wangi',
     desc: 'Musang pandan dewasa. Rimbunnya daun bisa menaungi seluruh gerobak.',
-    strong: ['Air', 'Batu'],
     base: 80,
     from: 1,
     types: ['Daun'],
@@ -145,9 +117,7 @@ const SPECIES = [
   {
     name: 'Galontitan',
     type: 'Air',
-    move: 'Galon Guling',
     desc: 'Kelomang dispenser raksasa, lengkap dengan dua capit keran air.',
-    strong: ['Api', 'Batu'],
     base: 99,
     from: 2,
     types: ['Air'],
@@ -156,9 +126,7 @@ const SPECIES = [
   {
     name: 'Trenggilapis',
     type: 'Logam',
-    move: 'Kilau Recehan',
     desc: 'Trenggiling dewasa dengan zirah perak berlapis.',
-    strong: ['Listrik', 'Batu'],
     base: 92,
     from: 3,
     types: ['Logam'],
@@ -167,9 +135,7 @@ const SPECIES = [
   {
     name: 'Tokeguntur',
     type: 'Listrik',
-    move: 'Token Habis',
     desc: 'Tokek dewasa. Suaranya menggetarkan meteran satu kelurahan.',
-    strong: ['Air', 'Angin'],
     base: 87,
     from: 5,
     types: ['Listrik'],
@@ -178,9 +144,7 @@ const SPECIES = [
   {
     name: 'Badakbatok',
     type: 'Batu',
-    move: 'Batok Banting',
     desc: 'Badak kelapa dewasa. Batoknya jadi benteng hidup.',
-    strong: ['Api', 'Listrik'],
     base: 95,
     from: 11,
     types: ['Batu', 'Daun'],
@@ -189,10 +153,8 @@ const SPECIES = [
   {
     name: 'Jalakawatt',
     type: 'Listrik',
-    strong: ['Air', 'Angin'],
     base: 76,
     legendary: false,
-    move: 'Sayap Gardu',
     desc: 'Jalak Bali langka penghuni gardu. Ujung bulunya berkilau seperti logam penghantar; ia mengganggu jurus lawan dengan arus pendek. Bisa ditemukan lagi di Puncak Sinyal.',
     types: ['Listrik', 'Angin'],
     role: 'Pengganggu langka: Kesetrum, kunci jurus & pantulan',
@@ -201,10 +163,8 @@ const SPECIES = [
   {
     name: 'Rajapari',
     type: 'Air',
-    strong: ['Api', 'Batu'],
     base: 108,
     legendary: true,
-    move: 'Arus Suaka',
     desc: 'Legenda pari manta penjaga suaka. Zirah karang di punggungnya menahan serangan sambil memulihkan diri; siripnya membasahi lawan. Hanya satu per perjalanan.',
     types: ['Air', 'Listrik'],
     role: 'Penjaga pasang: arus balik, pemulihan dan tekanan listrik',
@@ -213,144 +173,116 @@ const SPECIES = [
     name: 'Kopikukang',
     types: ['Normal', 'Daun'],
     type: 'Normal',
-    strong: ['Angin'],
     base: 54,
     desc: 'Kukang mungil berkuping biji kopi. Matanya selalu berbinar, bahkan ketika rapat RT sudah lewat jam tidur.',
     role: 'Anti-Tidur & pemulih mandiri',
-    move: 'Kopikukang beraksi',
   },
   {
     name: 'Kleponci',
     types: ['Normal'],
     type: 'Normal',
-    strong: ['Angin'],
     base: 57,
     desc: 'Kelinci klepon bertabur kelapa. Ekor gula arennya meninggalkan jejak lengket yang manis.',
     role: 'Penanda gula: kombo Api / Listrik',
-    move: 'Kleponci beraksi',
   },
   {
     name: 'Cendolotl',
     types: ['Air'],
     type: 'Air',
-    strong: ['Api', 'Batu'],
     base: 66,
     desc: 'Teman air mungil berinsang cendol. Perut santannya menyimpan minuman sejuk untuk satu tim.',
     role: 'Dokter tim: pulih & bersihkan status',
-    move: 'Cendolotl beraksi',
   },
   {
     name: 'Durimpit',
     types: ['Daun', 'Batu'],
     type: 'Daun',
-    strong: ['Air', 'Batu'],
     base: 63,
     desc: 'Landak durian yang lebih suka dipeluk dari depan. Wajahnya manis; durinya tetap punya pendirian.',
     role: 'Pemantul serangan & penghukum lawan',
-    move: 'Durimpit beraksi',
   },
   {
     name: 'Krupik',
     types: ['Air', 'Batu'],
     type: 'Air',
-    strong: ['Api', 'Batu'],
     base: 66,
     desc: 'Kepiting kerupuk yang memakai baju kriuk. Kalau kehujanan, ia minta dijemur sebentar.',
     role: 'Tameng sekali pukul & penguras HP',
-    move: 'Krupik beraksi',
   },
   {
     name: 'Lumilaut',
     types: ['Air', 'Listrik'],
     type: 'Air',
-    strong: ['Api', 'Batu'],
     base: 59,
     desc: 'Sotong kecil penghuni terumbu Nusantara. Titik emasnya berkedip seperti lampu perahu nelayan.',
     role: 'Basah → Listrik: kombo dua giliran',
-    move: 'Lumilaut beraksi',
   },
   {
     name: 'Layanganak',
     types: ['Angin', 'Daun'],
     type: 'Angin',
-    strong: ['Daun'],
     base: 58,
     desc: 'Layangan bermata ceria yang hidup dari angin kampung. Pita ekornya menari di atas genting.',
     role: 'Mempercepat jurus tim & membuang pelindung',
-    move: 'Layanganak beraksi',
   },
   {
     name: 'Martabakko',
     types: ['Api', 'Logam'],
     type: 'Api',
-    strong: ['Daun', 'Logam'],
     base: 58,
     desc: 'Tokek martabak dengan totol cokelat. Badannya empuk, tekadnya setebal martabak spesial.',
     role: 'Petarung recoil dengan HP tebal',
-    move: 'Martabakko beraksi',
   },
   {
     name: 'Mangglow',
     types: ['Listrik', 'Angin'],
     type: 'Listrik',
-    strong: ['Air', 'Angin'],
     base: 63,
     desc: 'Kunang-kunang manggis dengan mahkota daun. Menyalakan lampu kecil untuk teman yang takut gelap.',
     role: 'Pelindung status untuk seluruh tim',
-    move: 'Mangglow beraksi',
   },
   {
     name: 'Salaklak',
     types: ['Daun', 'Angin'],
     type: 'Daun',
-    strong: ['Air', 'Batu'],
     base: 60,
     desc: 'Kalong salak bersisik cokelat dan pipi pucat. Getah sepatnya membuat lawan sulit memulihkan diri.',
     role: 'Anti-pemulihan & pembuka pertahanan',
-    move: 'Salaklak beraksi',
   },
   {
     name: 'Kleponlop',
     types: ['Normal'],
     type: 'Normal',
-    strong: ['Angin'],
     base: 90,
     desc: 'Kleponci dewasa dengan tubuh kelapa bundar dan telinga pita gula aren. Ia memantul untuk melindungi kawanan.',
     role: 'Kombo gula & tameng kenyal',
-    move: 'Kleponci beraksi',
     from: 21,
   },
   {
     name: 'Cendolaga',
     types: ['Air'],
     type: 'Air',
-    strong: ['Api', 'Batu'],
     base: 92,
     desc: 'Cendolotl tumbuh menjadi naga sungai panjang, berjambul jeli cendol dan bertanduk gula aren.',
     role: 'Pemulih tim & perawat status',
-    move: 'Cendolotl beraksi',
     from: 22,
   },
   {
     name: 'Lumibahari',
     types: ['Air', 'Listrik'],
     type: 'Air',
-    strong: ['Api', 'Batu'],
     base: 83,
     desc: 'Sotong terumbu dewasa dengan mantel lebar. Cahaya keemasannya membantu perahu nelayan menemukan jalan pulang.',
     role: 'Pembasah lawan & penuntas Listrik',
-    move: 'Lumilaut beraksi',
     from: 25,
   },
   {
     name: 'Manggantara',
     types: ['Listrik', 'Angin'],
     type: 'Listrik',
-    strong: ['Air', 'Angin'],
     base: 100,
     desc: 'Mangglow membuka sayap daun lebar. Manggantara melayang seperti kelelawar buah, membawa biji manggis ke kebun baru.',
     role: 'Pelindung status & pengatur jeda tim',
-    move: 'Mangglow beraksi',
     from: 28,
   },
   {
@@ -360,8 +292,6 @@ const SPECIES = [
     role: 'Pengatur tempo: percepat tim & ganggu giliran',
     desc: 'Tikus komuter bertelinga karcis. Ekornya menyimpan listrik statis dari kursi kereta; selalu mengantre di belakang garis kuning.',
     type: 'Listrik',
-    strong: ['Air', 'Angin'],
-    move: 'Karcikus beraksi',
   },
   {
     name: 'Tempeko',
@@ -370,8 +300,6 @@ const SPECIES = [
     role: 'Tameng kedelai & penguras HP',
     desc: 'Tokek tempe berzirah kedelai dan daun pisang. Badannya kokoh, tetapi ia tetap menempel manja di tas bekal.',
     type: 'Daun',
-    strong: ['Air', 'Batu'],
-    move: 'Tempeko beraksi',
   },
   {
     name: 'Satecil',
@@ -380,8 +308,6 @@ const SPECIES = [
     role: 'Penyerang berisiko: bakar lalu tabrak',
     desc: 'Landak sate mungil dengan duri seperti tusuk kayu. Pipinya beraroma kacang; bara kecilnya menghangatkan rombongan.',
     type: 'Api',
-    strong: ['Daun', 'Logam'],
-    move: 'Satecil beraksi',
   },
   {
     name: 'Sateraja',
@@ -391,8 +317,6 @@ const SPECIES = [
     role: 'Penyerang bara dengan tameng batu',
     desc: 'Satecil dewasa dengan punggung batu panggangan. Duri satainya menyala hangat, bukan untuk menusuk teman.',
     type: 'Api',
-    strong: ['Daun', 'Logam'],
-    move: 'Sateraja beraksi',
   },
   {
     name: 'Kukubara',
@@ -401,8 +325,6 @@ const SPECIES = [
     role: 'Bara cengkih: bakar, lalu percepat tim',
     desc: 'Kakatua mungil berjambul cengkih. Kepaknya mengusir lembap dari jalur hutan dan menghangatkan bekal tanpa membakarnya.',
     type: 'Api',
-    strong: ['Daun', 'Logam'],
-    move: 'Kukubara beraksi',
   },
   {
     name: 'Becakong',
@@ -411,8 +333,6 @@ const SPECIES = [
     role: 'Tameng becak: tahan pukulan & bongkar pelindung',
     desc: 'Trenggiling dengan tempurung mirip kanopi becak. Ia senang mengantar teman kecil melewati gang bengkel.',
     type: 'Logam',
-    strong: ['Listrik', 'Batu', 'Normal'],
-    move: 'Becakong beraksi',
   },
   {
     name: 'Teratupai',
@@ -421,8 +341,6 @@ const SPECIES = [
     role: 'Penjaga waduk: serap HP & lindungi dari status',
     desc: 'Tupai air berekor daun teratai. Kelopak kecilnya menampung embun bersih untuk penghuni taman.',
     type: 'Air',
-    strong: ['Api', 'Batu'],
-    move: 'Teratupai beraksi',
   },
   {
     name: 'Teratupohon',
@@ -432,8 +350,6 @@ const SPECIES = [
     role: 'Teratai dewasa: pulihkan dan lindungi seluruh tim',
     desc: 'Teratupai dewasa dengan mahkota bunga teratai dan ekor daun lebar. Tempat beristirahat favorit burung-burung waduk.',
     type: 'Air',
-    strong: ['Api', 'Batu'],
-    move: 'Teratupohon beraksi',
   },
   {
     name: 'Kancilahar',
@@ -442,8 +358,6 @@ const SPECIES = [
     role: 'Bara kaldera: bakar dan tembus pelindung',
     desc: 'Kancil kecil bersepatu batu apung. Ia menuntun pendaki menjauhi tanah panas dengan jejak bara mungil.',
     type: 'Api',
-    strong: ['Daun', 'Logam'],
-    move: 'Kancilahar beraksi',
   },
   {
     name: 'Kancilava',
@@ -453,8 +367,6 @@ const SPECIES = [
     role: 'Penyerang kaldera dengan tanduk lava',
     desc: 'Tanduk lavanya menyala saat kabut turun. Kancilava menjaga jalur evakuasi, bukan mengejar pendaki.',
     type: 'Api',
-    strong: ['Daun', 'Logam'],
-    move: 'Kancilava beraksi',
   },
   {
     name: 'Belutara',
@@ -463,8 +375,6 @@ const SPECIES = [
     role: 'Pengendali arus: serang dan kunci jurus lawan',
     desc: 'Belut biru dari saluran irigasi. Sirip kuningnya menyimpan tenaga mikrohidro untuk menerangi sawah.',
     type: 'Listrik',
-    strong: ['Air', 'Angin'],
-    move: 'Belutara beraksi',
   },
   {
     name: 'Beluteguh',
@@ -474,8 +384,6 @@ const SPECIES = [
     role: 'Arus besar: serang dan rawat tim',
     desc: 'Belutara dewasa yang menjaga pintu air. Tubuhnya berkilau ketika pembangkit kampung kembali menyala.',
     type: 'Listrik',
-    strong: ['Air', 'Angin'],
-    move: 'Beluteguh beraksi',
   },
   {
     name: 'Berumadu',
@@ -484,8 +392,6 @@ const SPECIES = [
     role: 'Penjaga madu: serap HP dan lindungi tim',
     desc: 'Beruang madu Kalimantan dengan tanda bulan sabit emas di dada. Ia membawa sarang madu dalam tas rotan dan merawat pohon tempat lebah tinggal.',
     type: 'Normal',
-    strong: ['Angin'],
-    move: 'Madu Pelindung',
   },
   {
     name: 'Tarsion',
@@ -495,8 +401,6 @@ const SPECIES = [
     role: 'Penjaga eksperimen: bongkar tameng dan kendalikan arus',
     desc: 'Tarsius penjaga observatorium, sahabat para peneliti yang dahulu hilang kontak. Cincin logamnya mengubah medan listrik menjadi pelindung. Ia menunggu seseorang memulihkan sinyal rumahnya.',
     type: 'Logam',
-    strong: ['Listrik', 'Batu', 'Normal'],
-    move: 'Tarsion beraksi',
   },
   {
     name: 'Baraong',
@@ -505,8 +409,6 @@ const SPECIES = [
     role: 'Pemburu bara: membakar lalu memulihkan tenaga',
     desc: 'Musang kecil yang tidur dekat tungku sate. Kumisnya menyimpan bara, tetapi telapak empuknya tidak meninggalkan luka bakar.',
     type: 'Api',
-    strong: ['Daun', 'Logam'],
-    move: 'Baraong beraksi',
   },
   {
     name: 'Barongkrang',
@@ -516,8 +418,6 @@ const SPECIES = [
     role: 'Bara terkendali: serangan kuat dengan risiko balik',
     desc: 'Baraong dewasa dengan surai arang menyala. Ia menjaga pedagang malam dengan menahan panas di dalam bulunya.',
     type: 'Api',
-    strong: ['Daun', 'Logam'],
-    move: 'Barongkrang beraksi',
   },
   {
     name: 'Andesit',
@@ -526,8 +426,6 @@ const SPECIES = [
     role: 'Kristal statis: kendalikan lawan, lalu tembus tameng',
     desc: 'Cecak batu dari lereng gunung. Kristal kuning di punggungnya menyimpan listrik statis dari debu vulkanik.',
     type: 'Batu',
-    strong: ['Api', 'Listrik'],
-    move: 'Andesit beraksi',
   },
   {
     name: 'Andesakti',
@@ -537,8 +435,6 @@ const SPECIES = [
     role: 'Pemecah tameng: kristal berat dan arus listrik',
     desc: 'Andesit dewasa dengan pelat batu dan sirip kristal. Ia mengarahkan kilat menjauhi rumah di kaki gunung.',
     type: 'Batu',
-    strong: ['Api', 'Listrik'],
-    move: 'Andesakti beraksi',
   },
   {
     name: 'Parkiraja',
@@ -548,8 +444,6 @@ const SPECIES = [
     role: 'Pengatur giliran: percepat tim dan bongkar pelindung',
     desc: 'Parkiram dewasa dengan jambul peluit dan bulu reflektif. Satu kepakan menghentikan keributan satu terminal.',
     type: 'Normal',
-    strong: ['Angin'],
-    move: 'Parkiraja beraksi',
   },
   {
     name: 'Baksojaya',
@@ -559,8 +453,6 @@ const SPECIES = [
     role: 'Penahan benturan: pulihkan tenaga dan balas serangan',
     desc: 'Baksobanteng dewasa yang membawa zirah bakso batu. Tanduk mi melingkarnya membantu mengangkat gerobak yang terjebak.',
     type: 'Batu',
-    strong: ['Api', 'Listrik'],
-    move: 'Baksojaya beraksi',
   },
   {
     name: 'Kopironda',
@@ -570,278 +462,372 @@ const SPECIES = [
     role: 'Penjaga malam: percepat tim dan ganggu giliran lawan',
     desc: 'Kopikukang dewasa yang menemani ronda malam. Kalung buah kopinya selalu segar; ia hanya memetik buah yang matang.',
     type: 'Normal',
-    strong: ['Angin'],
-    move: 'Kopironda beraksi',
   },
   {
     name: 'Ojeklit',
     types: ['Listrik', 'Logam'],
     type: 'Listrik',
-    strong: ['Air', 'Angin'],
     base: 59,
     role: 'Kurir listrik: buka jalan dan jaga ritme',
     desc: 'Helm hijaunya menyala saat menerima pesanan. Ojeklit mengantar bekal tanpa meminta bintang lima.',
-    move: 'Ojeklit beraksi',
   },
   {
     name: 'Gorengseng',
     types: ['Api', 'Logam'],
     type: 'Api',
-    strong: ['Daun', 'Logam'],
     base: 61,
     role: 'Wajan panas: bakar lawan dengan risiko sendiri',
     desc: 'Wajan kecil yang hidup di gerobak gorengan. Sayap bakwannya mengembang saat minyak mulai panas.',
-    move: 'Gorengseng beraksi',
   },
   {
     name: 'Ketupetak',
     types: ['Daun', 'Normal'],
     type: 'Daun',
-    strong: ['Air', 'Batu'],
     base: 61,
     role: 'Bekal anyaman: pulih dan lindungi tim',
     desc: 'Anyaman daun kelapanya menyimpan nasi hangat. Ia menunggu di meja warga selepas kerja bakti.',
-    move: 'Ketupetak beraksi',
   },
   {
     name: 'Serutuk',
     types: ['Air', 'Logam'],
     type: 'Air',
-    strong: ['Api', 'Batu'],
     base: 66,
     role: 'Gerobak es: basahi dan tahan pukulan',
     desc: 'Lonceng mungilnya terdengar di gang terpanas. Tutup kotaknya menjaga es tetap dingin sepanjang ronda.',
-    move: 'Serutuk beraksi',
   },
   {
     name: 'Sendalkil',
     types: ['Normal', 'Angin'],
     type: 'Normal',
-    strong: ['Angin'],
     base: 62,
     role: 'Sandal gesit: percepat kesiapan jurus',
     desc: 'Sandal jepit biru yang selalu tertukar di teras. Pasangannya kembali setiap kali seseorang bersiul.',
-    move: 'Sendalkil beraksi',
   },
   {
     name: 'Bungkara',
     types: ['Api', 'Daun'],
     type: 'Api',
-    strong: ['Daun', 'Logam'],
     base: 65,
     role: 'Nasi bungkus: dukungan hangat dan bara',
     desc: 'Bungkusan nasi kecil dengan kaki bara. Ia menjaga lauk tetap hangat untuk pekerja sif malam.',
-    move: 'Bungkara beraksi',
   },
   {
     name: 'Atmimi',
     types: ['Logam', 'Listrik'],
     type: 'Logam',
-    strong: ['Listrik', 'Batu', 'Normal'],
     base: 61,
     role: 'Mesin tunai: kunci jurus dan simpan tenaga',
     desc: 'Mesin ATM mungil dengan lidah struk dan kaki pendek. Ia menyimpan uang receh warga, lalu mengeluarkannya tepat sebelum warung tutup.',
-    move: 'Atmimi beraksi',
   },
   {
     name: 'Jemuray',
     types: ['Air', 'Angin'],
     type: 'Air',
-    strong: ['Api', 'Batu'],
     base: 64,
     role: 'Jemuran: bersihkan status dan putar ritme',
     desc: 'Handuk dan tali jemuran membentuk sayapnya. Ia mengejar matahari sebelum hujan sore datang.',
-    move: 'Jemuray beraksi',
   },
   {
     name: 'Komporong',
     types: ['Api', 'Batu'],
     type: 'Api',
-    strong: ['Daun', 'Logam'],
     base: 59,
     role: 'Kompor gas: tekanan bara dan pantulan',
     desc: 'Kompor mungil berkaki batu yang tinggal di dapur warung. Ia mendesis jika tabungnya dipasang miring.',
-    move: 'Komporong beraksi',
   },
   {
     name: 'Satpamuk',
     types: ['Logam', 'Normal'],
     type: 'Logam',
-    strong: ['Listrik', 'Batu', 'Normal'],
     base: 64,
     role: 'Penjaga malam: kunci jurus dan lindungi tim',
     desc: 'Kumbang peluit berompi satpam. Ia memeriksa tamu dengan sopan, lalu tertidur di kursi plastik.',
-    move: 'Satpamuk beraksi',
   },
   {
     name: 'Tahulet',
     types: ['Daun', 'Api'],
     type: 'Daun',
-    strong: ['Air', 'Batu'],
     base: 60,
     role: 'Tahu renyah: serap HP dan bakar lawan',
     desc: 'Kubus tahu goreng dengan rambut tauge. Ia melompat dari saringan ketika mencium sambal segar.',
-    move: 'Tahulet beraksi',
   },
   {
     name: 'Cirengkel',
     types: ['Batu', 'Normal'],
     type: 'Batu',
-    strong: ['Api', 'Listrik'],
     base: 66,
     role: 'Cireng: pantulan dan benturan berat',
     desc: 'Bola cireng berkulit renyah. Bagian dalamnya kenyal, sehingga serangan yang sembrono bisa memantul.',
-    move: 'Cirengkel beraksi',
   },
   {
     name: 'Tokenyit',
     types: ['Listrik', 'Normal'],
     type: 'Listrik',
-    strong: ['Air', 'Angin'],
     base: 64,
     role: 'Meter prabayar: isi ritme dan kunci arus',
     desc: 'Meter listrik kecil dengan pipi kuning. Bunyi pengingatnya membangunkan satu kontrakan saat token menipis.',
-    move: 'Tokenyit beraksi',
   },
   {
     name: 'Tendara',
     types: ['Air', 'Angin'],
     type: 'Air',
-    strong: ['Api', 'Batu'],
     base: 66,
     role: 'Tenda warung: lindungi tim dari cuaca',
     desc: 'Tenda terpal biru-jingga yang hidup di kaki lima. Saat hujan deras, ia merapatkan tali agar pelanggan dan gorengan tetap kering.',
-    move: 'Tendara beraksi',
   },
   {
     name: 'Rantangkang',
     types: ['Logam', 'Daun'],
     type: 'Logam',
-    strong: ['Listrik', 'Batu', 'Normal'],
     base: 64,
     role: 'Rantang: pemulihan tim dan perlindungan',
     desc: 'Kura-kura rantang susun yang membawa lauk untuk tetangga. Tiap tingkat berisi aroma dapur yang berbeda.',
-    move: 'Rantangkang beraksi',
   },
   {
     name: 'Ojeksat',
     types: ['Listrik', 'Logam'],
     type: 'Listrik',
-    strong: ['Air', 'Angin'],
     base: 100,
     from: 55,
     role: 'Kurir tangguh: tembus tameng dan dukung tim',
     desc: 'Ojeklit berubah menjadi raptor berzirah motor. Kotak kirimannya menjadi perisai lengan, sementara ekor dinamonya menyimpan tenaga untuk menanjak.',
     evolutionChange: 'Kurir mungil → raptor berzirah motor dengan perisai kiriman dan ekor petir.',
-    move: 'Ojeksat beraksi',
   },
   {
     name: 'Gorenggong',
     types: ['Api', 'Logam'],
     type: 'Api',
-    strong: ['Daun', 'Logam'],
     base: 86,
     from: 56,
     role: 'Wajan ganda: tekanan Api dan tameng Logam',
     desc: 'Dua wajannya berdentang saat minyak siap. Ia mengubah gerobak kecil menjadi burung api bersayap lebar, dengan gagang wajan sebagai tanduk pelindung.',
     evolutionChange: 'Gerobak mungil → burung api bersayap dengan dua wajan tempur.',
-    move: 'Gorenggong beraksi',
   },
   {
     name: 'Ketupagung',
     types: ['Daun', 'Normal'],
     type: 'Daun',
-    strong: ['Air', 'Batu'],
     base: 93,
     from: 57,
     role: 'Janur penjaga: pulihkan dan lindungi',
     desc: 'Ketupetak dewasa meninggalkan bentuk kotak kecilnya dan menjadi penjaga tinggi berzirah anyaman, mahkota janur, dan empat lengan daun.',
     evolutionChange: 'Ketupat kecil → penjaga tinggi berzirah dengan empat lengan janur.',
-    move: 'Ketupagung beraksi',
   },
   {
     name: 'Serutara',
     types: ['Air', 'Logam'],
     type: 'Air',
-    strong: ['Api', 'Batu'],
     base: 95,
     from: 58,
     role: 'Puncak es: basahi lalu kendalikan arus',
     desc: 'Serutuk dewasa berubah menjadi binatang gerobak salju: gunung es tumbuh menjadi cangkang dan rodanya menjadi kuku es.',
     evolutionChange: 'Gerobak es mungil → binatang gunung es dengan kuku beku.',
-    move: 'Serutara beraksi',
   },
   {
     name: 'Bungkaraya',
     types: ['Api', 'Daun'],
     type: 'Api',
-    strong: ['Daun', 'Logam'],
     base: 91,
     from: 60,
     role: 'Bekal besar: pulihkan tim dan lawan balik',
     desc: 'Bungkara dewasa membungkus tubuhnya dalam kerah daun pisang berlapis, bahu bara, dan perisai nasi kukus sebesar pintu.',
     evolutionChange: 'Nasi bungkus kecil → penjaga dapur berbahu bara dengan perisai kukus.',
-    move: 'Bungkaraya beraksi',
   },
   {
     name: 'Atmara',
     types: ['Logam', 'Listrik'],
     type: 'Logam',
-    strong: ['Listrik', 'Batu', 'Normal'],
     base: 90,
     from: 61,
     role: 'Brankas berjalan: tahan pukulan dan ganggu lawan',
     desc: 'Atmimi dewasa membuka tubuh ATM mungilnya menjadi brankas tegak dengan dua slot, keypad bercahaya, pita struk, dan lengan baja.',
     evolutionChange: 'ATM berkaki pendek → brankas penjaga dengan keypad dan lengan baja.',
-    move: 'Atmara beraksi',
   },
   {
     name: 'Tahuraya',
     types: ['Daun', 'Api'],
     type: 'Daun',
-    strong: ['Air', 'Batu'],
     base: 87,
     from: 65,
     role: 'Penjaga tahu: serap tenaga dan lindungi tim',
     desc: 'Tahulet dewasa menjadi penjaga berzirah tahu goreng. Tauge tumbuh menjadi jubah, sementara perisai renyahnya melindungi teman satu gang.',
     evolutionChange: 'Kubus tahu kecil → penjaga berzirah renyah dengan jubah tauge dan perisai.',
-    move: 'Tahuraya beraksi',
   },
   {
     name: 'Cirenggulung',
     types: ['Batu', 'Normal'],
     type: 'Batu',
-    strong: ['Api', 'Listrik'],
     base: 100,
     from: 66,
     role: 'Aci berlapis: pantulkan dan dobrak',
     desc: 'Cirengkel dewasa menggulung lapisan aci menjadi prajurit spiral dengan perisai bundar dan roda gulung, bukan sekadar bola yang lebih besar.',
     evolutionChange: 'Bola aci kenyal → prajurit spiral berperisai.',
-    move: 'Cirenggulung beraksi',
   },
   {
     name: 'Tokenyala',
     types: ['Listrik', 'Normal'],
     type: 'Listrik',
-    strong: ['Air', 'Angin'],
     base: 96,
     from: 67,
     role: 'Gardu berjalan: kendalikan ritme tim',
     desc: 'Tokenyit dewasa menjadi gardu listrik berjalan dengan kumparan tembaga, lengan kabel, satu layar wajah, dan tangan yang menyalurkan daya ke rumah warga.',
     evolutionChange: 'Meter prabayar kecil → gardu tegap dengan kumparan dan lengan kabel.',
-    move: 'Tokenyala beraksi',
   },
   {
     name: 'Rantangga',
     types: ['Logam', 'Daun'],
     type: 'Logam',
-    strong: ['Listrik', 'Batu', 'Normal'],
     base: 87,
     from: 69,
     role: 'Rantang keluarga: pulihkan dan lindungi',
     desc: 'Rantangkang bangkit menjadi penjaga tegak bertubuh rantang empat susun. Tutupnya menjadi pelindung bahu dan tinju bajanya menjaga bekal satu gang.',
     evolutionChange: 'Kura-kura rantang kecil → penjaga tegak empat susun dengan tinju baja.',
-    move: 'Rantangga beraksi',
+  },
+  // 80-94 (2026-10-14): the Angin families, the chapter-five natives and the event creatures.
+  // Their art is not delivered yet: docs/art-requests/new-species-2026-10-14.md.
+  {
+    name: 'Bebeangin',
+    types: ['Angin'],
+    type: 'Angin',
+    base: 57,
+    role: 'Layangan aduan: tembus pelindung & putuskan jurus lawan',
+    desc: 'Layangan bebean berbentuk ikan dari pantai Sanur. Siripnya bergetar setiap kali angin musim timur datang.',
+    wildWeight: 6,
+  },
+  {
+    name: 'Layangawang',
+    types: ['Angin'],
+    type: 'Angin',
+    base: 88,
+    from: 80,
+    role: 'Janggan penguasa langit: tebasan ekor panjang yang menembus tameng',
+    desc: 'Bebeangin dewasa menjadi janggan, layangan raksasa Bali berkepala burung dengan ekor kain ratusan meter. Ia melayang di awang-awang sambil mengawasi pantai.',
+    evolutionChange: 'Layangan ikan kecil → janggan berkepala burung dengan ekor kain panjang.',
+  },
+  {
+    name: 'Satelawar',
+    types: ['Angin', 'Listrik'],
+    type: 'Angin',
+    base: 92,
+    from: 10,
+    role: 'Parabola terbang: pantulkan serangan, tidurkan & kuras lawan',
+    desc: 'Wifilawar dewasa yang menumbuhkan sayap parabola. Ia menangkap sinyal dari langit dan memantulkan serangan seperti piringan di atap rumah.',
+    evolutionChange: 'Kelelawar awan → kelelawar bersayap parabola dengan antena di telinga.',
+  },
+  {
+    name: 'Kincilik',
+    types: ['Angin', 'Logam'],
+    type: 'Angin',
+    base: 60,
+    role: 'Turbin kecil: tiupan kencang & tameng rotor',
+    desc: 'Kincir angin mungil dari bengkel kampung. Baling-balingnya berputar kencang, cukup untuk menyalakan satu bohlam di pos ronda.',
+    wildWeight: 8,
+  },
+  {
+    name: 'Kincirangin',
+    types: ['Angin', 'Logam'],
+    type: 'Angin',
+    base: 94,
+    from: 83,
+    role: 'Ladang angin berjalan: tiupan berat & arus listrik',
+    desc: 'Kincilik dewasa menjulang seperti turbin ladang angin Sidrap di bukit Sulawesi Selatan. Tiga bilahnya mengubah angin menjadi listrik untuk desa di bawahnya.',
+    evolutionChange: 'Kincir mungil → turbin tinggi tiga bilah dengan kaki menara baja.',
+  },
+  {
+    name: 'Elangkasa',
+    types: ['Angin', 'Batu'],
+    type: 'Angin',
+    base: 108,
+    legendary: true,
+    chapter: 5,
+    role: 'Penjaga langit: tembus pertahanan dan lindungi tim',
+    desc: 'Legenda elang jawa raksasa penjaga tebing di Seberang. Bulu sayapnya sekeras batu karang; satu kepakan mengusir badai dari perahu nelayan. Hanya satu per perjalanan.',
+  },
+  {
+    name: 'Stupik',
+    types: ['Batu'],
+    type: 'Batu',
+    base: 63,
+    chapter: 5,
+    role: 'Penjaga candi kecil: tameng stupa dan lemparan batu',
+    desc: 'Stupa batu mungil berlubang-lubang yang terbangun dari candi berlumut. Di dalam rongganya, arca kecil mengintip pengunjung yang berisik.',
+  },
+  {
+    name: 'Arcaraksa',
+    types: ['Batu', 'Logam'],
+    type: 'Batu',
+    base: 86,
+    from: 86,
+    chapter: 5,
+    role: 'Dwarapala: tahan pukulan dan balas dengan gada berat',
+    desc: 'Stupik tumbuh menjadi dwarapala, arca penjaga gerbang candi yang memegang gada perunggu. Matanya melotot, tetapi ia selalu memberi jalan kepada peziarah.',
+    evolutionChange: 'Stupa kecil → arca penjaga gerbang berbadan batu dengan gada perunggu.',
+  },
+  {
+    name: 'Candigdaya',
+    types: ['Batu', 'Logam'],
+    type: 'Batu',
+    base: 104,
+    from: 87,
+    chapter: 5,
+    role: 'Candi berjalan: tameng terkuat dan gempa yang menembus pertahanan',
+    desc: 'Arcaraksa dewasa menjadi candi berjalan. Panel relief di tubuhnya bercerita tentang kampung yang pernah ia lindungi, dan stupa di bahunya berdentang seperti genta saat kabut Dieng turun.',
+    evolutionChange: 'Arca penjaga → candi berjalan berlapis panel relief dengan stupa di bahu.',
+  },
+  {
+    name: 'Komodobrak',
+    types: ['Batu', 'Api'],
+    type: 'Batu',
+    base: 82,
+    chapter: 5,
+    role: 'Pendobrak sabana: racun, bara dan hantaman ekor',
+    desc: 'Komodo besar dari sabana timur. Ekornya bisa mendobrak pagar bambu, tetapi ia lebih suka berjemur di batu hangat sampai matahari tinggi.',
+  },
+  {
+    name: 'Enggangin',
+    types: ['Angin', 'Daun'],
+    type: 'Angin',
+    base: 80,
+    chapter: 5,
+    role: 'Penyebar biji: serap HP dan kepakan kencang',
+    desc: 'Rangkong Kalimantan bercula jingga. Kepakan sayapnya terdengar seperti angin kencang di atas kanopi, dan ia menanam hutan dengan menyebar biji ke mana-mana.',
+  },
+  {
+    name: 'Orangutanam',
+    types: ['Daun', 'Normal'],
+    type: 'Daun',
+    base: 84,
+    chapter: 5,
+    role: 'Penanam rimba: serap HP dan pulihkan tim',
+    desc: 'Orangutan berambut jingga yang membawa kantong bibit pohon. Setiap dahan yang patah di Rimba Ulin ia ganti dengan tunas baru.',
+  },
+  {
+    name: 'Ogohgoro',
+    types: ['Api', 'Normal'],
+    type: 'Api',
+    base: 112,
+    event: 'nyepi',
+    eventBoss: true,
+    role: 'Bos pawai: bakar lawan dan kunci jurusnya',
+    desc: 'Ogoh-ogoh raksasa yang terbangun pada malam Pengerupukan sebelum Nyepi. Diarak keliling banjar dengan obor dan baleganjur, ia menantang siapa pun yang belum pulang.',
+  },
+  {
+    name: 'Barongcuan',
+    types: ['Api', 'Logam'],
+    type: 'Api',
+    base: 64,
+    event: 'imlek',
+    role: 'Penari Imlek: bara kecil dan bagi-bagi hoki untuk tim',
+    desc: 'Barongsai merah-emas yang menari dari toko ke toko saat Imlek. Ia melompati tonggak demi angpao dan meninggalkan jejak petasan yang wangi.',
+  },
+  {
+    name: 'Ondelgondel',
+    types: ['Normal', 'Daun'],
+    type: 'Normal',
+    base: 70,
+    event: 'jakarta',
+    role: 'Raksasa Betawi: goyang meriah, serap HP dan percepat tim',
+    desc: 'Ondel-ondel Betawi setinggi pagar yang berjalan bergoyang mengikuti tanjidor. Mahkota kembang kelapanya menebar daun segar di jalan kampung.',
   },
 ];
 // Each family evolves within about a dozen levels of where it is first found.
@@ -853,6 +839,7 @@ const EVOLUTIONS = {
   4: { to: 52, level: 18 },
   5: { to: 16, level: 16 },
   6: { to: 53, level: 26 },
+  10: { to: 82, level: 48 },
   11: { to: 17, level: 18 },
   20: { to: 54, level: 22 },
   21: { to: 30, level: 18 },
@@ -875,77 +862,69 @@ const EVOLUTIONS = {
   66: { to: 77, level: 22 },
   67: { to: 78, level: 30 },
   69: { to: 79, level: 42 },
+  80: { to: 81, level: 18 },
+  83: { to: 84, level: 36 },
+  // The candi guardians are the one three-stage family (chapter five, Kawah Dieng).
+  86: { to: 87, level: 40 },
+  87: { to: 88, level: 58 },
 };
-// These entries share one object with another entry, so a change to one is a change to both.
-SPECIES[12].strong = SPECIES[0].strong;
-SPECIES[13].strong = SPECIES[1].strong;
-SPECIES[14].strong = SPECIES[2].strong;
-SPECIES[15].strong = SPECIES[3].strong;
-SPECIES[4].strong = ELEMENTS.Angin;
-SPECIES[10].strong = ELEMENTS.Angin;
-SPECIES[26].strong = ELEMENTS.Angin;
-SPECIES[52].strong = ELEMENTS.Angin;
-SPECIES[16].strong = SPECIES[5].strong;
-SPECIES[8].strong = ELEMENTS.Logam;
-SPECIES[24].strong = ELEMENTS.Logam;
-SPECIES[39].strong = ELEMENTS.Logam;
-SPECIES[47].strong = ELEMENTS.Logam;
-SPECIES[61].strong = ELEMENTS.Logam;
-SPECIES[64].strong = ELEMENTS.Logam;
-SPECIES[69].strong = ELEMENTS.Logam;
-SPECIES[75].strong = ELEMENTS.Logam;
-SPECIES[79].strong = ELEMENTS.Logam;
-SPECIES[9].strong = ELEMENTS.Api;
-SPECIES[27].strong = ELEMENTS.Api;
-SPECIES[36].strong = ELEMENTS.Api;
-SPECIES[37].strong = ELEMENTS.Api;
-SPECIES[38].strong = ELEMENTS.Api;
-SPECIES[42].strong = ELEMENTS.Api;
-SPECIES[43].strong = ELEMENTS.Api;
-SPECIES[48].strong = ELEMENTS.Api;
-SPECIES[49].strong = ELEMENTS.Api;
-SPECIES[56].strong = ELEMENTS.Api;
-SPECIES[60].strong = ELEMENTS.Api;
-SPECIES[63].strong = ELEMENTS.Api;
-SPECIES[71].strong = ELEMENTS.Api;
-SPECIES[74].strong = ELEMENTS.Api;
-SPECIES[11].strong = ELEMENTS.Batu;
-SPECIES[50].strong = ELEMENTS.Batu;
-SPECIES[51].strong = ELEMENTS.Batu;
-SPECIES[53].strong = ELEMENTS.Batu;
-SPECIES[66].strong = ELEMENTS.Batu;
-SPECIES[77].strong = ELEMENTS.Batu;
-SPECIES[18].strong = ELEMENTS.Listrik;
-SPECIES[28].strong = ELEMENTS.Listrik;
-SPECIES[33].strong = ELEMENTS.Listrik;
-SPECIES[34].strong = ELEMENTS.Listrik;
-SPECIES[44].strong = ELEMENTS.Listrik;
-SPECIES[45].strong = ELEMENTS.Listrik;
-SPECIES[55].strong = ELEMENTS.Listrik;
-SPECIES[67].strong = ELEMENTS.Listrik;
-SPECIES[70].strong = ELEMENTS.Listrik;
-SPECIES[78].strong = ELEMENTS.Listrik;
-SPECIES[19].strong = ELEMENTS.Air;
-SPECIES[22].strong = ELEMENTS.Air;
-SPECIES[25].strong = ELEMENTS.Air;
-SPECIES[31].strong = ELEMENTS.Air;
-SPECIES[32].strong = ELEMENTS.Air;
-SPECIES[40].strong = ELEMENTS.Air;
-SPECIES[41].strong = ELEMENTS.Air;
-SPECIES[58].strong = ELEMENTS.Air;
-SPECIES[62].strong = ELEMENTS.Air;
-SPECIES[68].strong = ELEMENTS.Air;
-SPECIES[73].strong = ELEMENTS.Air;
-SPECIES[20].strong = ELEMENTS.Normal;
-SPECIES[21].strong = ELEMENTS.Normal;
-SPECIES[30].strong = ELEMENTS.Normal;
-SPECIES[35].strong = ELEMENTS.Normal;
-SPECIES[46].strong = ELEMENTS.Normal;
-SPECIES[54].strong = ELEMENTS.Normal;
-SPECIES[59].strong = ELEMENTS.Normal;
-SPECIES[23].strong = ELEMENTS.Daun;
-SPECIES[29].strong = ELEMENTS.Daun;
-SPECIES[57].strong = ELEMENTS.Daun;
-SPECIES[65].strong = ELEMENTS.Daun;
-SPECIES[72].strong = ELEMENTS.Daun;
-SPECIES[76].strong = ELEMENTS.Daun;
+// The first form of a species' family: the kit every stage builds on.
+function speciesRoot(id) {
+  let root = id;
+  while (SPECIES[root]?.from !== undefined) root = SPECIES[root].from;
+  return root;
+}
+// Defined now, placed later. Chapter five ("Seberang") is not built yet: these species
+// are complete (kits, dex text, art briefs) but no habitat, trainer or legend point
+// offers them. Intended homes, for the chapter-five agent:
+const CHAPTER5_SPECIES = {
+  85: 'Seberang: tebing elang, legenda (satu per perjalanan)',
+  86: 'Kawah Dieng',
+  87: 'Kawah Dieng',
+  88: 'Kawah Dieng',
+  89: 'Teluk Pinisi',
+  90: 'Rimba Ulin',
+  91: 'Rimba Ulin',
+};
+// Creatures for calendar events (Nyepi, Imlek, HUT Jakarta on 22 June). `boss` is fielded
+// by the event's boss trainer and is never offered in the wild; `guests` are the event's
+// catchable visitors. Nothing schedules them yet: that is the events agent's part.
+const EVENT_SPECIES = {
+  nyepi: { boss: 92, guests: [] },
+  imlek: { boss: null, guests: [93] },
+  jakarta: { boss: null, guests: [94] },
+};
+// A species the current game can actually offer (not waiting for its calendar event).
+// Chapter five's species live in Seberang (story/seberang.js) since that chapter exists.
+const speciesOffered = id => !SPECIES[id].event;
+// Light combat traits. Damage comes from move power and level, so without these a species
+// differs only in HP, types and kit. Each one leans a little, never more than 10%:
+// - attack follows the body: lighter than its stage's average base HP hits up to 6% harder,
+//   heavier hits up to 6% softer (the extra HP already pays for itself);
+// - the concept adds a lean: strikers (heavy blows, recoil, risk) +4% attack and take 3%
+//   more; guards (shells, shields, sturdy bodies) take 5% less and hit 2% softer.
+// Legends, the rare bird and event bosses stay neutral: their aura or HP is their edge.
+// The averages are measured on the first 80 species, the roster chapters one to four were
+// balanced with, so adding species never shifts the traits of the existing ones.
+const STRIKER_SPECIES = [6, 8, 11, 17, 27, 36, 37, 42, 43, 49, 51, 56, 63, 66, 71, 77, 89];
+const GUARD_SPECIES = [3, 15, 23, 24, 30, 35, 39, 46, 53, 58, 64, 68, 69, 75, 79, 86, 87, 88];
+const TRAIT_REFERENCE_SPECIES = 80;
+const SPECIES_TRAITS = (() => {
+  const neutral = s => s.legendary || s.rarity === 'rare' || s.eventBoss,
+    stage = s => (s.from === undefined ? 'basic' : 'evolved'),
+    bases = { basic: [], evolved: [] };
+  SPECIES.forEach((s, id) => id < TRAIT_REFERENCE_SPECIES && !neutral(s) && bases[stage(s)].push(s.base));
+  const average = list => list.reduce((n, b) => n + b, 0) / list.length,
+    centre = { basic: average(bases.basic), evolved: average(bases.evolved) },
+    spread = { basic: 6, evolved: 10 },
+    clamp = n => Math.max(-1, Math.min(1, n)),
+    round = n => Math.round(n * 100) / 100;
+  return SPECIES.map((s, id) => {
+    if (neutral(s)) return { attack: 1, defence: 1 };
+    let attack = 1 + clamp((centre[stage(s)] - s.base) / spread[stage(s)]) * 0.06,
+      defence = 1;
+    if (STRIKER_SPECIES.includes(id)) ((attack += 0.04), (defence -= 0.03));
+    if (GUARD_SPECIES.includes(id)) ((attack -= 0.02), (defence += 0.05));
+    return { attack: round(attack), defence: round(defence) };
+  });
+})();

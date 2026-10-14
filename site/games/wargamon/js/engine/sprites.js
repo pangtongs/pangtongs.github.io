@@ -1,14 +1,8 @@
-/* Character, follower and facade art: loading sheets and cutting them into sprites. */
-for (const name of ['img/maps/interior/interiors.webp']) {
-  const im = new Image();
-  im.src = name;
-  images[name] = im;
-}
-for (const name of ['img/maps/interior/clinic.webp']) {
-  const im = new Image();
-  im.src = name;
-  images[name] = im;
-}
+/* Character, follower and facade art: loading sheets and cutting them into sprites.
+   Sheets are registered here without a download. The loading gate requests a sheet
+   when one of its people is on screen, and the rest follow at low priority after the
+   first painted frame (preloadBackgroundArt in loading.js). */
+for (const name of ['img/maps/interior/interiors.webp', 'img/maps/interior/clinic.webp']) deferMapImage(name);
 // Portraits share one transparent, feet-anchored rendering path.
 const castCells = new Map();
 function prepareCast(im, sheet) {
@@ -60,31 +54,11 @@ function prepareCast(im, sheet) {
   const im = new Image();
   images[name] = im;
   im.onload = () => prepareCast(im, i);
-  im.src = name;
 });
 function prepareServices() {
   const im = images['img/characters/trainers.webp'];
   if (!im?.naturalWidth || !document.createElement) return;
-  for (let id = 0; id < 8; id++) {
-    const c = document.createElement('canvas');
-    c.width = im.naturalWidth / 4;
-    c.height = im.naturalHeight / 2;
-    c.getContext('2d').drawImage(
-      im,
-      (id % 4) * c.width,
-      Math.floor(id / 4) * c.height,
-      c.width,
-      c.height,
-      0,
-      0,
-      c.width,
-      c.height,
-    );
-    castCells.set(id, { canvas: c, bounds: isolateSprite(c) });
-    const style = document.createElement('style');
-    style.textContent = `.trainer-sprite.cast${id}{background-image:url(${c.toDataURL()});background-size:contain;background-position:center;background-repeat:no-repeat}`;
-    document.head.appendChild(style);
-  }
+  registerCastSheet(im, 4, 2, 0);
 }
 if (images['img/characters/trainers.webp'].complete) prepareServices();
 else images['img/characters/trainers.webp'].addEventListener?.('load', prepareServices);
@@ -218,7 +192,7 @@ unifiedSheet.onload = () => {
     .join('');
   document.head.appendChild(style);
 };
-unifiedSheet.src = 'img/characters/characters-unified.webp';
+images['img/characters/characters-unified.webp'] = unifiedSheet;
 /* Measured cells; edge-connected matte removal preserves eyes and pale body details. */
 registerFollowerSheet(11, followerAtlasPath(11), balanceFollowers => {
   const ys = [0, 247, 490, 685, 913, 1140, 1382, 1659];
@@ -282,5 +256,4 @@ serviceSheet.onload = () => {
     document.head.appendChild(style);
   }
 };
-serviceSheet.src = 'img/characters/npcs-modern.webp';
 images['img/characters/npcs-modern.webp'] = serviceSheet;

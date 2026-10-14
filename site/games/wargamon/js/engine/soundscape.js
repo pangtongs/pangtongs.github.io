@@ -137,7 +137,14 @@ function stopMusic() {
   musicVoices.clear();
 }
 function scheduleMusic() {
-  if (!audioPreferences.music || audioPreferences.musicVolume <= 0 || !audioUnlocked || document.hidden) {
+  // Nyepi, the day of silence (calendar.js), has no music.
+  if (
+    !audioPreferences.music ||
+    audioPreferences.musicVolume <= 0 ||
+    !audioUnlocked ||
+    document.hidden ||
+    (typeof nyepiSilent === 'function' && nyepiSilent())
+  ) {
     stopMusic();
     return;
   }
@@ -147,7 +154,14 @@ function scheduleMusic() {
     ? 'battle'
     : state.room
       ? 'inside'
-      : [1, 2, 7, 11, 12, 13].includes(state.region)
+      : [
+            REGION.PADANG_OJEK,
+            REGION.HUTAN,
+            REGION.PUNCAK,
+            REGION.WADUK,
+            REGION.KALDERA,
+            REGION.OBSERVATORIUM,
+          ].includes(state.region)
         ? 'route'
         : 'town';
   if (theme !== musicTheme) {

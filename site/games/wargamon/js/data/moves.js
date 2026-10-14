@@ -4,7 +4,7 @@ const KITS = [
     { name: 'Cakar Rawit', power: 18, type: 'Normal' },
     {
       name: 'Sambal Meledak',
-      power: 19,
+      power: 22,
       type: 'Api',
       status: 'burn',
       chance: 0.35,
@@ -14,10 +14,10 @@ const KITS = [
     },
     {
       name: 'Minyak Panas',
-      power: 8,
+      power: 28,
       type: 'Api',
       status: 'burn',
-      chance: 1,
+      chance: 0.5,
       cooldown: 3,
       accuracy: 1,
       tempoCost: 2,
@@ -35,7 +35,7 @@ const KITS = [
       cooldown: 3,
       tempoCost: 2,
     },
-    { name: 'Serap Embun', power: 16, type: 'Daun', drain: 0.65, cooldown: 1, accuracy: 1, tempoCost: 0 },
+    { name: 'Serap Embun', power: 20, type: 'Daun', drain: 0.5, cooldown: 1, accuracy: 1, tempoCost: 0 },
   ],
   [
     { name: 'Capit Batu', power: 22, type: 'Batu' },
@@ -502,7 +502,7 @@ const KITS = [
     {
       name: 'Tanduk Terobos',
       type: 'Normal',
-      power: 18,
+      power: 28,
       pierce: true,
       cooldown: 3,
       accuracy: 0.92,
@@ -655,7 +655,7 @@ const KITS = [
     { name: 'Serap Bumbu', type: 'Daun', heal: 0.25, cooldown: 3, tempoCost: 1 },
   ],
   [
-    { name: 'Bentur Renyah', type: 'Batu', power: 27, tempoCost: 0 },
+    { name: 'Bentur Renyah', type: 'Batu', power: 22, tempoCost: 0 },
     { name: 'Pantul Aci', type: 'Normal', reflect: true, cooldown: 2, tempoCost: 1 },
     {
       name: 'Cireng Meletus',
@@ -683,10 +683,129 @@ const KITS = [
     { name: 'Rantang Tetangga', type: 'Normal', teamHeal: 0.3, cooldown: 4, tempoCost: 1 },
   ],
 ];
+// Kits of the species added on 2026-10-14 (stable IDs 80-94). Evolved forms share the kit
+// of their family's first form (speciesRoot) and add their own signature.
+Object.assign(KITS, {
+  // Bebeangin: a Sanur fighter kite. Glass-coated string cuts through shields.
+  80: [
+    { name: 'Tarik Ulur', type: 'Angin', power: 18, tempoCost: 0 },
+    {
+      name: 'Benang Gelasan',
+      type: 'Angin',
+      power: 24,
+      pierce: true,
+      cooldown: 2,
+      accuracy: 0.95,
+      tempoCost: 1,
+    },
+    { name: 'Sangkut Benang', type: 'Normal', power: 16, seal: true, cooldown: 3, tempoCost: 1 },
+  ],
+  // Kincilik: a workshop windmill.
+  83: [
+    { name: 'Baut Lepas', type: 'Logam', power: 18, tempoCost: 0 },
+    { name: 'Embusan Turbin', type: 'Angin', power: 25, cooldown: 2, accuracy: 0.95, tempoCost: 1 },
+    { name: 'Rem Rotor', type: 'Logam', shell: 0.6, cooldown: 3, tempoCost: 1 },
+  ],
+  // Elangkasa, the wind legend (chapter five).
+  85: [
+    { name: 'Cakar Tebing', type: 'Batu', power: 20, accuracy: 1, tempoCost: 0 },
+    { name: 'Kepak Prahara', type: 'Angin', power: 25, dispel: true, cooldown: 2, accuracy: 1, tempoCost: 1 },
+    {
+      name: 'Sayap Pelindung',
+      type: 'Angin',
+      power: 0,
+      teamWard: true,
+      cooldown: 3,
+      accuracy: 1,
+      tempoCost: 1,
+    },
+  ],
+  // Stupik, first of the candi guardians (chapter five).
+  86: [
+    { name: 'Ketuk Stupa', type: 'Batu', power: 20, tempoCost: 0 },
+    { name: 'Lempar Arca', type: 'Batu', power: 26, cooldown: 2, accuracy: 0.92, tempoCost: 1 },
+    { name: 'Pagar Stupa', type: 'Batu', shell: 0.65, cooldown: 3, tempoCost: 1 },
+  ],
+  // Komodobrak (chapter five).
+  89: [
+    { name: 'Ekor Gada', type: 'Batu', power: 22, tempoCost: 0 },
+    {
+      name: 'Liur Berbisa',
+      type: 'Normal',
+      power: 18,
+      status: 'poison',
+      chance: 0.7,
+      cooldown: 2,
+      accuracy: 0.95,
+      tempoCost: 1,
+    },
+    {
+      name: 'Terjang Sabana',
+      type: 'Api',
+      power: 28,
+      status: 'burn',
+      chance: 0.3,
+      recoil: 0.12,
+      cooldown: 3,
+      accuracy: 0.9,
+      tempoCost: 2,
+    },
+  ],
+  // Enggangin, the hornbill (chapter five).
+  90: [
+    { name: 'Patuk Cula', type: 'Normal', power: 18, tempoCost: 0 },
+    { name: 'Kepak Enggang', type: 'Angin', power: 25, cooldown: 2, accuracy: 0.95, tempoCost: 1 },
+    { name: 'Sebar Biji Ulin', type: 'Daun', power: 18, drain: 0.3, cooldown: 2, accuracy: 1, tempoCost: 1 },
+  ],
+  // Orangutanam (chapter five).
+  91: [
+    { name: 'Ayun Akar', type: 'Daun', power: 18, drain: 0.15, tempoCost: 0 },
+    { name: 'Lempar Durian', type: 'Normal', power: 26, cooldown: 2, accuracy: 0.9, tempoCost: 1 },
+    { name: 'Tanam Kembali', type: 'Daun', teamHeal: 0.25, cooldown: 4, tempoCost: 1 },
+  ],
+  // Ogohgoro, the Nyepi parade boss (event).
+  92: [
+    { name: 'Hentak Bambu', type: 'Normal', power: 20, accuracy: 1, tempoCost: 0 },
+    {
+      name: 'Obor Pawai',
+      type: 'Api',
+      power: 22,
+      status: 'burn',
+      chance: 0.5,
+      cooldown: 2,
+      accuracy: 0.95,
+      tempoCost: 1,
+    },
+    { name: 'Putaran Perempatan', type: 'Normal', power: 16, seal: true, cooldown: 3, tempoCost: 1 },
+  ],
+  // Barongcuan, the Imlek lion dancer (event).
+  93: [
+    { name: 'Petasan Kecil', type: 'Api', power: 17, status: 'burn', chance: 0.2, tempoCost: 0 },
+    { name: 'Lompat Tonggak', type: 'Normal', power: 25, cooldown: 2, accuracy: 0.92, tempoCost: 1 },
+    { name: 'Angpao Hoki', type: 'Logam', teamHeal: 0.2, cooldown: 3, tempoCost: 1 },
+  ],
+  // Ondelgondel, the Betawi giant (event).
+  94: [
+    { name: 'Goyang Ondel', type: 'Normal', power: 19, tempoCost: 0 },
+    {
+      name: 'Kembang Kelapa',
+      type: 'Daun',
+      power: 20,
+      drain: 0.25,
+      cooldown: 2,
+      accuracy: 0.95,
+      tempoCost: 1,
+    },
+    { name: 'Tanjidor Meriah', type: 'Normal', tailwind: true, cooldown: 3, tempoCost: 1 },
+  ],
+});
+// One move an evolved form adds to its family's kit. Signatures may hit up to 15% above
+// the curve every other move keeps (expected power, power × accuracy: free 23, free with
+// a cooldown 24, 1 Tempo 27, 2 Tempo 32; tests/combat-balance.cjs), never more.
 const SIGNATURES = {
   12: {
     name: 'Erupsi Sambal',
-    power: 22,
+    power: 32,
     type: 'Api',
     status: 'burn',
     chance: 0.6,
@@ -696,9 +815,9 @@ const SIGNATURES = {
   },
   13: {
     name: 'Rimba Penawar',
-    power: 15,
+    power: 24,
     type: 'Daun',
-    drain: 0.8,
+    drain: 0.5,
     cleanse: true,
     cooldown: 3,
     accuracy: 1,
@@ -725,7 +844,7 @@ const SIGNATURES = {
   },
   16: {
     name: 'Guntur Satu RT',
-    power: 24,
+    power: 30,
     type: 'Listrik',
     status: 'paralysis',
     chance: 0.75,
@@ -754,7 +873,7 @@ const SIGNATURES = {
   30: {
     name: 'Lompatan Gula Aren',
     type: 'Normal',
-    power: 39,
+    power: 37,
     shell: 0.3,
     cooldown: 2,
     accuracy: 0.82,
@@ -773,7 +892,7 @@ const SIGNATURES = {
   32: {
     name: 'Suar Bahari',
     type: 'Listrik',
-    power: 18,
+    power: 28,
     status: 'paralysis',
     chance: 0.35,
     cooldown: 3,
@@ -811,7 +930,7 @@ const SIGNATURES = {
   43: {
     name: 'Tanduk Lava',
     type: 'Api',
-    power: 22,
+    power: 32,
     recoil: 0.18,
     cooldown: 3,
     accuracy: 0.82,
@@ -829,7 +948,7 @@ const SIGNATURES = {
   47: {
     name: 'Sinyal Pulang',
     type: 'Angin',
-    power: 25,
+    power: 30,
     pierce: true,
     cooldown: 3,
     accuracy: 0.92,
@@ -865,7 +984,7 @@ const SIGNATURES = {
   53: {
     name: 'Gerobak Balik',
     type: 'Normal',
-    power: 45,
+    power: 44,
     pierce: true,
     cooldown: 3,
     accuracy: 0.82,
@@ -883,7 +1002,7 @@ const SIGNATURES = {
   70: {
     name: 'Kiriman Prioritas',
     type: 'Listrik',
-    power: 48,
+    power: 33,
     pierce: true,
     cooldown: 3,
     tempoCost: 1,
@@ -941,7 +1060,7 @@ const SIGNATURES = {
   77: {
     name: 'Gulungan Renyah',
     type: 'Batu',
-    power: 46,
+    power: 34,
     pierce: true,
     recoil: 0.1,
     cooldown: 3,
@@ -951,13 +1070,80 @@ const SIGNATURES = {
   78: {
     name: 'Aliran Sekontrakan',
     type: 'Listrik',
-    power: 36,
+    power: 31,
     dispel: true,
     cooldown: 2,
     tempoCost: 1,
     accuracy: 1,
   },
   79: { name: 'Bekal Empat Susun', type: 'Normal', teamHeal: 0.4, cooldown: 4, tempoCost: 1, accuracy: 1 },
+  81: {
+    name: 'Sabetan Janggan',
+    type: 'Angin',
+    power: 34,
+    pierce: true,
+    cooldown: 3,
+    accuracy: 0.92,
+    tempoCost: 2,
+  },
+  82: {
+    name: 'Pantulan Parabola',
+    type: 'Listrik',
+    power: 24,
+    reflect: true,
+    cooldown: 3,
+    accuracy: 1,
+    tempoCost: 1,
+  },
+  84: {
+    name: 'Tenaga Bayu',
+    type: 'Listrik',
+    power: 30,
+    status: 'paralysis',
+    chance: 0.35,
+    cooldown: 3,
+    accuracy: 0.95,
+    tempoCost: 2,
+  },
+  85: {
+    name: 'Hujaman Rajawali',
+    type: 'Angin',
+    power: 36,
+    pierce: true,
+    cooldown: 3,
+    accuracy: 0.9,
+    tempoCost: 2,
+  },
+  87: {
+    name: 'Gada Dwarapala',
+    type: 'Batu',
+    power: 38,
+    pierce: true,
+    cooldown: 3,
+    accuracy: 0.85,
+    tempoCost: 2,
+  },
+  // The third stage replaces the second stage's signature with its own.
+  88: {
+    name: 'Gempa Mandala',
+    type: 'Batu',
+    power: 40,
+    pierce: true,
+    recoil: 0.1,
+    cooldown: 3,
+    accuracy: 0.9,
+    tempoCost: 2,
+  },
+  92: {
+    name: 'Bara Pengerupukan',
+    type: 'Api',
+    power: 36,
+    status: 'burn',
+    chance: 0.5,
+    cooldown: 3,
+    accuracy: 0.9,
+    tempoCost: 2,
+  },
 };
 const TUTOR_MOVES = {
   ember: {
@@ -992,7 +1178,113 @@ const TUTOR_MOVES = {
     accuracy: 1,
     tempoCost: 2,
   },
+  // Moves picked up on the road: the tutors offer each one once its region has been reached.
+  tide: {
+    name: 'Ombak Pasang',
+    type: 'Air',
+    power: 24,
+    wetBonus: true,
+    cooldown: 2,
+    accuracy: 0.95,
+    tempoCost: 1,
+    region: 6,
+  },
+  net: {
+    name: 'Jaring Nelayan',
+    type: 'Normal',
+    power: 14,
+    seal: true,
+    cooldown: 3,
+    accuracy: 0.95,
+    tempoCost: 1,
+    region: 6,
+  },
+  wrench: {
+    name: 'Kunci Inggris',
+    type: 'Logam',
+    power: 26,
+    pierce: true,
+    cooldown: 2,
+    accuracy: 0.95,
+    tempoCost: 1,
+    region: 10,
+  },
+  dew: {
+    name: 'Embun Waduk',
+    type: 'Daun',
+    power: 0,
+    teamHeal: 0.2,
+    cooldown: 4,
+    accuracy: 1,
+    tempoCost: 1,
+    region: 11,
+  },
+  whistle: {
+    name: 'Peluit Kondektur',
+    type: 'Normal',
+    power: 12,
+    interrupt: true,
+    cooldown: 4,
+    accuracy: 0.9,
+    tempoCost: 1,
+    region: 8,
+  },
+  tower: {
+    name: 'Sambaran Menara',
+    type: 'Listrik',
+    power: 26,
+    status: 'paralysis',
+    chance: 0.3,
+    cooldown: 2,
+    accuracy: 0.9,
+    tempoCost: 1,
+    region: 7,
+  },
+  valley: {
+    name: 'Angin Lembah',
+    type: 'Angin',
+    power: 24,
+    cooldown: 2,
+    accuracy: 1,
+    tempoCost: 1,
+    region: 7,
+  },
+  sulfur: {
+    name: 'Semburan Belerang',
+    type: 'Api',
+    power: 22,
+    status: 'poison',
+    chance: 0.5,
+    cooldown: 2,
+    accuracy: 0.95,
+    tempoCost: 1,
+    region: 12,
+  },
+  gravel: {
+    name: 'Longsoran Kerikil',
+    type: 'Batu',
+    power: 30,
+    cooldown: 3,
+    accuracy: 0.9,
+    tempoCost: 2,
+    region: 12,
+  },
+  lens: {
+    name: 'Pecah Lensa',
+    type: 'Logam',
+    power: 20,
+    dispel: true,
+    cooldown: 3,
+    accuracy: 1,
+    tempoCost: 1,
+    region: 13,
+  },
 };
+// The tutor's list: the first six always, the road moves once their region is reached.
+const tutorOffers = () =>
+  Object.keys(TUTOR_MOVES).filter(
+    k => TUTOR_MOVES[k].region === undefined || (state.visited || []).includes(TUTOR_MOVES[k].region),
+  );
 // A fourth move learned at level 16 by creatures without a signature move. It covers a
 // type the kit lacks where it can, so growing up also widens the matchups.
 const LEVEL_MOVE_AT = 16;
@@ -1041,17 +1333,102 @@ const LEVEL_MOVES = {
   Angin: { name: 'Pusaran Debu', type: 'Angin', power: 26, cooldown: 2, accuracy: 0.95, tempoCost: 1 },
   Normal: { name: 'Gotong Royong', type: 'Normal', power: 24, cooldown: 2, accuracy: 1, tempoCost: 1 },
 };
-function levelMove(id, moves) {
+// A fifth move at level 36 for every creature, so growing keeps paying off after the
+// last evolutions. It is the mature form of the creature's element: the type its kit
+// still lacks if any, otherwise its own. Several are heavy (2 Tempo) and land after the foe.
+const LATE_MOVE_AT = 36;
+const LATE_MOVES = {
+  Api: {
+    name: 'Wajan Membara',
+    type: 'Api',
+    power: 32,
+    status: 'burn',
+    chance: 0.4,
+    cooldown: 3,
+    accuracy: 0.9,
+    tempoCost: 2,
+  },
+  Air: {
+    name: 'Banjir Kiriman',
+    type: 'Air',
+    power: 30,
+    status: 'soaked',
+    chance: 1,
+    cooldown: 3,
+    accuracy: 0.95,
+    tempoCost: 2,
+  },
+  Daun: {
+    name: 'Rimbun Beringin',
+    type: 'Daun',
+    power: 26,
+    drain: 0.4,
+    cooldown: 3,
+    accuracy: 1,
+    tempoCost: 1,
+  },
+  Batu: {
+    name: 'Runtuhan Cor',
+    type: 'Batu',
+    power: 34,
+    pierce: true,
+    recoil: 0.1,
+    cooldown: 3,
+    accuracy: 0.85,
+    tempoCost: 2,
+  },
+  Logam: {
+    name: 'Palang Pintu Besi',
+    type: 'Logam',
+    power: 24,
+    shell: 0.4,
+    cooldown: 3,
+    accuracy: 1,
+    tempoCost: 1,
+  },
+  Listrik: {
+    name: 'Gardu Meledak',
+    type: 'Listrik',
+    power: 32,
+    status: 'paralysis',
+    chance: 0.3,
+    cooldown: 3,
+    accuracy: 0.9,
+    tempoCost: 2,
+  },
+  Angin: {
+    name: 'Puting Beliung',
+    type: 'Angin',
+    power: 28,
+    tailwind: true,
+    cooldown: 3,
+    accuracy: 0.95,
+    tempoCost: 1,
+  },
+  Normal: {
+    name: 'Kerja Bakti',
+    type: 'Normal',
+    power: 0,
+    teamHeal: 0.25,
+    teamCleanse: true,
+    cooldown: 4,
+    accuracy: 1,
+    tempoCost: 2,
+  },
+};
+// The element a grown move takes: one the attacks do not cover yet, else a non-Normal one.
+function growthType(id, moves) {
   const types = SPECIES[id].types,
     covered = moves.filter(mv => mv.power).map(mv => mv.type);
-  return LEVEL_MOVES[types.find(t => !covered.includes(t)) ?? types.find(t => t !== 'Normal') ?? types[0]];
+  return types.find(t => !covered.includes(t)) ?? types.find(t => t !== 'Normal') ?? types[0];
 }
+const levelMove = (id, moves) => LEVEL_MOVES[growthType(id, moves)];
+const lateMove = (id, moves) => LATE_MOVES[growthType(id, moves)];
 const kit = (id, mon = null) => {
-  const moves = [...KITS[SPECIES[id].from ?? id], ...(SIGNATURES[id] ? [SIGNATURES[id]] : [])];
+  const moves = [...KITS[speciesRoot(id)], ...(SIGNATURES[id] ? [SIGNATURES[id]] : [])];
   if (moves.length < 4 && mon?.level >= LEVEL_MOVE_AT) moves.push(levelMove(id, moves));
+  if (mon?.level >= LATE_MOVE_AT) moves.push(lateMove(id, moves));
   if (mon?.learnedMoves && typeof TUTOR_MOVES !== 'undefined')
     return moves.map((mv, i) => TUTOR_MOVES[mon.learnedMoves[i]] || mv);
-  if (mon?.tutorMove && typeof TUTOR_MOVES !== 'undefined' && TUTOR_MOVES[mon.tutorMove])
-    return [...moves.slice(0, 3), TUTOR_MOVES[mon.tutorMove]];
   return moves;
 };

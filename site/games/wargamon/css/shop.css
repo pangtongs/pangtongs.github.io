@@ -1,0 +1,306 @@
+/* Shops, dining and the bazaar. */
+
+/* Dining */
+.special-dish-icon {
+  width: 48px;
+  height: 48px;
+  float: left;
+  margin-right: 10px;
+  image-rendering: pixelated;
+}
+.meal-icon {
+  width: 24px;
+  height: 24px;
+  vertical-align: middle;
+  margin-right: 5px;
+  image-rendering: pixelated;
+}
+[data-new='eat'] small {
+  display: block;
+  margin-top: 4px;
+  line-height: 1.35;
+}
+.fullness-pill {
+  display: inline-flex;
+  align-items: center;
+  width: max-content;
+  max-width: 100%;
+  padding: 2px 7px;
+  margin: 3px 4px 3px 0;
+  border: 1px solid #829d78;
+  border-radius: 10px;
+  color: #31583f;
+  background: #e9f4d4;
+  font-size: 0.78em;
+  font-weight: 700;
+}
+.fullness-pill.hungry {
+  border-color: #ba7c4c;
+  color: #81421f;
+  background: #fff0d4;
+}
+/* A food stall's meal on the spot, above the goods for sale. */
+.screen .modal .dine-card {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border: 2px solid #c99a4e;
+  border-radius: 8px;
+  background: #fbf0d6;
+}
+.screen .modal .dine-card :is(h3, p) {
+  margin: 0;
+}
+.meal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+}
+.meal-grid button {
+  min-height: 100px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* Shop cards */
+.shop-grid button,
+.decision-grid button {
+  width: 100%;
+  margin-top: 8px;
+}
+.shop-grid p {
+  font-size: 14px;
+}
+.shop-item-heading {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.shop-item-heading h3 {
+  margin: 0;
+}
+.shop-card p {
+  margin: 0;
+  min-height: 42px;
+}
+.wallet {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: #d6e5cc;
+}
+.decision-receipt {
+  border: 1px solid #a7bba0;
+  border-radius: 12px;
+  padding: 8px 16px;
+  background: #e1ecd8;
+  margin: 18px 0;
+}
+.decision-receipt > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  gap: 14px;
+  border-bottom: 1px solid #bdcdb7;
+}
+.decision-receipt > div:last-child {
+  border: 0;
+}
+.decision-receipt .item-icon {
+  width: 30px;
+  height: 30px;
+  font-size: 22px;
+  border-radius: 6px;
+}
+.quantity-picker {
+  display: flex;
+  gap: 10px;
+  margin: 12px 0 20px;
+}
+.quantity-picker button[aria-pressed='true'] {
+  background: #25594e;
+  color: white;
+}
+.shop-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.shop-card > button {
+  margin-top: auto;
+}
+.screen .modal :is(.target-grid, .shop-grid, .medicine-target-grid, .equipment-grid, .bag-medicine-grid) {
+  align-items: stretch;
+}
+.screen .modal :is(.target-card, .shop-card, .equipment-card, .medicine-target) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.screen .modal :is(.target-card, .shop-card, .equipment-card) > button:last-child {
+  margin-top: auto;
+}
+.screen .modal .shop-card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+.screen .modal .shop-card :is(h3, p) {
+  margin: 0;
+}
+.screen .modal .shop-card > button {
+  width: 100%;
+  margin-top: auto;
+}
+.shop-card button {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+}
+@media (max-width: 600px) {
+  .shop-grid > section {
+    padding: 10px;
+  }
+}
+@media (max-width: 640px) {
+  .shop-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 480px) {
+  .shop-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Minimarket */
+.mart-dialog-head {
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  border-radius: 12px;
+  background: #e4edd7;
+  border: 1px solid #9db49d;
+}
+.mart-dialog-head .mart-portrait {
+  display: block;
+  width: 82px;
+  height: 95px;
+  object-fit: contain;
+}
+.mart-dialog-head span {
+  display: block;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #476859;
+}
+.mart-dialog-head h2 {
+  margin: 3px 0 5px;
+}
+.mart-dialog-head p {
+  margin: 0;
+  line-height: 1.45;
+}
+.mart-actions {
+  display: flex;
+  gap: 10px;
+  margin: 12px 0 18px;
+}
+.mart-actions button {
+  min-height: 46px;
+  padding: 10px 18px;
+  border-radius: 8px;
+  background: #285a4e;
+  color: white;
+  font-weight: 700;
+  box-shadow: 0 3px #17372f;
+}
+.mart-price-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 14px 0;
+}
+.mart-price-grid > div {
+  padding: 18px;
+  border-radius: 10px;
+  background: #e5edd9;
+  border: 1px solid #a9b99e;
+}
+.mart-price-grid small,
+.mart-price-grid strong {
+  display: block;
+}
+.mart-price-grid strong {
+  font-size: 23px;
+  color: #24493d;
+  margin: 7px 0;
+}
+.mart-price-grid p {
+  margin: 0;
+}
+@media (max-width: 550px) {
+  .mart-dialog-head {
+    grid-template-columns: 64px minmax(0, 1fr);
+    gap: 10px;
+    padding: 10px;
+  }
+  .mart-dialog-head .mart-portrait {
+    width: 64px;
+    height: 78px;
+  }
+  .mart-price-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Bazaar */
+/* Pasar Subuh goods: Bu Nira's stall and the bag. */
+.bazaar-goods {
+  display: grid;
+  gap: 10px;
+}
+.bazaar-item {
+  display: grid;
+  grid-template-columns: 48px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f4efdf;
+}
+.bazaar-item p {
+  margin: 2px 0;
+}
+.goods-icon {
+  width: 48px;
+  height: 48px;
+  image-rendering: pixelated;
+}
+/* The visiting trader's good is shown by its emoji, in the same 48px column. */
+.guest-icon {
+  font-size: 34px;
+  line-height: 48px;
+  text-align: center;
+}
+@media (max-width: 520px) {
+  .bazaar-item {
+    grid-template-columns: 40px 1fr;
+  }
+  .bazaar-item .action {
+    grid-column: 1 / -1;
+  }
+}

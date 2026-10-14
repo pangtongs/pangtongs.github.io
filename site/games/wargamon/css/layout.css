@@ -1,0 +1,1338 @@
+/* Layout: page frame, console, dock, toolbar, fullscreen and touch controls. */
+
+/* Page grid and side panel */
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 26px;
+}
+.section-title {
+  font:
+    11px 'Space Mono',
+    monospace;
+  letter-spacing: 1px;
+  display: flex;
+  justify-content: space-between;
+  color: #a9bac4;
+}
+.section-title span:last-child:not(:first-child) {
+  color: #657f8f;
+}
+.badge {
+  width: 32px;
+  height: 34px;
+  border: 1px solid #5a6e7d;
+  background: #253b49;
+  display: grid;
+  place-items: center;
+  clip-path: polygon(0 0, 100% 0, 100% 80%, 50% 100%, 0 80%);
+  font:
+    13px 'Space Mono',
+    monospace;
+  color: #93aab7;
+  flex-shrink: 0;
+}
+.quest.done .badge {
+  background: var(--yellow);
+  color: #172830;
+}
+.quest strong {
+  font-size: 14px;
+  font-weight: 500;
+  display: block;
+}
+.quest small {
+  font-size: 12px;
+  color: #8da3b1;
+  display: block;
+  margin-top: 5px;
+}
+.quest.active strong {
+  color: var(--yellow);
+}
+.tip > span {
+  font:
+    10px 'Space Mono',
+    monospace;
+  color: var(--yellow);
+  letter-spacing: 1px;
+}
+.tip p {
+  font-size: 13px;
+  line-height: 1.55;
+  color: #bdcbd0;
+  margin: 7px 0 0;
+}
+.party .section-title button {
+  font-size: 11px;
+  letter-spacing: 0;
+  padding: 0;
+  color: var(--yellow);
+}
+.party-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-top: 14px;
+  padding: 10px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.party-row strong {
+  font-size: 14px;
+}
+.party-row small {
+  color: var(--muted);
+  font-size: 11px;
+  margin-left: 6px;
+}
+.party-info {
+  flex: 1;
+}
+/* Chapter expansion */
+.habitat {
+  margin-top: 18px;
+  background: #213c34;
+  border: 1px solid #55794d;
+  border-radius: 9px;
+  padding: 16px;
+}
+.habitat .section-title {
+  font-size: 10px;
+  color: #cce99c;
+}
+.habitat p {
+  font-size: 13px;
+  line-height: 1.6;
+  color: #d3dfcd;
+  margin: 10px 0;
+}
+.habitat button {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  background: #e7f587;
+  color: #193a2e;
+  font-weight: 700;
+  border-radius: 4px;
+  box-shadow: 0 3px 0 #8fa758;
+  font-size: 14px;
+}
+.habitat button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+.habitat small {
+  font-size: 11px;
+  color: #a9c49d;
+  display: block;
+  margin-top: 10px;
+  line-height: 1.5;
+}
+#journalGoal {
+  font-size: 13px;
+  line-height: 1.6;
+}
+.quest.active .badge {
+  border-color: #d5eb91;
+}
+.party-row .sprite {
+  width: 53px;
+  height: 53px;
+}
+.journal h2 {
+  letter-spacing: -0.8px;
+  margin: 22px 0 9px;
+  font-size: 22px;
+  margin-top: 15px;
+}
+.quest {
+  display: flex;
+  gap: 13px;
+  border-top: 1px solid var(--line);
+  align-items: center;
+  padding: 11px 0;
+}
+.tip {
+  margin-top: 13px;
+  border-radius: 6px;
+  background: #243943;
+  padding: 10px;
+}
+.section-title button {
+  font-size: 12px;
+}
+.journal {
+  padding: 22px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  max-height: 560px;
+  overflow: auto;
+}
+.party-info .xp-caption {
+  font-size: 11px;
+}
+.party {
+  margin-top: 24px;
+  display: none;
+}
+.journal > p {
+  color: var(--muted);
+  line-height: 1.65;
+  margin: 0 0 24px;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+.journal > #journalGoal {
+  font-size: 14px;
+}
+@media (min-width: 1400px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr) 300px;
+  }
+}
+@media (max-width: 1050px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr) 240px;
+    gap: 17px;
+  }
+  .journal {
+    padding: 17px;
+  }
+}
+@media (max-width: 780px) {
+  .party {
+    margin-top: 0;
+  }
+  .section-title {
+    font-size: 10px;
+  }
+  .party-row strong {
+    font-size: 12px;
+  }
+  .party-row .sprite {
+    width: 55px;
+    height: 55px;
+  }
+  .party-row small {
+    font-size: 10px;
+    display: block;
+    margin: 3px 0;
+  }
+  .habitat {
+    margin-top: 0;
+    padding: 13px;
+  }
+  .habitat p {
+    font-size: 12px;
+  }
+  .habitat button {
+    font-size: 13px;
+  }
+  .journal > p {
+    display: block;
+  }
+  .journal .tip {
+    display: none;
+  }
+  .layout {
+    grid-template-columns: 1fr;
+    display: block;
+  }
+  aside {
+    display: grid;
+    grid-template-columns: 1fr;
+    margin-top: 14px;
+    gap: 10px;
+  }
+  .habitat,
+  .party {
+    grid-column: auto;
+    grid-row: auto;
+  }
+  .party #party {
+    display: grid;
+    gap: 6px;
+    grid-template-columns: 1fr;
+  }
+  .party-row {
+    gap: 5px;
+    padding: 7px;
+    margin-top: 10px;
+    display: flex;
+  }
+  .journal {
+    max-height: 320px;
+  }
+}
+
+/* Console */
+.console {
+  border: 1px solid #405160;
+  border-radius: 13px;
+  overflow: hidden;
+  background: #14232d;
+  align-self: start;
+  box-shadow: 0 16px 50px #0003;
+}
+.console-top,
+.console-bottom {
+  height: 51px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 20px;
+  font-size: 13px;
+}
+.console-top {
+  background: #253846;
+}
+.console-top i {
+  width: 7px;
+  height: 7px;
+  background: var(--yellow);
+  display: inline-block;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+.console-top #money {
+  font-family: 'Space Mono', monospace;
+  color: var(--yellow);
+  font-size: 13px;
+}
+.screen {
+  position: relative;
+  overflow: hidden;
+  background: #568859;
+}
+/* Follow-camera viewport: never stretch the map to create room for an overlay. */
+.screen,
+.screen:has(.modal:not(.hidden)),
+.console:fullscreen .screen {
+  aspect-ratio: 3/2;
+  min-height: 0;
+}
+@media (max-width: 780px) {
+  .screen:has(.battle:not(.hidden)),
+  .screen:has(.modal:not(.hidden)) {
+    min-height: 430px;
+  }
+  .screen:has(.battle:not(.hidden)) canvas,
+  .screen:has(.modal:not(.hidden)) canvas {
+    object-fit: cover;
+  }
+  .console {
+    width: 100%;
+    min-width: 0;
+    border-radius: 9px;
+  }
+  .console-top {
+    height: 34px;
+    padding: 0 10px;
+    font-size: 12px;
+  }
+  .screen,
+  .console:fullscreen .screen,
+  .screen:has(.modal:not(.hidden)) {
+    width: 100%;
+    min-height: 0;
+    max-height: none;
+    aspect-ratio: 3/2;
+  }
+}
+@media (max-width: 640px) {
+  .console .console-top {
+    gap: 8px;
+    min-height: 40px;
+    height: auto;
+    padding: 10px;
+  }
+  .console .console-top > span:first-child {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .console .console-top #money {
+    flex-shrink: 0;
+  }
+}
+
+/* Game dock */
+.console-bottom button {
+  color: var(--yellow);
+  font-size: 13px;
+}
+.console-bottom button span {
+  margin-left: 15px;
+}
+.game-dock button:hover:not(:disabled) {
+  background: #347967;
+}
+.game-dock button:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #173d36;
+}
+.game-dock button:focus-visible {
+  outline: 3px solid #e8b84f;
+  outline-offset: 3px;
+}
+.game-dock {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+.game-dock kbd {
+  background: #164138;
+  font-size: 12px;
+  padding: 2px 4px;
+}
+/* Navigation occupies its real height; touch controls never overlap the dock. */
+.console .console-bottom {
+  height: auto;
+  min-height: 54px;
+  flex-shrink: 0;
+}
+.console .game-dock {
+  min-width: 0;
+}
+.console .game-dock button {
+  min-width: 0;
+  text-align: center;
+  justify-content: center;
+}
+/* Keep exactly one team entry in the game dock, in normal and fullscreen play. */
+.console-bottom {
+  height: 54px;
+  color: #bac8d0;
+  font-size: 12px;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  display: flex;
+}
+/* Status belongs in the dock, leaving the full map and its bottom labels visible. */
+.game-status {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+.console-bottom .hint {
+  position: static;
+  transform: none;
+  max-width: none;
+  border: 0;
+  box-shadow: none;
+  background: none;
+  padding: 0;
+  color: #eef4dc;
+  font-size: 14px;
+  line-height: 1.4;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.movement-help {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+}
+@media (max-width: 780px) {
+  .console-bottom {
+    font-size: 10px;
+    height: 44px;
+  }
+  .console-bottom button {
+    min-height: 44px;
+    font-size: 14px;
+  }
+}
+.game-dock button {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  touch-action: manipulation;
+  border: 1px solid #587b78;
+  border-radius: 8px;
+  background: #245c51;
+  color: #fff;
+  min-height: 44px;
+  padding: 10px 14px;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 1.35;
+  cursor: pointer;
+  box-shadow: 0 3px 0 #173d36;
+  transition:
+    background 0.12s,
+    transform 0.12s;
+  white-space: normal;
+}
+@media (max-width: 780px) {
+  .console-bottom > span {
+    font-size: 11px;
+  }
+}
+@media (max-width: 640px) {
+  .console-bottom > span {
+    display: none;
+  }
+  .game-dock {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .game-dock button {
+    font-size: 14px;
+    padding: 10px 6px;
+    justify-content: center;
+  }
+  .game-dock kbd {
+    display: none;
+  }
+  .console .console-bottom {
+    padding: 10px;
+    min-height: 74px;
+  }
+  .console .game-dock {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .console .game-dock button {
+    height: 54px;
+    min-height: 54px;
+    margin: 0;
+    padding: 6px 4px;
+    font-size: clamp(12px, 3.5vw, 14px);
+    line-height: 1.2;
+    overflow-wrap: normal;
+  }
+  .game-status {
+    flex-basis: 100%;
+  }
+  .movement-help {
+    display: none;
+  }
+  .console-bottom .hint {
+    font-size: 12px;
+  }
+}
+@media (max-width: 480px) {
+  .game-dock {
+    gap: 6px;
+  }
+  .game-dock button {
+    min-width: 0;
+  }
+  .console .game-dock button {
+    padding: 12px 4px;
+    font-size: 14px;
+  }
+}
+
+/* Touch controls */
+.mobile-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 20px;
+}
+.dpad {
+  display: grid;
+  grid-template-columns: repeat(3, 38px);
+  grid-template-rows: repeat(2, 34px);
+  gap: 4px;
+}
+.dpad button:first-child {
+  grid-column: 2;
+}
+.dpad button:nth-child(2) {
+  grid-column: 1;
+  grid-row: 2;
+}
+.dpad button:nth-child(3) {
+  grid-column: 2;
+  grid-row: 2;
+}
+.dpad button:nth-child(4) {
+  grid-column: 3;
+  grid-row: 2;
+}
+#interact {
+  width: 65px;
+  height: 65px;
+  background: var(--yellow);
+  border-radius: 50%;
+  color: #21392d;
+  font-size: 23px;
+  box-shadow: 0 4px 0 #74884f;
+}
+#interact small {
+  display: block;
+  font-size: 8px;
+}
+#travelBtn {
+  font-size: 12px;
+  border: 1px solid #4b646c;
+  padding: 12px;
+  color: #becdcc;
+  border-radius: 5px;
+}
+.console > .mobile-controls {
+  margin: 0;
+  padding: 10px;
+  border-top: 1px solid #38535b;
+}
+.dpad button {
+  background: #2b3e4d;
+  border: 1px solid #49606d;
+  border-radius: 5px;
+  font-size: 20px;
+  touch-action: none;
+}
+/* Long presses are game input, not selectable text or browser callouts. */
+.mobile-controls,
+.mobile-controls *,
+.game-dock,
+.game-dock * {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+.mobile-controls button {
+  touch-action: none;
+  -webkit-user-drag: none;
+}
+@media (max-width: 780px) {
+  .mobile-controls {
+    margin-top: 17px;
+  }
+  .console > .mobile-controls {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 12px;
+  }
+  .dpad {
+    grid-template-columns: repeat(3, 46px);
+    grid-template-rows: repeat(2, 42px);
+    gap: 4px;
+  }
+  .dpad button {
+    font-size: 20px;
+  }
+  .mobile-controls #interact {
+    min-width: 58px;
+    min-height: 58px;
+    font-size: 18px;
+  }
+  .mobile-controls #travelBtn {
+    max-width: 112px;
+    min-height: 48px;
+    font-size: 12px;
+  }
+}
+@media (max-width: 640px) {
+  .console > .mobile-controls {
+    display: grid;
+    grid-template-columns: 140px 64px minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    padding: 12px 10px 14px;
+    min-width: 0;
+  }
+  .console .dpad {
+    grid-template-columns: repeat(3, 44px);
+    grid-template-rows: repeat(2, 44px);
+    gap: 4px;
+    width: 140px;
+  }
+  .console .dpad button {
+    width: 44px;
+    height: 44px;
+    min-width: 0;
+    min-height: 44px;
+    padding: 0;
+    margin: 0;
+  }
+  .console .mobile-controls #interact {
+    width: 64px;
+    height: 64px;
+    min-width: 64px;
+    min-height: 64px;
+    padding: 0;
+    margin: 0;
+    font-size: 22px;
+  }
+  .console .mobile-controls #interact .pc-key {
+    display: none;
+  }
+  .console .mobile-controls #interact small {
+    font-size: 8px;
+    line-height: 1.3;
+  }
+  .console .mobile-controls #travelBtn {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    min-height: 54px;
+    padding: 8px 4px;
+    line-height: 1.3;
+    font-size: 12px;
+    overflow-wrap: normal;
+  }
+}
+
+/* Toolbar and objective */
+.places-nav {
+  border-top: 1px solid #405565;
+  padding: 14px 16px;
+  background: #1b2d39;
+}
+.places-nav summary {
+  font-size: 14px;
+  color: #dceac2;
+  cursor: pointer;
+}
+.places-nav > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  margin-top: 12px;
+}
+.places-nav button {
+  text-align: left;
+  font-size: 14px;
+  padding: 9px 10px;
+  line-height: 1.4;
+  border: 1px solid #4a6270;
+  background: #283f4c;
+  border-radius: 4px;
+}
+.places-nav button:hover {
+  background: #375462;
+}
+.play-toolbar span {
+  flex: 1;
+}
+.play-toolbar button:disabled {
+  opacity: 0.4;
+}
+.objective-strip {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 13px 17px;
+  background: #e4efb9;
+  color: #213e31;
+}
+.objective-strip div {
+  flex: 1;
+}
+.objective-strip small {
+  display: block;
+  font:
+    10px 'Space Mono',
+    monospace;
+  letter-spacing: 0.7px;
+  color: #607244;
+}
+.objective-strip strong {
+  display: block;
+  font-size: 15px;
+  line-height: 1.4;
+  margin-top: 4px;
+}
+.objective-strip p {
+  font-size: 12px;
+  line-height: 1.4;
+  margin: 4px 0 0;
+  color: #4d664a;
+}
+.objective-strip button {
+  padding: 10px 12px;
+  border: 1px solid #71924e;
+  border-radius: 5px;
+  background: #305a3b;
+  color: #f7ffdf;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+.objective-strip button:disabled {
+  opacity: 0.5;
+}
+/* Play controls stay inside the game, including browser fullscreen. */
+.play-toolbar {
+  align-items: center;
+  padding: 10px 13px;
+  background: #1c303b;
+  border-bottom: 1px solid #45606b;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.play-toolbar button {
+  font-size: 13px;
+  padding: 7px 10px;
+  background: #304c59;
+  border: 1px solid #54717b;
+  border-radius: 5px;
+  min-height: 38px;
+}
+.objective-strip > div {
+  min-width: 0;
+}
+.console-top .explore-quick {
+  margin-left: auto;
+  margin-right: 10px;
+  padding: 4px 10px;
+  min-height: 28px;
+  border: 1px solid #94bd9f;
+  border-radius: 6px;
+  background: #285a4a;
+  color: #fff7d6;
+  font: 700 14px/1.2 inherit;
+  cursor: pointer;
+}
+.play-toolbar,
+#screenTeam,
+#partyOpen {
+  display: none;
+}
+@media (max-width: 780px) {
+  .play-toolbar span {
+    display: none;
+  }
+  .play-toolbar {
+    flex-wrap: wrap;
+    padding: 6px;
+  }
+  .play-toolbar button {
+    font-size: 13px;
+    padding: 8px;
+  }
+  .objective-strip {
+    gap: 8px;
+    align-items: flex-start;
+    padding: 8px 10px;
+  }
+  .objective-strip strong {
+    font-size: 14px;
+  }
+  .objective-strip p {
+    font-size: 12px;
+  }
+  .objective-strip small {
+    font-size: 10px;
+  }
+  .objective-strip button {
+    font-size: 12px;
+    padding: 9px;
+    min-height: 44px;
+  }
+  .places-nav {
+    padding: 12px;
+    margin: 0;
+  }
+  .places-nav summary {
+    min-height: 44px;
+    font-size: 14px;
+  }
+  .places-nav button {
+    min-height: 44px;
+    font-size: 14px;
+  }
+}
+@media (max-width: 640px) {
+  .console .objective-strip {
+    gap: 10px;
+    padding: 10px;
+    align-items: center;
+  }
+  .console .objective-strip button {
+    max-width: 30%;
+    white-space: normal;
+    line-height: 1.3;
+    padding: 8px;
+    min-height: 44px;
+  }
+  .places-nav #placesList {
+    min-width: 0;
+  }
+  .places-nav #placesList button {
+    min-width: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}
+@media (max-width: 350px) {
+  .console .objective-strip {
+    flex-wrap: wrap;
+  }
+  .console .objective-strip > div {
+    flex-basis: 100%;
+  }
+  .console .objective-strip button {
+    max-width: none;
+    width: 100%;
+  }
+}
+
+/* Fullscreen */
+.console:fullscreen .places-nav {
+  display: none;
+}
+.console:fullscreen .play-toolbar,
+.console:fullscreen .objective-strip,
+.console:fullscreen .console-top,
+.console:fullscreen .console-bottom {
+  margin: auto;
+}
+.console:fullscreen .play-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 15;
+}
+.console:fullscreen .screen:has(.modal:not(.hidden)) {
+  min-height: 0;
+}
+.console:fullscreen {
+  width: 100vw;
+  height: 100dvh;
+  border: 0;
+  border-radius: 0;
+  background: #14232d;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.console:fullscreen .play-toolbar,
+.console:fullscreen .console-top,
+.console:fullscreen .objective-strip,
+.console:fullscreen .console-bottom {
+  width: 100%;
+  flex-shrink: 0;
+  max-width: none;
+}
+.console:fullscreen .screen {
+  margin: auto;
+  max-height: none;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  aspect-ratio: auto;
+  overflow: hidden;
+}
+.console:fullscreen .screen canvas {
+  object-fit: fill;
+}
+.console:fullscreen .mobile-controls {
+  flex-shrink: 0;
+}
+.console:fullscreen .objective-strip p {
+  display: none;
+}
+.console:fullscreen .console-bottom {
+  display: flex;
+}
+@media (max-height: 650px) {
+  .console:fullscreen .console-top {
+    height: 30px;
+  }
+  .console:fullscreen .objective-strip {
+    padding: 5px 10px;
+  }
+}
+
+/* Game-first layout */
+/* The map is the home screen. Travel details live in Menu > Wilayah. */
+body.game-first {
+  overflow-x: hidden;
+}
+body.game-first > header,
+body.game-first .topline,
+body.game-first .objective-strip,
+body.game-first .places-nav,
+body.game-first .layout > aside,
+body.game-first footer {
+  display: none;
+}
+body.game-first main {
+  width: 100%;
+  max-width: none;
+  padding: 0;
+  margin: 0;
+}
+body.game-first .layout {
+  display: block;
+  width: 100%;
+  margin: 0;
+}
+body.game-first .console {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  height: 100dvh;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  overflow: hidden;
+}
+body.game-first .play-toolbar {
+  display: none;
+}
+body.game-first .console-top,
+body.game-first .console-bottom {
+  flex: none;
+  width: 100%;
+  max-width: none;
+}
+body.game-first .console-top {
+  height: 38px;
+}
+body.game-first .console-bottom {
+  min-height: 56px;
+  height: auto;
+  padding: 5px 12px;
+}
+body.game-first .screen,
+body.game-first .screen:has(.modal:not(.hidden)),
+body.game-first .screen:has(.battle:not(.hidden)) {
+  flex: none;
+  align-self: center;
+  width: min(100vw, calc((100dvh - 140px) * 1.5));
+  height: auto;
+  max-height: calc(100dvh - 140px);
+  min-height: 0;
+  aspect-ratio: 3/2;
+  margin: auto;
+}
+body.game-first .screen canvas {
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+}
+body.game-first .console > .mobile-controls {
+  display: none;
+  flex: none;
+}
+body.game-first.show-exploration .layout > aside {
+  display: block;
+  position: fixed;
+  right: 8px;
+  top: 48px;
+  bottom: 12px;
+  width: min(360px, calc(100vw - 16px));
+  z-index: 45;
+  overflow: auto;
+  background: #f7f9e9;
+  border: 2px solid #6b8d78;
+  border-radius: 10px;
+  box-shadow: 0 10px 24px #101d29a6;
+}
+body.game-first.show-exploration .places-nav {
+  display: block;
+  position: fixed;
+  left: 8px;
+  bottom: 72px;
+  width: min(330px, calc(100vw - 16px));
+  max-height: 35dvh;
+  overflow: auto;
+  z-index: 44;
+  background: #f7f9e9;
+  border: 2px solid #6b8d78;
+  border-radius: 8px;
+}
+body.game-first.show-exploration .objective-strip {
+  display: flex;
+  position: fixed;
+  left: 8px;
+  top: 48px;
+  width: min(330px, calc(100vw - 16px));
+  z-index: 44;
+}
+@media (max-width: 780px) {
+  body.game-first .console {
+    height: 100dvh;
+  }
+  body.game-first .console > .mobile-controls {
+    display: flex;
+  }
+  body.game-first .console-top {
+    height: 34px;
+  }
+  body.game-first .console-bottom {
+    min-height: 64px;
+    padding: 5px 8px;
+  }
+  /* On a phone the map takes all the height between the toolbar and the controls;
+     the camera narrows its view to match, so the world is drawn larger. */
+  body.game-first .screen,
+  body.game-first .screen:has(.modal:not(.hidden)),
+  body.game-first .screen:has(.battle:not(.hidden)) {
+    flex: 1 1 auto;
+    width: 100%;
+    height: auto;
+    max-height: none;
+    min-height: 240px;
+    aspect-ratio: auto;
+    margin: 0;
+  }
+  body.game-first.show-exploration .layout > aside {
+    top: 44px;
+    bottom: 160px;
+    width: min(330px, calc(100vw - 16px));
+    max-height: 38dvh;
+  }
+  body.game-first.show-exploration .places-nav {
+    bottom: 162px;
+    max-height: 25dvh;
+  }
+  body.game-first.show-exploration .objective-strip {
+    top: 44px;
+    max-height: 22dvh;
+    overflow: auto;
+  }
+  body.game-first.show-exploration .layout > aside,
+  body.game-first.show-exploration .places-nav,
+  body.game-first.show-exploration .objective-strip {
+    display: none;
+  }
+}
+
+/* Loading screen */
+.asset-preload[hidden],
+.asset-preload button[hidden] {
+  display: none;
+}
+/* Finish the initial art download before a player can enter a match. */
+.asset-preload {
+  position: fixed;
+  z-index: 150;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  color: #fff;
+  inset: 0;
+  left: 0;
+  bottom: 0;
+  transform: none;
+  width: 100vw;
+  min-height: 100dvh;
+  box-sizing: border-box;
+  justify-content: center;
+  background: #0e2928dc;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  font-size: 15px;
+}
+.asset-preload > div {
+  width: min(90vw, 420px);
+  padding: 24px;
+  background: #173d38;
+  border: 1px solid #9fc3a2;
+  border-radius: 12px;
+  box-shadow: 0 10px 32px #081b19a8;
+  text-align: center;
+}
+.asset-preload strong,
+.asset-preload span {
+  display: block;
+  margin-bottom: 12px;
+}
+.asset-preload button {
+  flex: none;
+  padding: 7px 10px;
+  background: #dcebb9;
+  color: #1e4336;
+  border-radius: 6px;
+  margin: 5px;
+  min-height: 44px;
+}
+
+/* Team strip: the team's health beside the money, on every screen size. */
+.console-top .team-strip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-right: 10px;
+  flex: none;
+}
+.console-top .team-strip[hidden] {
+  display: none;
+}
+.team-chip {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  width: 30px;
+  height: 32px;
+  padding: 1px 2px 3px;
+  border: 1px solid #55707a;
+  border-radius: 6px;
+  background: #1a2c38;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.team-chip:hover {
+  border-color: #c7dcb0;
+}
+.team-chip:focus-visible {
+  outline: 2px solid #e8b84f;
+  outline-offset: 1px;
+}
+.team-chip .sprite {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+}
+.team-chip-hp {
+  display: block;
+  width: 24px;
+  height: 4px;
+  border-radius: 2px;
+  background: #0c171e;
+  overflow: hidden;
+}
+.team-chip-hp i {
+  display: block;
+  height: 100%;
+  background: #4cc07f;
+}
+.team-chip.mid .team-chip-hp i {
+  background: #e4aa35;
+}
+.team-chip.low {
+  border-color: #ff6b5e;
+  animation: team-chip-low 1s ease-in-out infinite;
+}
+.team-chip.low .team-chip-hp i {
+  background: #ff5a4c;
+}
+.team-chip.fainted .sprite {
+  filter: grayscale(1);
+  opacity: 0.45;
+}
+.team-chip.fainted {
+  border-color: #7a4a4a;
+}
+@keyframes team-chip-low {
+  50% {
+    background: #6b2420;
+    box-shadow: 0 0 0 2px #ff5a4c66;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .team-chip.low {
+    animation: none;
+    background: #5a2420;
+  }
+}
+.console-top .explore-quick kbd {
+  margin-left: 6px;
+  font-size: 12px;
+  background: #164138;
+}
+/* The location name gives way first when the top bar is crowded. */
+.console-top > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+body.game-first .console-top {
+  gap: 8px;
+}
+.movement-help {
+  font-size: 12px;
+}
+.movement-help kbd {
+  font-size: 12px;
+}
+@media (max-width: 640px) {
+  .console .console-top {
+    flex-wrap: nowrap;
+    padding: 4px 8px;
+    gap: 6px;
+  }
+  .console-top .explore-quick {
+    margin-right: 0;
+    padding: 4px 8px;
+  }
+  .console-top .team-strip {
+    gap: 2px;
+    margin-right: 0;
+  }
+  .team-chip {
+    width: 26px;
+    height: 30px;
+    padding: 1px 1px 3px;
+  }
+  .team-chip .sprite {
+    width: 20px;
+    height: 20px;
+  }
+  .team-chip-hp {
+    width: 20px;
+  }
+  .console .console-top #money {
+    font-size: 12px;
+  }
+  .console-bottom .hint {
+    font-size: 13px;
+  }
+}
+/* On a touch-only device there is no keyboard to point at. Keys stay visible elsewhere. */
+@media (hover: none) and (pointer: coarse) {
+  .console-top .explore-quick kbd,
+  .game-dock kbd,
+  .movement-help {
+    display: none;
+  }
+}
+
+/* Touch controls: the action button says what it will do ("Bicara: Gibur"). */
+.mobile-controls #interact small,
+.console .mobile-controls #interact small {
+  display: block;
+  font-size: 14px;
+  font-weight: 750;
+  line-height: 1.15;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 780px) {
+  .mobile-controls #interact {
+    width: auto;
+    min-width: 96px;
+    max-width: 180px;
+    padding: 4px 12px;
+    border-radius: 16px;
+  }
+}
+@media (max-width: 640px) {
+  .console > .mobile-controls {
+    grid-template-columns: 140px minmax(0, 1fr) 92px;
+  }
+  .console .mobile-controls #interact {
+    width: 100%;
+    min-width: 0;
+    height: 64px;
+    padding: 4px 8px;
+    border-radius: 16px;
+  }
+  .console .mobile-controls #travelBtn {
+    font-size: 12px;
+  }
+}

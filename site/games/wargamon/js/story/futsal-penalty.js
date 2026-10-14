@@ -1,15 +1,12 @@
 /* Skill-based penalties. All outcomes derive from visible aim, power and keeper position. */
 let football = null;
 /* Sukamaju futsal field: enter through the gate drawn in town.webp. */
-const futsalPenalty = PLACES[0].points.find(p => p.key === 'shoot');
+const futsalPenalty = PLACES[REGION.SUKAMAJU].points.find(p => p.key === 'shoot');
 futsalPenalty.x = 580;
 futsalPenalty.y = 430;
-futsalPenalty.name = 'ADU PENALTI, mulai';
 const FUTSAL_RULES = Object.freeze({
   shots: 5,
   target: 3,
-  reward: 3000,
-  rewardLimit: 3,
   goalTop: 100,
   goalBottom: 250,
   goalX: 688,
@@ -28,6 +25,84 @@ function futsalResolveShot(aim, power, keeper) {
   const kind = wide ? 'wide' : Math.abs(targetY - keeperEnd) < 22 ? 'saved' : 'goal';
   return { targetY, keeperStart: keeper, keeperEnd, duration, power, kind };
 }
+// --- Prizes. A win (3 of 5) pays once a day in items that grow with the journey; a
+// perfect five adds a capsule. The goal streak runs across games and keeps a record.
+function futsalRecord() {
+  return (state.futsal ??= { best: 0, streak: 0, day: -1 });
+}
+function futsalStreak(goal) {
+  const r = futsalRecord();
+  r.streak = goal ? r.streak + 1 : 0;
+  if (r.streak > r.best) {
+    r.best = r.streak;
+    if (r.best >= 3) toast(ft('record', { n: r.best }));
+  }
+}
+const futsalTier = () => (state.defeated.length < 10 ? 0 : state.defeated.length < 25 ? 1 : 2);
+// The late prize carries one of Bu Nira's goods, a different one each day.
+const futsalGood = () => BAZAAR_ORDER[dayNumber() % BAZAAR_ORDER.length];
+const futsalPrizeName = () => ft('prize.' + futsalTier(), { good: I18N.t(`bazaar.${futsalGood()}.name`) });
+function futsalPrize(f) {
+  const r = futsalRecord(),
+    lines = [];
+  if (f.goals >= FUTSAL_RULES.target && r.day !== dayNumber()) {
+    r.day = dayNumber();
+    const tier = futsalTier();
+    if (tier === 0) addItem('balls', 2);
+    else {
+      addItem('ultraballs', 1);
+      if (tier === 1) addItem('potions', 1);
+      else {
+        state.goods ??= {};
+        state.goods[futsalGood()] = goodsCount(futsalGood()) + 1;
+      }
+    }
+    if (f.goals === FUTSAL_RULES.shots) addItem('ultraballs', 1);
+    lines.push(
+      ft('paid', { prize: futsalPrizeName() }) + (f.goals === FUTSAL_RULES.shots ? ' ' + ft('perfect') : ''),
+    );
+  }
+  if (f.lomba) lines.push(agustusPrize(f.goals));
+  return lines.filter(Boolean).join(' ');
+}
+
+// --- Agustusan: around 17 Agustus (10 to 24 August on the player's clock, or ?debug&agustus)
+// the pitch hosts the Lomba Penalti 17-an. The keeper moves faster; four goals win the
+// year's Piala Agustusan, and every finished round gets the kerupuk from the lomba table.
+// The switch only works in debug pages, which keep their own save (KEY in game.js).
+const AGUSTUS_FORCED = DEBUG && /[?&](agustus\b|event=agustus\b)/.test(location.search || '');
+function agustusan(now = new Date()) {
+  return AGUSTUS_FORCED || (now.getMonth() === 7 && now.getDate() >= 10 && now.getDate() <= 24);
+}
+const AGUSTUS_CUP_GOALS = 4,
+  AGUSTUS_CUP_MONEY = 45000;
+function agustusPrize(goals) {
+  const a = (state.agustus ??= { cups: [], kerupuk: -1 }),
+    year = new Date().getFullYear(),
+    lines = [];
+  if (goals >= AGUSTUS_CUP_GOALS && !a.cups.includes(year)) {
+    a.cups.push(year);
+    state.money += AGUSTUS_CUP_MONEY;
+    addItem('scarf', 1);
+    addItem('ultraballs', 3);
+    lines.push(ft('lomba.cup', { year, money: money(AGUSTUS_CUP_MONEY) }));
+  }
+  if (a.kerupuk !== dayNumber()) {
+    a.kerupuk = dayNumber();
+    state.team.forEach(m => (m.fullness = Math.min(100, (m.fullness ?? 75) + 30)));
+    lines.push(ft('lomba.kerupuk'));
+  }
+  return lines.join(' ');
+}
+// In lomba week the townsfolk open with a festive line the first time you talk.
+const AGUSTUS_CHATS = 4;
+// Other holidays bring their own greetings (seasonLine in calendar.js).
+function festiveLine(p, turn) {
+  if (!p.resident || turn !== 0) return '';
+  return agustusan() ? I18N.t(`agustus.chat.${p.portrait % AGUSTUS_CHATS}`) : seasonLine(p);
+}
+futsalPenalty.name = I18N.t(agustusan() ? 'futsal.lomba.point' : 'futsal.point');
+
 let futsalFrame = 0;
 const ft = (key, params) => I18N.t('futsal.' + key, params);
 loadMapImage('img/characters/futsal-keeper.webp', false, 'low');
@@ -37,7 +112,7 @@ function futsalAssetState() {
 }
 function penaltyGame() {
   if (futsalFrame) cancelAnimationFrame(futsalFrame);
-  football = {
+  const game = (football = {
     stage: 'aim',
     aim: -0.65,
     clock: 0,
@@ -50,11 +125,22 @@ function penaltyGame() {
     lastTime: null,
     flightTime: 0,
     shot: null,
-    paid: 0,
-  };
+    prize: '',
+    lomba: agustusan(),
+  });
   modal(
-    `<section class="futsal-game"><header class="futsal-heading"><div><small>${ft('eyebrow')}</small><h2>${ft('title')}</h2></div><strong id="futsalScore"></strong></header><div class="futsal-rounds" id="futsalRounds" aria-label="${ft('shots')}"></div><canvas id="futsalCanvas" width="800" height="360" aria-label="${ft('canvas')}"></canvas><p class="futsal-instruction">${ft('instructions')}</p><label class="futsal-aim" for="futsalAim"><span>${ft('aim')}</span><input id="futsalAim" type="range" min="-100" max="100" step="1" value="-65" aria-label="${ft('aim')}"><span class="futsal-aim-labels"><span>${ft('upper')}</span><span>${ft('lower')}</span></span></label><div class="futsal-power-heading"><span>${ft('power')}</span><strong id="futsalPowerLabel">${ft('ready')}</strong></div><div class="futsal-meter" role="img" aria-label="${ft('meter')}"><span class="futsal-sweet"></span><i id="futsalNeedle"></i></div><p id="futsalStatus" class="futsal-status" role="status" aria-live="polite"></p><div class="futsal-actions"><button id="futsalAction" data-futsal="action"></button><button id="futsalResetAim" data-futsal="aim" hidden>${ft('reaim')}</button><button data-act="close">${ft('exit')}</button></div><p id="futsalReward" class="futsal-reward"></p><small class="futsal-keyboard">${ft('keyboard')}</small></section>`,
+    `<section class="futsal-game"><header class="futsal-heading"><div><small>${ft(game.lomba ? 'lomba.eyebrow' : 'eyebrow')}</small><h2>${ft(game.lomba ? 'lomba.title' : 'title')}</h2></div><strong id="futsalScore"></strong></header><div class="futsal-rounds" id="futsalRounds" aria-label="${ft('shots')}"></div><canvas id="futsalCanvas" width="800" height="360" aria-label="${ft('canvas')}"></canvas><p class="futsal-instruction">${ft('instructions')}</p><label class="futsal-aim" for="futsalAim"><span>${ft('aim')}</span><input id="futsalAim" type="range" min="-100" max="100" step="1" value="-65" aria-label="${ft('aim')}"><span class="futsal-aim-labels"><span>${ft('upper')}</span><span>${ft('lower')}</span></span></label><div class="futsal-power-heading"><span>${ft('power')}</span><strong id="futsalPowerLabel">${ft('ready')}</strong></div><div class="futsal-meter" role="img" aria-label="${ft('meter')}"><span class="futsal-sweet"></span><i id="futsalNeedle"></i></div><p id="futsalStatus" class="futsal-status" role="status" aria-live="polite"></p><div class="futsal-actions"><button id="futsalAction" data-futsal="action"></button><button id="futsalResetAim" data-futsal="aim" hidden>${ft('reaim')}</button><button data-act="close">${ft('exit')}</button></div><p id="futsalReward" class="futsal-reward"></p><small class="futsal-keyboard">${ft('keyboard')}</small></section>`,
     'penalty',
+    null,
+    {
+      // Closed, or covered by another dialog: the animation stops. A replay has already
+      // started a new game, which stays.
+      onClose() {
+        if (futsalFrame) cancelAnimationFrame(futsalFrame);
+        futsalFrame = 0;
+        if (football === game) football = null;
+      },
+    },
   );
   const c = $('futsalCanvas');
   const aimAt = e => {
@@ -106,14 +192,16 @@ function futsalRefresh() {
     message =
       ft(f.goals >= FUTSAL_RULES.target ? 'win' : 'practice', { goals: f.goals }) +
       ' ' +
-      (f.paid ? ft('paid', { amount: money(f.paid) }) : f.goals >= FUTSAL_RULES.target ? ft('cap') : '');
+      (f.prize || (f.goals >= FUTSAL_RULES.target ? ft('cap') : ''));
   $('futsalStatus').textContent = message;
   $('futsalStatus').className =
     'futsal-status ' + (f.stage === 'result' || f.stage === 'done' ? f.shot.kind : '');
-  $('futsalReward').textContent = ft('reward', {
-    amount: money(3000),
-    left: Math.max(0, 3 - (state.penalties || 0)),
-  });
+  const record = futsalRecord();
+  $('futsalReward').textContent =
+    (f.lomba ? ft('lomba.rules') + ' ' : '') +
+    (record.day === dayNumber() ? ft('cap') : ft('reward', { prize: futsalPrizeName() })) +
+    ' ' +
+    ft('streak', { streak: record.streak, best: record.best });
 }
 function futsalAction() {
   const f = football;
@@ -149,14 +237,9 @@ function futsalFinishShot() {
   f.results.push(f.shot.kind);
   if (f.shot.kind === 'goal') f.goals++;
   f.stage = f.shots === FUTSAL_RULES.shots ? 'done' : 'result';
-  if (
-    f.stage === 'done' &&
-    f.goals >= FUTSAL_RULES.target &&
-    (state.penalties || 0) < FUTSAL_RULES.rewardLimit
-  ) {
-    f.paid = FUTSAL_RULES.reward;
-    state.money += f.paid;
-    state.penalties = (state.penalties || 0) + 1;
+  futsalStreak(f.shot.kind === 'goal');
+  if (f.stage === 'done') {
+    f.prize = futsalPrize(f);
     update();
   }
   beep(f.shot.kind === 'goal' ? 900 : 220, 0.1);
@@ -178,7 +261,7 @@ function futsalTick(time) {
   if (!document.hidden && assetState === 'ready') {
     f.clock += dt;
     if (f.stage === 'aim' || f.stage === 'charge')
-      f.keeper = 175 + 55 * Math.sin(f.clock * (1.35 + f.shots * 0.12));
+      f.keeper = 175 + 55 * Math.sin(f.clock * (1.35 + f.shots * 0.12) * (f.lomba ? 1.3 : 1));
     if (f.stage === 'charge') {
       f.chargeTime += dt;
       f.power = futsalPowerAt(f.chargeTime);

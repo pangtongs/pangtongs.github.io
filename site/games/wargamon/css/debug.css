@@ -1,0 +1,211 @@
+/* Debug tools (?debug) and the floor editor. */
+
+/* Debug panel */
+/* Debug tools (?debug). */
+.debug-panel {
+  position: fixed;
+  left: 50%;
+  top: 6px;
+  transform: translateX(-50%);
+  z-index: 200;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  max-width: min(94vw, 760px);
+  padding: 8px 10px;
+  background: #20121aee;
+  border: 1px solid #e58fb0;
+  border-radius: 8px;
+  color: #ffe3ee;
+  font-size: 12px;
+}
+.debug-panel button,
+.debug-panel select {
+  padding: 5px 8px;
+  background: #4a2334;
+  border: 1px solid #a35c78;
+  border-radius: 5px;
+  color: inherit;
+  font: inherit;
+}
+.debug-panel button[aria-pressed='true'] {
+  background: #e58fb0;
+  color: #20121a;
+}
+.debug-panel small {
+  flex-basis: 100%;
+  opacity: 0.75;
+}
+/* Folded, the debug panel is only a small tab in the header. */
+.debug-panel:not(.open) {
+  padding: 0;
+  background: none;
+  border: 0;
+}
+.debug-panel .debug-toggle {
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+/* Floor editor */
+/* The floor editor takes the whole window, and the map fills whatever space is left. */
+.screen .modal:has(.floor-editor) {
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
+}
+.screen .modal .dialog.menu-frame:has(.floor-editor) {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+.screen .modal .dialog-body:has(.floor-editor) {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  padding: 10px 14px 0;
+  overflow: hidden;
+}
+.floor-editor {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+.screen .modal .floor-editor h2 {
+  font-size: 20px;
+  margin: 0 8px 0 0;
+}
+.floor-editor-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.floor-editor-tools select {
+  max-width: 100%;
+  padding: 7px;
+  font: inherit;
+}
+.screen .modal .floor-editor .floor-editor-help,
+.screen .modal .floor-editor #floorEditorStatus {
+  font-size: 13px;
+  margin: 6px 0;
+}
+/* Green / gray is one switch; the chosen colour is unmistakable. */
+.floor-editor-fill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  padding: 3px;
+  border: 2px solid #263d32;
+  border-radius: 10px;
+  background: #dfe5d0;
+}
+.screen .modal .floor-editor-fill button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #3b4a43;
+  box-shadow: none;
+}
+.screen .modal .floor-editor-fill button[aria-pressed='false']:hover:not(:disabled) {
+  background: #c9d3b8;
+}
+.screen .modal .floor-editor-fill button[aria-pressed='true'] {
+  background: #263d32;
+  color: #fbf5d2;
+}
+.screen .modal .floor-editor-fill #floorEditorGreen[aria-pressed='true'] {
+  background: #1f7a43;
+}
+.screen .modal .floor-editor-fill #floorEditorBlocked[aria-pressed='true'] {
+  background: #5d6878;
+}
+.floor-editor-fill .floor-key {
+  display: inline-grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  margin: 0 4px 0 8px;
+  padding: 0 5px;
+  border: 1px solid #263d32;
+  border-bottom-width: 3px;
+  border-radius: 5px;
+  background: #fffdf4;
+  color: #1d3b33;
+  font:
+    800 12px/1 ui-monospace,
+    Menlo,
+    monospace;
+}
+.floor-swatch {
+  width: 14px;
+  height: 14px;
+  border: 2px solid #fff;
+  border-radius: 3px;
+}
+.floor-swatch.walkable {
+  background: #35e06a;
+}
+.floor-swatch.blocked {
+  background: #8896aa;
+}
+/* The debug pill would cover the editor's toolbar; Selesai brings it back. */
+body:has(.modal:not(.hidden) .floor-editor) .debug-panel {
+  display: none;
+}
+/* At 100% the whole map fits; zooming in makes it larger than the view, which scrolls. */
+.floor-editor-stage {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  overflow: auto;
+  container-type: size;
+  overscroll-behavior: contain;
+}
+.floor-editor #floorEditorCanvas {
+  display: block;
+  flex: none;
+  width: calc(min(100cqw, 150cqh) * var(--zoom, 1));
+  height: auto;
+  aspect-ratio: 3 / 2;
+  max-width: none;
+  max-height: none;
+  /* Auto margins centre a small map without cutting off the left of a large one. */
+  margin: auto;
+  border: 1px solid #4b665e;
+  border-radius: 0;
+  cursor: crosshair;
+  touch-action: none;
+}
+.floor-editor-stage.panning #floorEditorCanvas {
+  cursor: move;
+}
+.floor-editor-page {
+  font-size: 14px;
+  font-weight: 700;
+  color: #245c51;
+}
+.floor-editor-zoom {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.screen .modal .floor-editor-zoom button {
+  min-width: 40px;
+  padding: 6px 10px;
+  font-size: 18px;
+}
+#floorEditorZoom {
+  min-width: 46px;
+  text-align: center;
+  font-weight: 700;
+}

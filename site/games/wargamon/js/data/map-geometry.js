@@ -1,5 +1,4 @@
-/* Four chapters, four paintings each. Stable region IDs preserve existing saves. */
-const WORLD_MAP_GAP = 0;
+/* Five chapters, four paintings each. Stable region IDs preserve existing saves. */
 const WORLD_MAP_WIDTH = 960,
   WORLD_MAP_HEIGHT = 640;
 // Maps own whole grid cells. Roads fit the cells; roads never shift a map.
@@ -43,6 +42,10 @@ function buildWorldGrid(count, connections) {
   }
   return cells;
 }
+// Gang Senggol is a painting with no region of its own: it is the grid cell after the last
+// region. Saves never store this number (in the gang, state.region is Sukamaju and the
+// position is a world coordinate east of it), so adding regions may move it safely;
+// tests/seberang.cjs loads a save standing in the gang to keep it that way.
 const GANG_GRID_INDEX = PLACES.length;
 const WORLD_CHAPTERS = [
   {
@@ -85,13 +88,35 @@ const WORLD_CHAPTERS = [
     cell: [0, 1],
     seamless: true,
   },
+  // Across the sea from the League: Teluk Pinisi, Rimba Ulin, Lembah Tongkonan, Kawah Dieng.
+  {
+    name: 'Seberang',
+    order: [15, 16, 17, 18],
+    tiles: [
+      [16, 17],
+      [15, 18],
+    ],
+    cell: [4, 1],
+    seamless: true,
+  },
 ];
 function chapterOf(i = state.region) {
   return WORLD_CHAPTERS.findIndex(chapter => chapter.order.includes(i));
 }
+// Regions in the order the story visits them. Region numbers are IDs, not progress:
+// Wargamall (9) comes before Stasiun Sela (8), so compare through this order.
+const STORY_ORDER = WORLD_CHAPTERS.flatMap(chapter => chapter.order);
+// How far along the journey a region sits: 0 for Sukamaju, 14 for the League, 18 for Dieng.
+// Region numbers are not story order (Wargamall is 9 but comes seventh).
+const storyStep = region => STORY_ORDER.filter(r => r !== GANG_GRID_INDEX).indexOf(region);
+// Whether the journey has reached `region` or anywhere after it.
+function storyReached(region) {
+  const at = STORY_ORDER.indexOf(region);
+  return [state.region, ...state.visited].some(r => STORY_ORDER.indexOf(r) >= at);
+}
 function buildChapterGrid(chapters) {
   if (
-    chapters.length !== 4 ||
+    chapters.length !== 5 ||
     chapters.some(
       c =>
         c.order.length !== 4 ||
@@ -114,7 +139,7 @@ function buildChapterGrid(chapters) {
         occupied.add(key);
       }),
     );
-  if (cells.includes(undefined) || occupied.size !== 16)
+  if (cells.includes(undefined) || occupied.size !== chapters.length * 4)
     throw new Error('Each chapter needs four unique maps');
   return cells;
 }
@@ -138,6 +163,15 @@ const WORLD_CONNECTIONS = [
   { from: 12, to: 14, edge: 'east', width: 16, at: 390 },
   // Stop before the monument's crown; the courtyard path continues around it.
   { from: 14, to: 13, edge: 'south', width: 40, at: 560, inset: 10 },
+  // Balai Beton's lower pavement runs on into Pasar Rakyat's market street.
+  { from: 4, to: 3, edge: 'east', width: 30, at: 615 },
+  // Puncak Sinyal's upper dirt road meets the Observatorium's west trail below its fence.
+  { from: 7, to: 13, edge: 'east', width: 30, at: 105 },
+  // Seberang: the harbour road climbs into the forest, the forest trail runs east to the
+  // valley, and the valley's stone road descends to the plateau.
+  { from: 15, to: 16, edge: 'north', width: 60, at: 480 },
+  { from: 16, to: 17, edge: 'east', width: 60, at: 320 },
+  { from: 17, to: 18, edge: 'south', width: 60, at: 480 },
 ];
 const WORLD_LINKS = WORLD_CONNECTIONS.map(link => {
   const [ox, oy] = WORLD_ORIGINS[link.from],
@@ -174,11 +208,24 @@ const WORLD_LINKS = WORLD_CONNECTIONS.map(link => {
     throw new Error(`Map entrances ${link.from}/${link.to} must match on their shared grid edge`);
   return { ...link, points: [start, end], gap };
 });
+// Painted roads that run into an edge with no map behind it end at a drawn barrier; the
+// floor stops just short of it (art/floors.json), so nobody walks into an invisible wall.
+// (x, y) is the foot of the barrier; `span` runs across the road along `axis`.
+const ROAD_ENDS = [
+  { region: 0, x: 500, y: 618, span: 88, axis: 'x' },
+  { region: 0, x: 12, y: 266, span: 68, axis: 'y' },
+  { region: 4, x: 660, y: 18, span: 100, axis: 'x' },
+  { region: 7, x: 150, y: 17, span: 80, axis: 'x' },
+  { region: 8, x: 94, y: 38, span: 56, axis: 'x' },
+];
 const CHAPTER_CONNECTORS = [
-  { from: 2, to: 5, exit: [945, 330], entry: [755, 595] },
+  // Pusat Kota begins at Pasar Rakyat, where its first errands are, not among its strongest trainers.
+  { from: 2, to: 3, exit: [945, 330], entry: [165, 605] },
   { from: 3, to: 6, exit: [575, 215], entry: [115, 225] },
   // The north landing beyond the workshop's railway staircase ends this chapter.
   { from: 10, to: 7, exit: [125, 15], entry: [515, 585] },
+  // Pak Darto's pinisi sails from the League's north trail to Teluk Pinisi's west pier.
+  { from: 14, to: 15, exit: [100, 85], entry: [230, 495] },
 ];
 // Replace obsolete linear-route signs with destinations belonging to this world.
 for (let i = 0; i < PLACES.length; i++) {
@@ -237,9 +284,3 @@ for (const connector of CHAPTER_CONNECTORS)
       mark: '↔',
       color: '#f3dc9a',
     });
-// Buildings drawn over a map painting are solid; everything painted is part of the
-// traced floors in js/data/floors.js.
-const SOLID_MAP_OBJECTS = {};
-// Kota Beton's services are painted into its base map; collision is traced in FLOORS.
-// Outdoor clinics are integrated into their own map backgrounds.
-const CLINIC_EXTERIORS = [];

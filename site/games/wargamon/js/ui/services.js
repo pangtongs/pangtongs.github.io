@@ -2,7 +2,7 @@
 function depositMon(i) {
   if (!atDaycare() || battle || locked || state.team.length <= 1 || !state.team[i]) return false;
   if (state.team[i].hp > 0 && !state.team.some((m, n) => n !== i && m.hp > 0)) {
-    toast('Sisakan satu teman yang masih sadar.');
+    toast(I18N.t('daycare.keepOneAwake'));
     return false;
   }
   state.storage.push(state.team.splice(i, 1)[0]);
@@ -15,6 +15,7 @@ function withdrawMon(i) {
   const m = state.storage.splice(i, 1)[0];
   state.team.push(m);
   const evolved = checkEvolution(m);
+  checkDexMilestones();
   update();
   if (evolved) toast(evolved);
   return true;
@@ -34,18 +35,18 @@ function restAtCamp() {
   )
     return;
   if (!state.team.some(m => m.hp < m.max)) {
-    toast('HP tim sudah penuh.');
+    toast(I18N.t('rest.fullHp'));
     return;
   }
   if (state.money < REST_FEE) {
-    toast('Uang belum cukup.');
+    toast(I18N.t('common.notEnoughMoney'));
     return;
   }
   state.money -= REST_FEE;
   state.team.forEach(m => (m.hp = m.max));
   closeModal();
   update();
-  toast('Istirahat selesai. HP penuh; status tetap.');
+  toast(I18N.t('rest.done'));
 }
 // The workshop's service bay: a mechanic tunes the team up instead of a clinic.
 function pitStop(p = nearest()) {
@@ -74,20 +75,20 @@ function daycareMenu(page = 0) {
   state.storage ??= [];
   if (!atDaycare()) {
     modal(
-      `<h2>Titipan Wargamon</h2><p>${state.storage.length ? I18N.t('ui.0429', { n: state.storage.length }) : I18N.t('daycare.away.none')}</p>${closeButton()}`,
+      `<h2>${I18N.t('daycare.title')}</h2><p>${state.storage.length ? I18N.t('daycare.away.count', { n: state.storage.length }) : I18N.t('daycare.away.none')}</p>${closeButton()}`,
       'daycare',
     );
     return;
   }
   page = Math.max(0, Math.min(Math.floor(Math.max(0, state.storage.length - 1) / 6), page));
   const card = (m, i, stored) =>
-    `<section class="target-card">${monArt(m)}<b>${monName(m)}, Lv.${m.level}</b><small>${typeLabel(m.id)}, HP ${m.hp}/${m.max}</small>${statusBadge(m)}<button data-over="${stored ? 'retrieve' : 'deposit'}" data-id="${i}" ${!stored && state.team.length <= 1 ? 'disabled' : ''}>${stored ? (state.team.length === 6 ? 'Tukar dengan tim' : 'Ambil') : 'Titip'}</button></section>`;
+    `<section class="target-card">${monArt(m)}<b>${monName(m)}, Lv.${m.level}</b>${batikTag(m)}<small>${typeLabel(m.id)}, HP ${m.hp}/${m.max}</small>${statusBadge(m)}<button data-over="${stored ? 'retrieve' : 'deposit'}" data-id="${i}" ${!stored && state.team.length <= 1 ? 'disabled' : ''}>${I18N.t(stored ? (state.team.length === 6 ? 'daycare.swapWithTeam' : 'daycare.withdraw') : 'daycare.deposit')}</button></section>`;
   modal(
-    `<h2>Titipan</h2><p>Tim ${state.team.length}/6, Dititipkan ${state.storage.length}. HP dan status tidak berubah.</p><h3>Tim aktif</h3><div class="target-grid">${state.team.map((m, i) => card(m, i, false)).join('')}</div><h3>Titipan</h3><div class="target-grid">${
+    `<h2>${I18N.t('daycare.shortTitle')}</h2><p>${I18N.t('daycare.summary', { n: state.team.length, stored: state.storage.length })}</p><h3>${I18N.t('daycare.activeTeam')}</h3><div class="target-grid">${state.team.map((m, i) => card(m, i, false)).join('')}</div><h3>${I18N.t('daycare.shortTitle')}</h3><div class="target-grid">${
       state.storage
         .slice(page * 6, page * 6 + 6)
         .map((m, i) => card(m, page * 6 + i, true))
-        .join('') || '<p>Belum ada titipan.</p>'
+        .join('') || `<p>${I18N.t('daycare.empty')}</p>`
     }</div><div class="actions"><button data-refresh="storagepage" data-id="${page - 1}" ${page === 0 ? 'disabled' : ''}>←</button><span>${page + 1}/${Math.max(1, Math.ceil(state.storage.length / 6))}</span><button data-refresh="storagepage" data-id="${page + 1}" ${page * 6 + 6 >= state.storage.length ? 'disabled' : ''}>→</button></div>${closeButton()}`,
     'daycare',
   );
@@ -101,7 +102,7 @@ function retrieveStored(i) {
   }
   storageSelection = i;
   modal(
-    `<h2>Tukar ${SPECIES[state.storage[i].id].name}</h2><p>Pilih teman aktif yang akan dititipkan.</p><div class="target-grid">${state.team.map((m, n) => `<button class="target-card" data-over="swap" data-id="${n}">${art(m.id)}<b>${SPECIES[m.id].name}</b><span>Lv.${m.level}, HP ${m.hp}/${m.max}</span>${statusBadge(m)}</button>`).join('')}</div>${closeButton('Batal')}`,
+    `<h2>${I18N.t('daycare.swap.title', { name: tr(SPECIES[state.storage[i].id].name) })}</h2><p>${I18N.t('daycare.swap.pick')}</p><div class="target-grid">${state.team.map((m, n) => `<button class="target-card" data-over="swap" data-id="${n}">${art(m.id)}<b>${SPECIES[m.id].name}</b><span>Lv.${m.level}, HP ${m.hp}/${m.max}</span>${statusBadge(m)}</button>`).join('')}</div>${closeButton(I18N.t('common.cancel'))}`,
     'swap',
   );
 }
@@ -117,44 +118,64 @@ function swapStored(i) {
     return false;
   const incoming = state.storage[storageSelection];
   if (!incoming.hp && !state.team.some((m, n) => n !== i && m.hp > 0)) {
-    toast('Sisakan satu teman yang sadar.');
+    toast(I18N.t('daycare.keepOneConscious'));
     return false;
   }
   [state.team[i], state.storage[storageSelection]] = [incoming, state.team[i]];
   const evolved = checkEvolution(incoming);
   storageSelection = null;
   resetScene();
+  checkDexMilestones();
   update();
   daycareMenu();
   if (evolved) toast(evolved);
   return true;
 }
-let tutorSlot = 0;
-function teachMove(i, k) {
+// The slot the tutor replaces. It starts on the last slot for each teammate: slot 1 is
+// usually the only free (0-Tempo) move, and losing it leaves nothing to use every turn.
+let tutorSlot = null,
+  tutorFor = null;
+// Whether replacing the slot's move with `k` would leave the creature no 0-Tempo move.
+function tutorTakesFreeMove(m, slot, k) {
+  const moves = kit(m.id, m);
+  return (
+    tempoCost(TUTOR_MOVES[k]) > 0 &&
+    tempoCost(moves[slot]) === 0 &&
+    !moves.some((mv, s) => s !== slot && tempoCost(mv) === 0)
+  );
+}
+function teachMove(i, k, confirmed = false) {
   if (
     modalKind !== 'tutor' ||
     battle ||
     locked ||
     !atTutor() ||
     !state.team[i] ||
-    !(k === 'none' || TUTOR_MOVES[k])
+    !(k === 'none' || tutorOffers().includes(k))
   )
     return false;
   const m = state.team[i];
   if (k === 'none') {
     delete m.learnedMoves;
-    delete m.tutorMove;
   } else {
     if (state.money < 25000 || tutorSlot >= kit(m.id, m).length) return false;
-    m.learnedMoves ??= m.tutorMove ? { 3: m.tutorMove } : {};
+    m.learnedMoves ??= {};
     // A move the creature already knows, in any slot, is not sold a second time.
     if (m.learnedMoves[tutorSlot] === k || kit(m.id, m).some(mv => mv.name === TUTOR_MOVES[k].name)) {
       toast(I18N.t('tutor.alreadyKnown'));
       return false;
     }
+    if (!confirmed && tutorTakesFreeMove(m, tutorSlot, k)) {
+      const old = kit(m.id, m)[tutorSlot];
+      modal(
+        `<h2>${I18N.t('tutor.freeWarn.title')}</h2><p>${I18N.t('tutor.freeWarn.body', { old: old.name, name: monName(m), move: TUTOR_MOVES[k].name })}</p><div class="actions"><button class="action" data-over="teach" data-id="${i}" data-key="${k}" data-confirm="1">${I18N.t('tutor.freeWarn.confirm')}</button></div>`,
+        'tutor',
+        `<button class="secondary" data-league="tutor" data-id="${i}">${I18N.t('tutor.freeWarn.back')}</button>`,
+      );
+      return false;
+    }
     state.money -= 25000;
     m.learnedMoves[tutorSlot] = k;
-    delete m.tutorMove;
   }
   m.cooldowns = {};
   update();
@@ -164,85 +185,83 @@ function teachMove(i, k) {
 function clinicReception() {
   const nurse = spots().find(p => p.key === 'clinic');
   modal(
-    `<div class="portrait-head">${trainerArt(nurse.portrait)}<div><h2>Selamat datang di klinik</h2><p>Perawat Sinta</p></div></div><div class="menu-actions"><button data-ui="checkup">✚ Periksa tim<small>Pemeriksaan gratis, tanpa pemulihan</small></button><button data-ui="treatment">♥ Rawat tim<small>HP & status pulih, ${money(CLINIC_FEE)}</small></button></div>${closeButton()}`,
+    `<div class="portrait-head">${trainerArt(nurse.portrait)}<div><h2>${I18N.t('clinic.welcome')}</h2><p>${I18N.t('clinic.nurse')}</p></div></div><div class="menu-actions"><button data-ui="checkup">✚ ${I18N.t('clinic.checkup')}<small>${I18N.t('clinic.checkup.hint')}</small></button><button data-ui="treatment">♥ ${I18N.t('clinic.treat')}<small>${I18N.t('clinic.treat.hint', { fee: money(CLINIC_FEE) })}</small></button></div>${closeButton()}`,
     'reception',
   );
 }
 /* Food has separate service rules. MBG is always free and safe; paid canteen meals
    can also treat status. The chosen dish is saved for the rotating menu. */
-const MBG_DISHES = ['Nasi telur dan sayur', 'Bubur ayam hangat', 'Nasi tempe dan tumis kacang'];
+// Dish names are catalog entries: food.mbg.dish.<n>, food.canteen.dish.<n>, food.warung.dish.<n>.
+const MBG_DISH_COUNT = 3;
 const CANTEEN_DISHES = [
-  { name: 'Pisang dan teh hangat', price: 5000, heal: 0.5, cleanse: false },
-  { name: 'Nasi lauk lengkap', price: 18000, heal: 1, cleanse: true },
+  { price: 5000, heal: 0.5, cleanse: false },
+  { price: 18000, heal: 1, cleanse: true },
 ];
-function foodT(key, fallback, params = {}) {
-  return typeof I18N === 'undefined'
-    ? fallback.replace(/\{(\w+)\}/g, (_, name) => params[name] ?? `{${name}}`)
-    : I18N.t(key, params);
-}
-// The basecamp warung sells what its chalkboard lists.
+// The basecamp warung sells what its chalkboard lists: coffee, ginger, tea, noodles, and spirit.
 const WARUNG_KALDERA_MENU = [
-  { name: 'Kopi', price: 5000, fill: 20 },
-  { name: 'Jahe', price: 5000, fill: 20 },
-  { name: 'Teh', price: 4000, fill: 15 },
-  { name: 'Indomie', price: 6000, fill: 60 },
-  { name: 'Semangat', price: 0, fill: 0 },
+  { price: 5000, fill: 20 },
+  { price: 5000, fill: 20 },
+  { price: 4000, fill: 15 },
+  { price: 6000, fill: 60 },
+  { price: 0, fill: 0 },
 ];
 function foodService() {
-  return { canteen: 'canteen', leaguearena: 'canteen', calderacamp: 'warung' }[state.room] ?? 'mbg';
+  return { leaguearena: 'canteen', calderacamp: 'warung' }[state.room] ?? 'mbg';
 }
 function mbgDishIndex() {
-  return (state.meals || 0) % MBG_DISHES.length;
+  return (state.meals || 0) % MBG_DISH_COUNT;
 }
 // The tutor is a three-step choice: teammate, slot, then replacement move.
 function tutorMenu(i = 0) {
   if (battle || locked || !atTutor() || !state.team[i]) return;
   const m = state.team[i],
     moves = kit(m.id, m);
+  if (tutorFor !== i || tutorSlot === null) tutorSlot = moves.length - 1;
   tutorSlot = Math.max(0, Math.min(tutorSlot, moves.length - 1));
+  tutorFor = i;
   modal(
-    `<div class="portrait-head tutor-head">${trainerArt(spots().find(p => p.key === 'tutor')?.portrait ?? 3)}<div><h2>${spots().find(p => p.key === 'tutor')?.name || 'Bu Ramu, Tutor Jurus'}</h2><p>Ganti satu jurus, Rp25.000</p></div></div>
- <section class="tutor-step"><h3>1. Pilih teman</h3><div class="tutor-team">${state.team.map((mon, n) => `<button data-league="tutor" data-id="${n}" aria-pressed="${n === i}">${creatureChip(mon.id, `Lv.${mon.level}`)}</button>`).join('')}</div></section>
- <section class="tutor-step"><h3>2. Pilih jurus yang diganti</h3><div class="tutor-slot-grid">${moves.map((mv, s) => `<button data-over="tutorslot" data-id="${i}" data-slot="${s}" aria-pressed="${s === tutorSlot}"><span class="slot-number">${s + 1}</span><span>${mv.name}</span><small>${TYPE_ICONS[mv.type]} ${mv.type}</small></button>`).join('')}</div></section>
- <section class="tutor-step"><h3>3. Pilih jurus baru</h3><div class="tutor-options">${Object.entries(
-   TUTOR_MOVES,
- )
+    `<div class="portrait-head tutor-head">${trainerArt(spots().find(p => p.key === 'tutor')?.portrait ?? 3)}<div><h2>${spots().find(p => p.key === 'tutor')?.name || I18N.t('tutor.defaultName')}</h2><p>${I18N.t('tutor.price')}</p></div></div>
+ <section class="tutor-step"><h3>${I18N.t('tutor.step.mon')}</h3><div class="tutor-team">${state.team.map((mon, n) => `<button data-league="tutor" data-id="${n}" aria-pressed="${n === i}">${creatureChip(mon.id, `Lv.${mon.level}`)}</button>`).join('')}</div></section>
+ <section class="tutor-step"><h3>${I18N.t('tutor.step.slot')}</h3><div class="tutor-slot-grid">${moves.map((mv, s) => `<button data-over="tutorslot" data-id="${i}" data-slot="${s}" aria-pressed="${s === tutorSlot}"><span class="slot-number">${s + 1}</span><span>${mv.name}</span><small>${TYPE_ICONS[mv.type]} ${mv.type}</small></button>`).join('')}</div></section>
+ <section class="tutor-step"><h3>${I18N.t('tutor.step.move')}</h3><div class="tutor-options">${tutorOffers()
+   .map(k => [k, TUTOR_MOVES[k]])
    .map(
      ([k, mv]) =>
-       `<section class="move-card tutor-move">${moveCard(mv)}<button data-over="teach" data-id="${i}" data-key="${k}" ${state.money < 25000 ? 'disabled' : ''}>Ajarkan ke slot ${tutorSlot + 1}, Rp25.000</button></section>`,
+       `<section class="move-card tutor-move">${moveCard(mv)}<button data-over="teach" data-id="${i}" data-key="${k}" ${state.money < 25000 ? 'disabled' : ''}>${I18N.t('tutor.teach', { n: tutorSlot + 1 })}</button></section>`,
    )
    .join('')}</div></section>
- <button class="tutor-restore secondary" data-over="teach" data-id="${i}" data-key="none">Pulihkan jurus asli, gratis</button>${closeButton('Selesai')}`,
+ <button class="tutor-restore secondary" data-over="teach" data-id="${i}" data-key="none">${I18N.t('tutor.restore')}</button>${closeButton(I18N.t('common.done'))}`,
     'tutor',
   );
 }
 /* Three independent needs: rest restores HP, food restores fullness, care treats conditions. */
 const MBG_POISON_CHANCE = 0.05;
 function meal() {
+  if (nyepiClosed()) return;
   if (foodService() === 'mbg') {
-    const dish = foodT(`food.mbg.dish.${mbgDishIndex()}`, MBG_DISHES[mbgDishIndex()]);
+    const dish = I18N.t(`food.mbg.dish.${mbgDishIndex()}`);
     modal(
-      `<h2>${foodT('food.mbg.title', 'Dapur MBG')}</h2><p>${foodT('food.mbg.offer', 'Menu hari ini: {dish}. Gratis, Kenyang tim menjadi 100. Ada peluang 20% satu teman keracunan.', { dish })}</p><button class="action" data-new="eat">${foodT('food.mbg.take', 'Ambil porsi')}</button>${closeButton('Nanti')}`,
+      `<h2>${I18N.t('food.mbg.title')}</h2><p>${I18N.t('food.mbg.offer', { dish })}</p><button class="action" data-new="eat">${I18N.t('food.mbg.take')}</button>${closeButton(I18N.t('common.later'))}`,
       'meal',
     );
     return;
   }
   if (foodService() === 'warung') {
     modal(
-      `<h2>${foodT('food.warung.title', 'Warung Kopi Kaldera')}</h2><p>${foodT('food.warung.intro', '“Pesan apa, Kak? Harga sesuai papan.”')}</p><div class="meal-grid">${WARUNG_KALDERA_MENU.map((dish, i) => `<button class="action" data-new="eat" data-dish="${i}" ${state.money < dish.price ? 'disabled' : ''}><b>${foodT(`food.warung.dish.${i}`, dish.name)}</b><small>${dish.price ? money(dish.price) : foodT('food.warung.free', 'Gratis')}${dish.fill ? ', ' + foodT('food.warung.fill', 'Kenyang +{fill}', { fill: dish.fill }) : ''}</small></button>`).join('')}</div>${closeButton('Nanti')}`,
+      `<h2>${I18N.t('food.warung.title')}</h2><p>${I18N.t('food.warung.intro')}</p><div class="meal-grid">${WARUNG_KALDERA_MENU.map((dish, i) => `<button class="action" data-new="eat" data-dish="${i}" ${state.money < dish.price ? 'disabled' : ''}><b>${I18N.t(`food.warung.dish.${i}`)}</b><small>${dish.price ? money(dish.price) : I18N.t('food.warung.free')}${dish.fill ? ', ' + I18N.t('food.warung.fill', { fill: dish.fill }) : ''}</small></button>`).join('')}</div>${closeButton(I18N.t('common.later'))}`,
       'meal',
     );
     return;
   }
   modal(
-    `<h2>${foodT('food.canteen.title', 'Kantin Arena')}</h2><p>${foodT('food.canteen.intro', 'Makanan kantin aman. Pilih porsi sesuai kebutuhan tim.')}</p><div class="actions">${CANTEEN_DISHES.map((dish, i) => `<button class="action" data-new="eat" data-dish="${i}" ${state.money < dish.price ? 'disabled' : ''}><b>${foodT(`food.canteen.dish.${i}`, dish.name)}</b><small>${money(dish.price)}, ${foodT(i ? 'food.canteen.full' : 'food.canteen.half', i ? 'Kenyang 100' : 'Kenyang +40')}</small></button>`).join('')}</div>${closeButton('Nanti')}`,
+    `<h2>${I18N.t('food.canteen.title')}</h2><p>${I18N.t('food.canteen.intro')}</p><div class="actions">${CANTEEN_DISHES.map((dish, i) => `<button class="action" data-new="eat" data-dish="${i}" ${state.money < dish.price ? 'disabled' : ''}><b>${I18N.t(`food.canteen.dish.${i}`)}</b><small>${money(dish.price)}, ${I18N.t(i ? 'food.canteen.full' : 'food.canteen.half')}</small></button>`).join('')}</div>${closeButton(I18N.t('common.later'))}`,
     'meal',
   );
 }
 function eatMeal(index = 0) {
   if (battle || locked || modalKind !== 'meal') return;
   if (foodService() === 'mbg') {
-    const dish = foodT(`food.mbg.dish.${mbgDishIndex()}`, MBG_DISHES[mbgDishIndex()]);
+    const dish = I18N.t(`food.mbg.dish.${mbgDishIndex()}`);
     state.meals = (state.meals || 0) + 1;
     state.team.forEach(m => (normalise(m).fullness = 100));
     let sick = null;
@@ -252,7 +271,7 @@ function eatMeal(index = 0) {
     }
     update();
     modal(
-      `<h2>${foodT('food.mbg.doneTitle', 'Sudah makan')}</h2><p>${foodT(sick ? 'food.mbg.sick' : 'food.mbg.done', sick ? '{dish} mengisi Kenyang tim. {mon} keracunan dan perlu Penawar atau puskesmas. Kondisi lain tetap ada.' : '{dish} mengisi Kenyang tim. HP dan kondisi tidak berubah.', { dish, mon: sick ? SPECIES[sick.id].name : '' })}</p>${closeButton('Lanjut')}`,
+      `<h2>${I18N.t('food.mbg.doneTitle')}</h2><p>${I18N.t(sick ? 'food.mbg.sick' : 'food.mbg.done', { dish, mon: sick ? tr(SPECIES[sick.id].name) : '' })}</p>${closeButton()}`,
     );
     return;
   }
@@ -263,7 +282,7 @@ function eatMeal(index = 0) {
     state.team.forEach(m => (normalise(m).fullness = Math.min(100, m.fullness + dish.fill)));
     update();
     modal(
-      `<h2>${foodT('food.canteen.doneTitle', 'Pesanan siap')}</h2><p>${dish.fill ? foodT('food.warung.result', 'Kenyang tim bertambah {fill}. HP dan kondisi tetap.', { fill: dish.fill }) : foodT('food.warung.spirit', '“Semangat, ya! Puncaknya tinggal sedikit lagi.” Gratis, dan timmu tersenyum.')}</p>${closeButton('Lanjut')}`,
+      `<h2>${I18N.t('food.canteen.doneTitle')}</h2><p>${dish.fill ? I18N.t('food.warung.result', { fill: dish.fill }) : I18N.t('food.warung.spirit')}</p>${closeButton()}`,
     );
     return;
   }
@@ -276,13 +295,13 @@ function eatMeal(index = 0) {
   });
   update();
   modal(
-    `<h2>${foodT('food.canteen.doneTitle', 'Pesanan siap')}</h2><p>${foodT(`food.canteen.result.${Number(index) ? 'full' : 'half'}`, Number(index) ? 'Kenyang tim menjadi 100. HP dan kondisi tetap.' : 'Kenyang tim bertambah 40. HP dan kondisi tetap.')}</p>${closeButton('Lanjut')}`,
+    `<h2>${I18N.t('food.canteen.doneTitle')}</h2><p>${I18N.t(`food.canteen.result.${Number(index) ? 'full' : 'half'}`)}</p>${closeButton()}`,
   );
 }
 function freeTreatment() {
   const needed = state.team.some(m => hasCondition(m));
   modal(
-    `<h2>${foodT('health.clinic.title', 'Puskesmas')}</h2><p>${foodT('health.clinic.body', 'Perawatan menghapus semua kondisi tiap anggota tim, termasuk Racun, Terbakar, Tidur, dan Kesetrum. HP dan Kenyang tetap. Biaya {fee} per tim.', { fee: money(CLINIC_FEE) })}</p><p>${foodT('health.clinic.money', 'Uang: {money}', { money: money(state.money) })}</p><button class="action" data-refresh="treat" ${state.money < CLINIC_FEE || !needed ? 'disabled' : ''}>${foodT('health.clinic.treat', 'Rawat tim')}</button>${!needed ? `<p>${foodT('health.clinic.healthy', 'Tim tidak memiliki kondisi yang perlu dirawat.')}</p>` : ''}${closeButton()}`,
+    `<h2>${I18N.t('health.clinic.title')}</h2><p>${I18N.t('health.clinic.body', { fee: money(CLINIC_FEE) })}</p><p>${I18N.t('health.clinic.money', { money: money(state.money) })}</p><button class="action" data-refresh="treat" ${state.money < CLINIC_FEE || !needed ? 'disabled' : ''}>${I18N.t('health.clinic.treat')}</button>${!needed ? `<p>${I18N.t('health.clinic.healthy')}</p>` : ''}${closeButton()}`,
     'clinic',
   );
 }
@@ -299,12 +318,12 @@ function payTreatment() {
   state.team.forEach(clearStatus);
   closeModal();
   update();
-  toast(foodT('health.clinic.done', 'Kondisi tim sudah dirawat. HP dan Kenyang tetap.'));
+  toast(I18N.t('health.clinic.done'));
   return true;
 }
 function checkup() {
   modal(
-    `<h2>${foodT('health.checkup.title', 'Pemeriksaan tim, gratis')}</h2><div class="target-grid">${state.team.map(m => `<section class="target-card">${art(m.id)}<b>${SPECIES[m.id].name}</b><span>HP ${m.hp}/${m.max}</span>${statusBadge(m)}${health(m)}<small>${hasCondition(m) ? foodT('health.checkup.condition', 'Ada kondisi: rawat di puskesmas atau pakai Penawar.') : m.hp < m.max ? foodT('health.checkup.hp', 'HP kurang: istirahat atau pakai obat.') : m.fullness < 25 ? foodT('health.checkup.hungry', 'Lapar: makan untuk mengembalikan daya serang.') : foodT('health.checkup.good', 'Kondisi baik.')}</small></section>`).join('')}</div>${closeButton()}`,
+    `<h2>${I18N.t('health.checkup.title')}</h2><div class="target-grid">${state.team.map(m => `<section class="target-card">${art(m.id)}<b>${SPECIES[m.id].name}</b><span>HP ${m.hp}/${m.max}</span>${statusBadge(m)}${health(m)}<small>${hasCondition(m) ? I18N.t('health.checkup.condition') : m.hp < m.max ? I18N.t('health.checkup.hp') : m.fullness < 25 ? I18N.t('health.checkup.hungry') : I18N.t('health.checkup.good')}</small></section>`).join('')}</div>${closeButton()}`,
     'checkup',
   );
 }

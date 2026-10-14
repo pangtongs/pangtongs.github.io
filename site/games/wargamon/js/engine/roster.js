@@ -4,14 +4,8 @@ for (const name of ['img/characters/hero-traveler.webp']) {
   im.src = name;
   images[name] = im;
 }
-function baseMatchup(type, id) {
-  let score = 0;
-  for (const defending of SPECIES[id].types) {
-    if (ELEMENTS[type]?.includes(defending)) score++;
-    else if (ELEMENTS[defending]?.includes(type)) score--;
-  }
-  return score > 0 ? 1.6 ** score : score < 0 ? 0.7 ** -score : 1;
-}
+// The type chart lives in elements.js; this only adds the conditions a body carries.
+const baseMatchup = (type, id) => typeMatchup(type, SPECIES[id].types);
 function typeMultiplier(type, target) {
   let n = baseMatchup(type, target.id);
   if (hasCondition(target, 'soaked')) {
@@ -65,7 +59,7 @@ const HERO_FRAMES = [
   ],
 ];
 const HERO_ROWS = { down: 0, right: 1, left: 2, up: 3 };
-let heroMotion = { last: null, scene: null, distance: 0, lastMove: -1000, time: 0 };
+let heroMotion = { last: null, scene: null, distance: 0, lastMove: -1000 };
 function faceMovement(dx, dy) {
   if (!dx && !dy) return;
   state.facing = Math.abs(dx) >= Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : dy > 0 ? 'down' : 'up';
@@ -117,9 +111,13 @@ function requestFollowerSheet(sheet) {
 }
 let followerMotion = { last: null, scene: null, facing: 'down', lastMove: -1000, distance: 0 };
 // Stable species IDs select one source sheet. IDs 70 to 79 have individual portraits
-// but no directional follower sheet yet, so their own portrait is used below.
+// but no directional follower sheet yet, so their own portrait is used below. Species
+// from 80 on get one sheet each (CREATURE_FOLLOWER_FILES, sheet 100 + id) once it exists;
+// until then the portrait, or its loud placeholder, follows the player.
+const SPECIES_FOLLOWER_SHEET = 100;
 function followerFrameFor(id) {
   if (id === 26) return { sheet: 17, row: 0 };
+  if (id >= 80) return creatureFollowerFile(id) ? { sheet: SPECIES_FOLLOWER_SHEET + id, row: 0 } : null;
   if (id >= 70) return null;
   if (id >= 55) return { sheet: 12 + Math.floor((id - 55) / 5), row: (id - 55) % 5 };
   if (id >= 48) return { sheet: 11, row: id - 48 };
@@ -277,7 +275,7 @@ function isolateGeneratedSprite(canvas) {
 // Slice follower poses at the measured row and column boundaries.
 function followerRows(index, height) {
   const boundaries =
-    index === 17
+    index === 17 || index >= SPECIES_FOLLOWER_SHEET
       ? [0, height]
       : index === 8
         ? [0, 240, 520, 745, 1027, 1247, 1536].map(y => (y * height) / 1536)
@@ -316,6 +314,11 @@ FOLLOWER_SHEETS.forEach((name, index) =>
   registerFollowerSheet(index, name, image => prepareFollowerSheet(image, index)),
 );
 registerFollowerSheet(17, 'img/followers/follower-layanganak.webp', image => prepareFollowerSheet(image, 17));
+for (const id of Object.keys(CREATURE_FOLLOWER_FILES).map(Number))
+  if (creatureFollowerFile(id))
+    registerFollowerSheet(SPECIES_FOLLOWER_SHEET + id, creatureFollowerFile(id), image =>
+      prepareFollowerSheet(image, SPECIES_FOLLOWER_SHEET + id),
+    );
 // Render one correctly aligned shadow and sprite; don't patch drawImage globally.
 const portraitFollowerImages = new Map();
 function followerPortrait(id) {
@@ -326,15 +329,15 @@ function followerPortrait(id) {
   }
   return portraitFollowerImages.get(id);
 }
-function drawFollower(t, position = trackFollower()) {
+// Draws the follower at the position and in the pose tickWorld() (render.js) chose.
+function drawFollower(position, pose) {
   const mon = followingMon();
   if (!mon) return;
   const frame = followerFrameFor(mon.id);
   if (frame) requestFollowerSheet(frame.sheet);
   const p = position;
-  if (!p) return;
+  if (!p || !pose) return;
   const id = mon.id,
-    pose = followerPose(p, t),
     cell = pose.sheet === undefined ? null : followerCells.get(`${pose.sheet}:${pose.row}:${pose.column}`);
   const portrait = cell
     ? null
@@ -350,6 +353,8 @@ function drawFollower(t, position = trackFollower()) {
   ctx.ellipse(p.x, p.y + 1, state.room ? 10 : 8, 3, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.imageSmoothingEnabled = false;
+  // A rare-coloured follower walks in its batik palette (batik.js caches each frame).
+  const batik = batikFor(mon);
   if (cell) {
     const [sx, sy, sw, sh] = cell.rect,
       size = state.room ? (id >= 55 ? 33 : 31) : id >= 55 ? 30 : 28,
@@ -357,7 +362,7 @@ function drawFollower(t, position = trackFollower()) {
       w = sw * scale,
       h = sh * scale;
     ctx.drawImage(
-      cell.canvas,
+      batik ? batikFrame(cell.canvas, batik) : cell.canvas,
       sx,
       sy,
       sw,
@@ -369,7 +374,13 @@ function drawFollower(t, position = trackFollower()) {
     );
   } else {
     const size = state.room ? 38 : 32;
-    ctx.drawImage(portrait, Math.round(p.x - size / 2), Math.round(p.y - size + 5), size, size);
+    ctx.drawImage(
+      batik ? batikFrame(portrait, batik) : portrait,
+      Math.round(p.x - size / 2),
+      Math.round(p.y - size + 5),
+      size,
+      size,
+    );
   }
   ctx.restore();
 }

@@ -91,7 +91,9 @@ function safeProgress(s) {
   )
     return false;
   if (s.legendCaught !== undefined && !indexList(s.legendCaught, SPECIES.length)) return false;
-  if (s.room !== null && s.room !== undefined && !Object.hasOwn(ROOMS, s.room)) return false;
+  // A room that no longer exists is allowed: migrateSave moves the player to the spawn.
+  if (s.room !== null && s.room !== undefined && (typeof s.room !== 'string' || s.room.length > 40))
+    return false;
   return true;
 }
 function createSaveArchive() {
@@ -156,6 +158,17 @@ function applySaveArchive(value) {
     next = archive.autosave || archive.slots.find(Boolean).data;
   const oldAuto = localStorage.getItem(KEY),
     oldSlots = localStorage.getItem('wargamon-slots');
+  // Slots the game cannot read are about to be replaced: a copy goes to quarantine first.
+  let readable = true;
+  try {
+    storedSlots();
+  } catch {
+    readable = false;
+  }
+  if (oldSlots != null && (!readable || damagedSlots().length) && !quarantineSave('slots', oldSlots))
+    throw Error(saveText('storage'));
+  // The same for an unreadable autosave that could not be copied away at start-up.
+  if (!unblockAutosave()) throw Error(saveText('storage'));
   try {
     localStorage.setItem('wargamon-slots', JSON.stringify(archive.slots));
     localStorage.setItem(KEY, JSON.stringify(next));
@@ -177,6 +190,7 @@ function applySaveArchive(value) {
   closeModal(true);
   resetScene();
   if (!walkable(state.x, state.y)) [state.x, state.y] = state.room ? [480, 555] : place().spawn;
+  settleState();
   update();
   resetScene();
   toast(saveText('restored'));

@@ -1,28 +1,23 @@
 for (const name of ['img/maps/exterior/3-2.webp', 'img/maps/exterior/3-3.webp']) deferMapImage(name);
+// Title, hint and the three dial names are catalog entries under waduk.<key>.
+const wadukText = key => ({
+  title: I18N.t(`waduk.${key}.title`),
+  names: [0, 1, 2].map(i => I18N.t(`waduk.${key}.name.${i}`)),
+  hint: I18N.t(`waduk.${key}.hint`),
+});
 const WADUK_PUZZLES = {
-  gears: {
-    region: 10,
-    first: 37,
-    title: 'Roda Servis',
-    names: ['Roda kecil', 'Roda sedang', 'Roda besar'],
-    target: [2, 4, 1],
-    hint: 'Roda kecil: 2 putaran. Roda sedang dua kali roda kecil. Roda besar setengah roda kecil. Roda kecil ikut memutar sedang; sedang ikut memutar besar.',
-  },
-  irrigation: {
-    region: 11,
-    first: 39,
-    title: 'Irigasi Taman',
-    names: ['Teratai', 'Rumput', 'Bunga'],
-    target: [4, 2, 1],
-    hint: 'Tujuh unit air tersedia. Teratai perlu dua kali rumput; rumput perlu dua kali bunga.',
-  },
+  gears: { region: REGION.BENGKEL, first: 37, target: [2, 4, 1], ...wadukText('gears') },
+  irrigation: { region: REGION.WADUK, first: 39, target: [4, 2, 1], ...wadukText('irrigation') },
 };
+// Each puzzle's point carries the puzzle's own key.
+for (const key of Object.keys(WADUK_PUZZLES))
+  addInteraction(TEAM_INTERACTIONS, key, () => wadukPuzzleMenu(key));
 function wadukPuzzleState(key) {
   const p = chapterState();
   return (p[key] ??= { values: [0, 0, 0], message: '' });
 }
 function gearWheel(value, index) {
-  return `<svg class="gear-wheel" viewBox="0 0 100 100" role="img" aria-label="Roda ${index + 1}, posisi ${value}"><g transform="rotate(${value * 72} 50 50)"><circle cx="50" cy="50" r="35" fill="none" stroke="#557b70" stroke-width="12"/>${Array.from({ length: 8 }, (_, n) => `<path d="M45 4h10v14H45z" fill="#557b70" transform="rotate(${n * 45} 50 50)"/>`).join('')}<path d="M50 50V18" stroke="#d16e2e" stroke-width="6"/></g><circle cx="50" cy="50" r="9" fill="#264a40"/></svg>`;
+  return `<svg class="gear-wheel" viewBox="0 0 100 100" role="img" aria-label="${I18N.t('waduk.gear.aria', { n: index + 1, position: value })}"><g transform="rotate(${value * 72} 50 50)"><circle cx="50" cy="50" r="35" fill="none" stroke="#557b70" stroke-width="12"/>${Array.from({ length: 8 }, (_, n) => `<path d="M45 4h10v14H45z" fill="#557b70" transform="rotate(${n * 45} 50 50)"/>`).join('')}<path d="M50 50V18" stroke="#d16e2e" stroke-width="6"/></g><circle cx="50" cy="50" r="9" fill="#264a40"/></svg>`;
 }
 function changeWadukPuzzle(key, i) {
   const c = WADUK_PUZZLES[key];
@@ -38,7 +33,7 @@ function changeWadukPuzzle(key, i) {
   const p = wadukPuzzleState(key);
   const next = (p.values[i] + 1) % 5;
   if (key === 'irrigation' && p.values.reduce((a, b) => a + b, 0) - p.values[i] + next > 7) {
-    p.message = 'Air tersedia hanya 7 unit. Kurangi saluran lain dulu.';
+    p.message = I18N.t('waduk.waterLimit');
     wadukPuzzleMenu(key);
     return;
   }
@@ -60,7 +55,7 @@ function checkWadukPuzzle(key) {
     return;
   const p = wadukPuzzleState(key);
   if (p.values.every((v, i) => v === c.target[i])) awardQuest(key);
-  else p.message = 'Belum pas. Cocokkan jumlah dan perbandingan pada petunjuk.';
+  else p.message = I18N.t('waduk.notYet');
   save();
   wadukPuzzleMenu(key);
 }
@@ -72,31 +67,8 @@ onClick(e => {
 });
 const wadukNpcs = new Image();
 images['img/characters/waduk-npcs.webp'] = wadukNpcs;
-wadukNpcs.onload = () => {
-  for (let i = 0; i < 4; i++) {
-    const c = document.createElement('canvas');
-    c.width = wadukNpcs.naturalWidth / 2;
-    c.height = wadukNpcs.naturalHeight / 2;
-    c.getContext('2d').drawImage(
-      wadukNpcs,
-      (i % 2) * c.width,
-      Math.floor(i / 2) * c.height,
-      c.width,
-      c.height,
-      0,
-      0,
-      c.width,
-      c.height,
-    );
-    const bounds = isolateGeneratedSprite(c),
-      id = 45 + i;
-    castCells.set(id, { canvas: c, bounds });
-    const style = document.createElement('style');
-    style.textContent = `.trainer-sprite.cast${id}{background-image:url(${c.toDataURL()});background-size:contain;background-position:center;background-repeat:no-repeat}`;
-    document.head.appendChild(style);
-  }
-};
-wadukNpcs.src = 'img/characters/waduk-npcs.webp';
+wadukNpcs.onload = () => registerCastSheet(wadukNpcs, 2, 2, 45, { isolate: isolateGeneratedSprite });
+// Requested when one of these people is on screen; see visibleActorAssets.
 function quickTeamToggle() {
   if (locked || modalKind === 'starter') return;
   if (modalKind === 'team') {
@@ -104,7 +76,7 @@ function quickTeamToggle() {
     return;
   }
   if (modalKind) {
-    toast('Tutup percakapan dulu untuk membuka tim.');
+    toast(I18N.t('team.closeDialogFirst'));
     return;
   }
   navigation++;
@@ -127,19 +99,21 @@ function wadukPuzzleMenu(key) {
   const controls = cfg.names
     .map(
       (name, i) =>
-        `<section class="activity-panel"><b>${name}</b>${key === 'gears' ? gearWheel(p.values[i], i) : `<div class="puzzle-meter" aria-label="${name}: ${p.values[i]} dari 4">${Array.from({ length: 4 }, (_, n) => `<i class="${n < p.values[i] ? 'lit' : ''}"></i>`).join('')}</div>`}${done ? `<output>${p.values[i]} putaran</output>` : `<button data-waduk="turn" data-key="${key}" data-id="${i}">${p.values[i]} → ${(p.values[i] + 1) % 5}</button>`}</section>`,
+        `<section class="activity-panel"><b>${name}</b>${key === 'gears' ? gearWheel(p.values[i], i) : `<div class="puzzle-meter" aria-label="${I18N.t('waduk.meter.aria', { label: name, n: p.values[i] })}">${Array.from({ length: 4 }, (_, n) => `<i class="${n < p.values[i] ? 'lit' : ''}"></i>`).join('')}</div>`}${done ? `<output>${I18N.t('activity.gears.turns', { n: p.values[i] })}</output>` : `<button data-waduk="turn" data-key="${key}" data-id="${i}">${p.values[i]} → ${(p.values[i] + 1) % 5}</button>`}</section>`,
     )
     .join('');
   modal(
-    `<h2>${cfg.title}</h2><p>${done ? 'Roda telah terhubung. Arena siap digunakan.' : cfg.hint}</p><div class="waduk-puzzle ${key}">${controls}</div><p class="${done ? 'activity-complete' : ''}" role="status">${done ? 'Pengaturan tepat! Arena siap.' : p.message || 'Sentuh tombol untuk mengubah pengaturan.'}</p>${done ? '' : `<div class="actions"><button class="action" data-waduk="test" data-key="${key}">Uji pengaturan</button></div>`}${closeButton()}`,
+    `<h2>${cfg.title}</h2><p>${done ? I18N.t('activity.gears.complete') : cfg.hint}</p><div class="waduk-puzzle ${key}">${controls}</div><p class="${done ? 'activity-complete' : ''}" role="status">${done ? I18N.t('waduk.done') : p.message || I18N.t('waduk.prompt')}</p>${done ? '' : `<div class="actions"><button class="action" data-waduk="test" data-key="${key}">${I18N.t('waduk.test')}</button></div>`}${closeButton()}`,
     'wadukPuzzle',
   );
 }
 // The reservoir park's pipe grid: turn pipes until water crosses the middle row.
 function irrigationMenu() {
-  if (state.region !== 11 || battle || locked) return;
+  if (state.region !== REGION.WADUK || battle || locked) return;
   if (!state.defeated.includes(39)) {
-    modal(`<h2>Irigasi Taman</h2><p>Temui ${TRAINERS[39].name} untuk membuka aliran.</p>${closeButton()}`);
+    modal(
+      `<h2>${I18N.t('waduk.irrigation.title')}</h2><p>${I18N.t('waduk.irrigation.locked', { name: tr(TRAINERS[39].name) })}</p>${closeButton()}`,
+    );
     return;
   }
   const ports = [
@@ -153,11 +127,11 @@ function irrigationMenu() {
   const cells = PIPE_BASE.map((_, i) => {
     const drawing = `<svg viewBox="0 0 60 60"><polyline points="${ports[pipePorts(i)[0]]} 30,30 ${ports[pipePorts(i)[1]]}" fill="none" stroke="${flow.path.includes(i) ? '#2486ad' : '#758980'}" stroke-width="12"/></svg>`;
     return done
-      ? `<div class="pipe-result" aria-label="Pipa ${i + 1}">${drawing}</div>`
-      : `<button data-over="pipe" data-id="${i}" aria-label="Putar pipa ${i + 1}">${drawing}</button>`;
+      ? `<div class="pipe-result" aria-label="${I18N.t('waduk.pipe.aria', { n: i + 1 })}">${drawing}</div>`
+      : `<button data-over="pipe" data-id="${i}" aria-label="${I18N.t('waduk.pipe.rotate', { n: i + 1 })}">${drawing}</button>`;
   }).join('');
   modal(
-    `<h2>Irigasi Taman</h2><p>${done ? 'Air kembali mengalir ke taman.' : 'Sambungkan air dari kiri baris tengah ke kanan baris tengah. Putar pipa; jangan biarkan aliran menuju tepi kosong.'}</p><div class="pipe-grid">${cells}</div><p class="${done ? 'activity-complete' : ''}" role="status">${done ? 'Air mengalir. Taman kembali hidup.' : irrigationState().message}</p>${done ? '' : '<button data-over="water">Buka aliran</button>'}${closeButton()}`,
+    `<h2>${I18N.t('waduk.irrigation.title')}</h2><p>${I18N.t(done ? 'activity.irrigation.complete' : 'waduk.irrigation.help')}</p><div class="pipe-grid">${cells}</div><p class="${done ? 'activity-complete' : ''}" role="status">${done ? I18N.t('waduk.irrigation.flowing') : irrigationState().message}</p>${done ? '' : `<button data-over="water">${I18N.t('waduk.irrigation.open')}</button>`}${closeButton()}`,
     'irrigation',
   );
 }

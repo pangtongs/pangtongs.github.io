@@ -8,7 +8,8 @@ onClick(e => {
     return;
   }
   if (act === 'eat') eatMeal(b.dataset.dish);
-  if (act === 'sri-battle' && state.region === 3 && state.stamps.includes('sri')) trainerIntro(10);
+  if (act === 'sri-battle' && state.region === REGION.PASAR_RAKYAT && state.stamps.includes('sri'))
+    trainerIntro(10);
 });
 document.addEventListener('fullscreenchange', () => {
   $('fullscreenBtn').textContent = document.fullscreenElement ? 'Keluar layar penuh' : 'Layar penuh';
@@ -51,7 +52,7 @@ onClick(e => {
         loadCheckpoint(id);
         break;
       }
-      if (readSlots()[id]) {
+      if (readSlots()[id] || damagedSlots().includes(id)) {
         modal(
           `<h2>Ganti slot ${id + 1}?</h2><p>Perjalanan dalam slot ini akan diganti.</p><button class="action" data-refresh="writeslot" data-id="${id}" data-mode="${d.mode}">Ganti & simpan</button>${closeButton('Batal')}`,
           'slots',
@@ -143,7 +144,9 @@ onClick(async e => {
       swapStored(i);
       break;
     case 'medmenu':
-      medicineMenu(d.key);
+      // With one teammate there is nobody to choose: the item goes straight to it.
+      if (state.team.length === 1 && canUseMedicine(d.key, state.team[0])) await useMedicine(d.key, 0, true);
+      else medicineMenu(d.key);
       break;
     case 'medicine':
       await useMedicine(d.key, i);
@@ -153,7 +156,7 @@ onClick(async e => {
       tutorMenu(i);
       break;
     case 'teach':
-      teachMove(i, d.key);
+      teachMove(i, d.key, d.confirm === '1');
       break;
     case 'decision':
       decideCivic(d.key, i);
@@ -162,14 +165,20 @@ onClick(async e => {
       resolveConsequence(d.key);
       break;
     case 'pipe':
-      if (modalKind === 'irrigation' && state.region === 11 && !has('irrigation') && i >= 0 && i < 9) {
+      if (
+        modalKind === 'irrigation' &&
+        state.region === REGION.WADUK &&
+        !has('irrigation') &&
+        i >= 0 &&
+        i < 9
+      ) {
         irrigationState().rot[i] = (irrigationState().rot[i] + 1) % 4;
         save();
         wadukPuzzleMenu('irrigation');
       }
       break;
     case 'water':
-      if (modalKind === 'irrigation' && state.region === 11 && !has('irrigation')) {
+      if (modalKind === 'irrigation' && state.region === REGION.WADUK && !has('irrigation')) {
         if (irrigationFlow().ok) awardQuest('irrigation');
         else irrigationState().message = 'Air belum mencapai taman. Ikuti pipa biru dan sambungkan ujungnya.';
         update();
@@ -253,6 +262,15 @@ onClick(async e => {
     case 'bag':
       battleItemMenu();
       break;
+    case 'speed':
+      setBattleSpeed(battleSpeed === 2 ? 1 : 2);
+      renderBattle();
+      break;
+    case 'tipsok':
+      state.tipsSeen = { ...state.tipsSeen, [b.dataset.tip === 'catch' ? 'catch' : 'battle']: true };
+      save();
+      renderBattle();
+      break;
   }
 });
 onClick(e => {
@@ -295,7 +313,9 @@ const locator = document.createElement('button');
 locator.id = 'wildLocator';
 locator.className = 'wild-locator';
 locator.type = 'button';
-locator.innerHTML = '<span class="wild-grass" aria-hidden="true"></span><span></span>';
+// A grass tuft under a magnifying glass: search the long grass.
+locator.innerHTML =
+  '<svg class="wild-grass" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 22c1-5 2-8 4-10-1 4-1 7 0 10zM7 22c0-6 1-10 3-13 0 5 0 9 1 13zM12 22c1-3 2-5 4-6-1 2-1 4-1 6z" fill="#a8cf72"/><circle cx="16.5" cy="7.5" r="4.5" fill="none" stroke="#f4dd7a" stroke-width="2.4"/><path d="M19.8 10.8 23 14" stroke="#f4dd7a" stroke-width="2.6" stroke-linecap="round"/></svg><span></span>';
 $('screen').append(locator);
 locator.addEventListener('click', () => findWild());
 setInterval(updateWildLocator, 400);

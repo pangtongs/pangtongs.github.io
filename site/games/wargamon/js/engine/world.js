@@ -2,13 +2,18 @@
 
 // --- Activity points.
 // Points of the room or region the player is in.
+// A point marked `after` appears once that quest is done (the post-game Mudik cast).
+// worldPeople (terrain.js) caches who stands in the world, keyed by state.quests and
+// debugFlags.openAll only. Anything else this reads must join that key, or people would
+// stay hidden or shown after it changes (tests/world-crowd-cache.cjs checks the source).
+const pointVisible = p => !p.after || has(p.after) || !!debugFlags.openAll;
 function spots() {
   let visible = room()
     ? room().points.some(p => p.key === 'exit')
       ? [...room().points]
-      : [...room().points, marker('exit', 'KELUAR, kembali ke jalan', 480, 570)]
+      : [...room().points, marker('exit', I18N.t('world.exitMarker'), 480, 570)]
     : place()
-        .points.filter(p => p.key !== 'trash' || !state.trash.includes(p.id))
+        .points.filter(p => (p.key !== 'trash' || !state.trash.includes(p.id)) && pointVisible(p))
         .map(p => (p.key === 'trainer' ? { ...p, mark: state.defeated.includes(p.id) ? '✓' : '!' } : p));
   visible = visible.filter(p => p.key !== 'tarsion' || !ownsTarsion());
   if (inGang()) return GANG_POINTS;
@@ -17,7 +22,7 @@ function spots() {
 // Points of any region, for drawing neighbours that are on screen.
 function regionPoints(i) {
   return PLACES[i].points
-    .filter(p => p.key !== 'trash' || !state.trash.includes(p.id))
+    .filter(p => (p.key !== 'trash' || !state.trash.includes(p.id)) && pointVisible(p))
     .map(p => ({ ...p, regionIndex: i }))
     .filter(p => p.key !== 'tarsion' || !ownsTarsion());
 }
@@ -49,6 +54,7 @@ function enterRoom(key) {
   navigation++;
   held = null;
   closeModal();
+  settlePosition();
   update();
   cameraPosition(true);
   if (key === 'pasarsubuh') {
@@ -56,7 +62,7 @@ function enterRoom(key) {
       (state.districtVisited ??= []).push(key);
       save();
       modal(
-        `<h2>${ROOMS[key].name}</h2><p>${I18N.t('market.intro')}</p>${closeButton('Jelajahi')}`,
+        `<h2>${ROOMS[key].name}</h2><p>${I18N.t('market.intro')}</p>${closeButton(I18N.t('common.explore'))}`,
         'district-intro',
       );
     }
@@ -77,19 +83,11 @@ function exitRoom() {
     held = null;
     closeModal();
     cameraPosition(true);
+    settlePosition();
     update();
     return;
   }
-  if (state.room === 'futsal' && state.region === 3) {
-    state.room = 'warungcity';
-    [state.x, state.y] = ROOMS.warungcity.spawn;
-    const door = PLACES[3].points.find(p => p.room === 'warungcity');
-    state.returnPosition = { x: door.x, y: door.y };
-    sceneReturn = state.returnPosition;
-    navigation++;
-    closeModal();
-    update();
-  } else if (state.room) {
+  if (state.room) {
     const p = state.returnPosition || { x: place().spawn[0], y: place().spawn[1] };
     state.room = null;
     state.x = p.x;
@@ -97,6 +95,7 @@ function exitRoom() {
     recoverFloor();
     navigation++;
     closeModal();
+    settlePosition();
     update();
   }
   cameraPosition(true);
@@ -164,13 +163,14 @@ function rideOjek(id) {
   return true;
 }
 function arriveRegion(id, coordinates) {
-  if (leagueState().active && id !== 14) abandonLeague();
+  if (leagueState().active && id !== REGION.LIGA) abandonLeague();
   state.room = null;
   state.region = id;
   [state.x, state.y] = coordinates;
   if (!state.visited.includes(id)) state.visited.push(id);
   resetScene();
   recoverFloor();
+  settlePosition();
   update();
   story();
 }
@@ -178,7 +178,7 @@ function useConnector(point) {
   if (!regionAvailable(point.to)) {
     const objective = nextObjective();
     modal(
-      `<h2>Penghubung belum dibuka</h2><p>${objective.title}</p><p>${objective.detail}</p>${closeButton('Bereskan dulu')}`,
+      `<h2>${I18N.t('connector.closed.title')}</h2><p>${objective.title}</p><p>${objective.detail}</p>${closeButton(I18N.t('connector.closed.button'))}`,
     );
     return;
   }
@@ -220,7 +220,7 @@ function setWorldPosition(x, y) {
     update();
     toast(REGIONS[next].name + ', ' + REGIONS[next].subtitle);
   }
-  if (previous === 14 && state.region !== 14) abandonLeague();
+  if (previous === 14 && state.region !== REGION.LIGA) abandonLeague();
   const nowInGang = inGang();
   if (!wasInGang && nowInGang && !(state.districtVisited ??= []).includes('gangsenggol')) {
     state.districtVisited.push('gangsenggol');
@@ -228,6 +228,7 @@ function setWorldPosition(x, y) {
     toast(I18N.t('gang.arrive'));
   }
   if (wasInGang !== nowInGang) syncGangLocation();
+  roadAmbush();
   return changed;
 }
 
@@ -243,14 +244,10 @@ function movement(dx, dy) {
       state.y = y;
       state.steps++;
     }
-    const p = nearest();
-    $('hint').textContent =
-      p && Math.hypot(state.x - p.x, state.y - p.y) < reachOf(p)
-        ? 'E, ' + p.name
-        : 'Klik penanda, WASD / panah untuk jalan';
+    refreshHint();
     return;
   }
-  if (battle || modalKind || locked || !state.team.length) return;
+  if (busy() || !state.team.length) return;
   const p = worldPosition(),
     x = p.x + dx,
     y = p.y + dy;
@@ -258,11 +255,16 @@ function movement(dx, dy) {
     setWorldPosition(x, y);
     state.steps++;
   }
+  refreshHint();
+}
+// The hint bar names what E would use from where the player stands. Called after every
+// step, typed or walked by a click.
+function refreshHint() {
   const near = nearest();
   $('hint').textContent =
-    near && Math.hypot(state.x - near.x, state.y - near.y) < reachOf(near)
-      ? 'E, ' + near.name
-      : 'Ikuti jalan, kamera mengikuti kamu';
+    near && Math.hypot(state.x - near.x, state.y - near.y) <= reachOf(near)
+      ? reachHintText(near)
+      : I18N.t(state.room ? 'hint.room' : 'hint.region');
 }
 // A path of 10px steps to a point in the current room or region, or null.
 function routeTo(x, y) {
@@ -345,34 +347,42 @@ function routeTo(x, y) {
 async function autoWalk(p) {
   if (!state.room) return walkWorldTarget(p);
   if (modalKind || battle || !p) return;
-  let destination = p;
+  let path = null;
   if (p.portrait !== undefined) {
-    const candidates = [
-      [55, 0],
-      [-55, 0],
-      [0, 65],
-      [0, -65],
-    ]
-      .map(([dx, dy]) => ({ x: p.x + dx, y: p.y + dy }))
-      .filter(c => walkable(c.x, c.y))
-      .map(c => ({ c, path: routeTo(c.x, c.y) }))
-      .filter(c => c.path)
-      .sort((a, b) => a.path.length - b.path.length);
-    if (candidates.length) destination = candidates[0].c;
+    // routeTo ends on the 10px floor grid, so a side is only taken when the cell the walk
+    // really ends on is still within reach; otherwise the click would walk up and stop.
+    const inReach = route => route && Math.hypot(route.at(-1).x - p.x, route.at(-1).y - p.y) <= reachOf(p),
+      candidates = [
+        [50, 0],
+        [-50, 0],
+        [0, 50],
+        [0, -50],
+        [40, 40],
+        [-40, 40],
+        [40, -40],
+        [-40, -40],
+      ]
+        .map(([dx, dy]) => ({ x: p.x + dx, y: p.y + dy }))
+        .filter(c => walkable(c.x, c.y))
+        .map(c => routeTo(c.x, c.y))
+        .filter(inReach)
+        .sort((a, b) => a.length - b.length);
+    path = candidates[0] || null;
   }
-  const path = routeTo(destination.x, destination.y);
+  path ??= routeTo(p.x, p.y);
   if (!path) {
-    toast('Jalur terhalang. Ikuti jalan yang terlihat.');
+    toast(I18N.t('route.blocked'));
     return;
   }
   const nav = ++navigation;
   for (const pos of path) {
-    if (nav !== navigation || battle || modalKind || held) return;
+    if (nav !== navigation || battle || modalKind || held) return refreshHint();
     state.x = pos.x;
     state.y = pos.y;
     state.steps++;
     await delay(24);
   }
+  refreshHint();
   if (nav === navigation) interact(p);
 }
 // Walk to a spot on the ground without using anything there.
@@ -382,11 +392,12 @@ async function autoWalkGround(dest) {
   if (!path) return;
   const nav = ++navigation;
   for (const p of path) {
-    if (nav !== navigation || battle || modalKind || held) return;
+    if (nav !== navigation || battle || modalKind || held) return refreshHint();
     state.x = p.x;
     state.y = p.y;
     await delay(24);
   }
+  refreshHint();
 }
 // Where the lead creature stands: 30px back along the player's recent path,
 // or beside the player when there is no path yet.
@@ -460,7 +471,7 @@ async function guideObjective() {
     if (o.room) {
       const door = spots().find(p => p.room === o.room);
       if (!door) {
-        toast('Tempat tujuan belum tersedia di peta ini.');
+        toast(I18N.t('route.noTarget'));
         return;
       }
       await autoWalk(door);

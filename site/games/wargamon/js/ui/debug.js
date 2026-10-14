@@ -58,6 +58,8 @@ if (DEBUG) {
       sessionStorage.setItem('wargamon-debug-flags', JSON.stringify(debugFlags));
     } catch {}
     renderDebugPanel();
+    // Opening or closing maps and floors can leave the player on ground that is now solid.
+    settlePosition();
     update();
   };
   panel.addEventListener('click', event => {

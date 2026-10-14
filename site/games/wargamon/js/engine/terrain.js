@@ -3,8 +3,6 @@
    a function says world. */
 
 // --- Floors. Coordinates are local to one region (960 x 640) or one room.
-// A floor generated from a map painting (js/data/floors.js): one character per 10px cell.
-const paintedFloor = (rows, x, y) => rows[Math.round(y / 10)]?.[Math.round(x / 10)] === '#';
 function localTerrain(i, x, y) {
   // Travel openings are traced in the painting too. A connecting road must never
   // turn a building, tree or pond into floor merely because it is near an edge.
@@ -21,7 +19,7 @@ function localTerrain(i, x, y) {
     )
       return false;
   }
-  return effectiveFloorAt(i, x, y) && !(SOLID_MAP_OBJECTS[i] || []).some(r => insideRect(x, y, r));
+  return effectiveFloorAt(i, x, y);
 }
 // Every room's floor is traced over its painting in art/floors.json; see js/data/floors.js.
 function roomFloor(key, x, y) {
@@ -42,7 +40,11 @@ function personHeight(p = {}) {
   if (castCells.has(p.portrait)) return state.room ? 47 : 37;
   return state.room ? 48 : 38;
 }
+// No footprint is wider than a counter (34px to each side) or reaches below the feet.
+const PERSON_REACH = 34;
 function insidePerson(p, x, y) {
+  // Walking and route finding ask about every person for every step; most are far away.
+  if (x - p.x >= PERSON_REACH || p.x - x >= PERSON_REACH || y >= p.y + PERSON_BOX.down) return false;
   const counter = p.stall && p.stall !== 'painted',
     height = personHeight(p),
     tall = p.tall || height > (state.room ? 52 : 42),
@@ -50,13 +52,40 @@ function insidePerson(p, x, y) {
   return Math.abs(x - p.x) < (counter ? 34 : PERSON_BOX.half) && y > p.y - up && y < p.y + PERSON_BOX.down;
 }
 const people = points => points.filter(p => p.portrait !== undefined);
+// A long list of people (the whole world's) is grouped once into columns twice as wide as
+// the widest footprint reaches, so a question about one point looks only at the two
+// columns that can touch it. Route finding asks this for every cell.
+const crowdColumns = new WeakMap();
+function nearbyPeople(feet, x) {
+  if (feet.length < 32) return feet;
+  let columns = crowdColumns.get(feet);
+  if (!columns) {
+    columns = new Map();
+    for (const p of feet) {
+      const c = Math.floor(p.x / (2 * PERSON_REACH));
+      if (!columns.has(c)) columns.set(c, []);
+      columns.get(c).push(p);
+    }
+    crowdColumns.set(feet, columns);
+  }
+  // insidePerson needs |x - p.x| < PERSON_REACH: the point's column and the nearer neighbour.
+  const c = Math.floor(x / (2 * PERSON_REACH)),
+    side = x - c * 2 * PERSON_REACH < PERSON_REACH ? c - 1 : c + 1;
+  return [...(columns.get(c) || []), ...(columns.get(side) || [])];
+}
 function personBlocks(feet, x, y, from) {
-  return feet.some(p => insidePerson(p, x, y) && !insidePerson(p, from.x, from.y));
+  return nearbyPeople(feet, x).some(p => insidePerson(p, x, y) && !insidePerson(p, from.x, from.y));
 }
 let worldPeopleCache = null;
 // Tarsion stands in the observatory courtyard as solid as a person until it joins the
 // team. Owning it is checked at most a few times a second; walking asks constantly.
 const tarsionHere = { at: -Infinity, here: false };
+// Who stands in the world changes only with progress: a quest done (people marked
+// `after`), the debug open-all switch, Tarsion joining the team. The list is kept until
+// one of those changes, so walking and route finding get the same array (and its
+// columns, see nearbyPeople) every time. This relies on pointVisible (world.js) reading
+// nothing but `after`, the quests and openAll; a new visibility rule must join the key.
+const worldCrowd = { list: null, quests: null, done: -1, openAll: null, tarsion: null, gang: null };
 function worldPeople() {
   worldPeopleCache ??= PLACES.flatMap((place, i) =>
     people(place.points).map(p => ({ ...p, ...globalPoint(i, p) })),
@@ -66,12 +95,34 @@ function worldPeople() {
     tarsionHere.at = now;
     tarsionHere.here = typeof ownsTarsion === 'function' && !ownsTarsion();
   }
-  const extra = typeof GANG_POINTS === 'undefined' ? [] : people(GANG_POINTS);
+  const openAll = typeof debugFlags === 'object' && !!debugFlags.openAll,
+    gang = typeof GANG_POINTS !== 'undefined';
+  if (
+    worldCrowd.list &&
+    worldCrowd.quests === state.quests &&
+    worldCrowd.done === state.quests.length &&
+    worldCrowd.openAll === openAll &&
+    worldCrowd.tarsion === tarsionHere.here &&
+    worldCrowd.gang === gang
+  )
+    return worldCrowd.list;
+  const extra = gang ? people(GANG_POINTS) : [];
   if (tarsionHere.here) {
-    const p = PLACES[13].points.find(p => p.key === 'tarsion');
+    const p = PLACES[REGION.OBSERVATORIUM].points.find(p => p.key === 'tarsion');
     extra.push({ ...p, ...globalPoint(13, p) });
   }
-  return extra.length ? [...worldPeopleCache, ...extra] : worldPeopleCache;
+  const present = worldPeopleCache.some(p => p.after)
+    ? worldPeopleCache.filter(p => typeof pointVisible !== 'function' || pointVisible(p))
+    : worldPeopleCache;
+  Object.assign(worldCrowd, {
+    list: extra.length ? [...present, ...extra] : present,
+    quests: state.quests,
+    done: state.quests.length,
+    openAll,
+    tarsion: tarsionHere.here,
+    gang,
+  });
+  return worldCrowd.list;
 }
 // Inside, the hero's body must fit: half a body to each side and a little room in
 // front, so the feet never reach the very edge of a counter, shelf or wall.
@@ -91,10 +142,11 @@ function walkable(x, y) {
   return worldWalkable(x + worldOrigin()[0], y + worldOrigin()[1]);
 }
 // World coordinates: every unlocked region, the roads between them and the alley.
-function worldWalkable(x, y) {
+// `crowd` lets a caller asking about many cells at once gather worldPeople() once.
+function worldWalkable(x, y, crowd = null) {
   if (debugWalkAll()) return groundWalkable(x, y);
   if (freeWalkAt(x, y)) return true;
-  if (personBlocks(worldPeople(), x, y, worldPosition())) return false;
+  if (personBlocks(crowd || worldPeople(), x, y, worldPosition())) return false;
   return groundWalkable(x, y);
 }
 function gangContains(x, y) {
@@ -181,6 +233,9 @@ function linkContains(link, x, y, slack = 0) {
     );
 }
 // A* on the same collision surface the camera displays, including all opened connecting paths.
+// Cells are 10px. One call owns a grid over the chapter's paintings: walkability is
+// asked once per cell, and a breadth-first fill from the goal runs alongside the search,
+// so an unreachable goal is known once the smaller of the two areas is used up.
 function worldRoute(start, goal) {
   // Do not snap a destination in another chapter back onto this chapter's edge.
   // Sparse paintings now have clear grass there, so proximity is insufficient.
@@ -192,15 +247,39 @@ function worldRoute(start, goal) {
         return p.x >= x && p.x < x + 960 && p.y >= y && p.y < y + 640;
       });
   if (!ownsPoint(start) || !ownsPoint(goal)) return null;
-  const step = 10,
-    key = (x, y) => x + ',' + y;
+  const step = 10;
+  // Everything worldWalkable can accept lies inside these paintings (see groundWalkable
+  // and freeWalkAt); a cell outside the grid is solid.
+  const areas = [];
+  for (const i of maps)
+    for (const origin of [WORLD_PAINT_ORIGINS[i], WORLD_ORIGINS[i]]) if (origin) areas.push(origin);
+  if (chapterOf() === 0) {
+    areas.push([GANG_WORLD.x, GANG_WORLD.y]);
+    for (const i of FREE_WALK_MAPS) if (WORLD_ORIGINS[i]) areas.push(WORLD_ORIGINS[i]);
+  }
+  const x0 = Math.floor(Math.min(...areas.map(a => a[0])) / step) - 1,
+    y0 = Math.floor(Math.min(...areas.map(a => a[1])) / step) - 1,
+    cols = Math.ceil((Math.max(...areas.map(a => a[0])) + 960) / step) + 2 - x0,
+    rows = Math.ceil((Math.max(...areas.map(a => a[1])) + 640) / step) + 2 - y0,
+    size = cols * rows;
+  // 0 unknown, 1 walkable, 2 solid.
+  const open = new Uint8Array(size),
+    crowd = worldPeople();
+  const walk = (x, y) => {
+    const cx = x - x0,
+      cy = y - y0;
+    if (cx < 0 || cy < 0 || cx >= cols || cy >= rows) return false;
+    const k = cy * cols + cx;
+    if (!open[k]) open[k] = worldWalkable(x * step, y * step, crowd) ? 1 : 2;
+    return open[k] === 1;
+  };
   const node = p => {
     let best = null,
       d = Infinity;
     for (let yy = Math.round(p.y / step) - 3; yy <= Math.round(p.y / step) + 3; yy++)
       for (let xx = Math.round(p.x / step) - 3; xx <= Math.round(p.x / step) + 3; xx++) {
         const dd = Math.hypot(xx * step - p.x, yy * step - p.y);
-        if (dd < d && worldWalkable(xx * step, yy * step)) {
+        if (dd < d && walk(xx, yy)) {
           d = dd;
           best = { x: xx, y: yy };
         }
@@ -210,88 +289,119 @@ function worldRoute(start, goal) {
   const a = node(start),
     b = node(goal);
   if (!a || !b) return null;
-  const first = key(a.x, a.y),
-    last = key(b.x, b.y),
-    cost = new Map([[first, 0]]),
-    prev = new Map([[first, null]]),
-    closed = new Set(),
-    heap = [];
-  const push = n => {
-    heap.push(n);
-    let i = heap.length - 1;
+  const index = (x, y) => (y - y0) * cols + (x - x0),
+    first = index(a.x, a.y),
+    last = index(b.x, b.y),
+    cost = new Int32Array(size).fill(0x7fffffff),
+    prev = new Int32Array(size).fill(-1),
+    closed = new Uint8Array(size),
+    heapK = [],
+    heapF = [];
+  cost[first] = 0;
+  const push = (k, f) => {
+    let i = heapK.length;
+    heapK.push(k);
+    heapF.push(f);
     while (i) {
       const p = (i - 1) >> 1;
-      if (heap[p].f <= n.f) break;
-      heap[i] = heap[p];
+      if (heapF[p] <= f) break;
+      heapK[i] = heapK[p];
+      heapF[i] = heapF[p];
       i = p;
     }
-    heap[i] = n;
+    heapK[i] = k;
+    heapF[i] = f;
   };
   const pop = () => {
-    const result = heap[0],
-      tail = heap.pop();
-    if (heap.length) {
+    const result = heapK[0],
+      tailK = heapK.pop(),
+      tailF = heapF.pop();
+    if (heapK.length) {
       let i = 0;
-      while (i * 2 + 1 < heap.length) {
+      while (i * 2 + 1 < heapK.length) {
         let c = i * 2 + 1;
-        if (c + 1 < heap.length && heap[c + 1].f < heap[c].f) c++;
-        if (heap[c].f >= tail.f) break;
-        heap[i] = heap[c];
+        if (c + 1 < heapK.length && heapF[c + 1] < heapF[c]) c++;
+        if (heapF[c] >= tailF) break;
+        heapK[i] = heapK[c];
+        heapF[i] = heapF[c];
         i = c;
       }
-      heap[i] = tail;
+      heapK[i] = tailK;
+      heapF[i] = tailF;
     }
     return result;
   };
-  push({ ...a, k: first, f: 0 });
-  while (heap.length && closed.size < 120000) {
-    const cur = pop();
-    if (closed.has(cur.k)) continue;
-    if (cur.k === last) {
-      const path = [];
-      let k = last;
-      while (k !== null) {
-        const [x, y] = k.split(',').map(Number);
-        path.push({ x: x * step, y: y * step });
-        k = prev.get(k);
+  // The goal's own area, filled one cell per search step. Moves are symmetric, so if
+  // the fill ends without reaching the start, no route exists.
+  const reached = new Uint8Array(size),
+    fill = [last];
+  reached[last] = 1;
+  let fillAt = 0,
+    explored = 0;
+  const DIRS = [
+    [1, 0],
+    [-1, 0],
+    [0, 1],
+    [0, -1],
+  ];
+  push(first, 0);
+  while (heapK.length && explored < 120000) {
+    if (fillAt < fill.length) {
+      const k = fill[fillAt++],
+        x = (k % cols) + x0,
+        y = Math.floor(k / cols) + y0;
+      for (const [dx, dy] of DIRS) {
+        if (!walk(x + dx, y + dy)) continue;
+        const n = index(x + dx, y + dy);
+        if (reached[n]) continue;
+        reached[n] = 1;
+        fill.push(n);
       }
+      if (fillAt === fill.length && !reached[first]) return null;
+    }
+    const cur = pop();
+    if (closed[cur]) continue;
+    if (cur === last) {
+      const path = [];
+      for (let k = last; k !== -1; k = prev[k])
+        path.push({ x: ((k % cols) + x0) * step, y: (Math.floor(k / cols) + y0) * step });
       return path.reverse();
     }
-    closed.add(cur.k);
-    for (const [dx, dy] of [
-      [1, 0],
-      [-1, 0],
-      [0, 1],
-      [0, -1],
-    ]) {
-      const x = cur.x + dx,
-        y = cur.y + dy,
-        k = key(x, y),
-        g = cost.get(cur.k) + 1;
-      if (closed.has(k) || g >= (cost.get(k) ?? Infinity) || !worldWalkable(x * step, y * step)) continue;
-      cost.set(k, g);
-      prev.set(k, cur.k);
-      push({ x, y, k, f: g + Math.abs(x - b.x) + Math.abs(y - b.y) });
+    closed[cur] = 1;
+    explored++;
+    const cx = (cur % cols) + x0,
+      cy = Math.floor(cur / cols) + y0,
+      g = cost[cur] + 1;
+    for (const [dx, dy] of DIRS) {
+      const x = cx + dx,
+        y = cy + dy;
+      if (!walk(x, y)) continue;
+      const k = index(x, y);
+      if (closed[k] || g >= cost[k]) continue;
+      cost[k] = g;
+      prev[k] = cur;
+      push(k, g + Math.abs(x - b.x) + Math.abs(y - b.y));
     }
   }
   return null;
 }
 async function followWorldPath(path) {
   if (!path) {
-    toast('Belum ada jalan terbuka ke sana. Lihat tujuan berikutnya.');
+    toast(I18N.t('route.noPath'));
     return false;
   }
   const nav = ++navigation;
   for (const p of path) {
-    if (nav !== navigation || battle || modalKind || held) return false;
+    if (nav !== navigation || battle || modalKind || held) return (refreshHint(), false);
     setWorldPosition(p.x, p.y);
     state.steps++;
     await delay(24);
   }
+  refreshHint();
   return nav === navigation;
 }
 async function walkConnection(direction) {
-  if (state.room || battle || modalKind || locked) return;
+  if (state.room || busy()) return;
   const chapter = WORLD_CHAPTERS[chapterOf()],
     position = chapter.order.indexOf(state.region),
     destination = chapter.order[position + direction];

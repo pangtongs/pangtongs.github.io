@@ -1,0 +1,942 @@
+/* Story activities: puzzles, district scenes, league, news and futsal. */
+
+/* Festival power panel */
+/* Chapter devices are playable controls, never baked into map artwork. */
+.power-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  max-width: 340px;
+  margin: 18px auto;
+}
+.power-grid button {
+  min-height: 70px;
+  background: #263f4b;
+  color: #fff;
+  border: 3px solid #607782;
+  border-radius: 8px;
+  font-size: 23px;
+}
+.power-grid button.lit {
+  background: #eeef91;
+  color: #234731;
+  border-color: #99ad42;
+  box-shadow: 0 0 12px #e6ee9290;
+}
+.power-grid small {
+  display: block;
+  font-size: 14px;
+}
+.screen .modal .power-grid .power-result {
+  box-sizing: border-box;
+  min-height: 70px;
+  padding: 10px;
+  border: 3px solid #99ad42;
+  border-radius: 8px;
+  background: #eeef91;
+  color: #234731;
+  text-align: center;
+  font-size: 23px;
+  box-shadow: none;
+}
+.screen .modal .power-grid .power-result small {
+  display: block;
+  font-size: 14px;
+}
+/* Keep the switch state visible even under the shared modal button theme. */
+.screen .modal .power-grid button[aria-pressed='false'],
+.screen .modal .power-grid button[aria-pressed='false']:hover:not(:disabled) {
+  background: #53646c;
+  color: #fff;
+  border: 3px solid #354650;
+  box-shadow: 0 3px 0 #283840;
+}
+.screen .modal .power-grid button[aria-pressed='true'],
+.screen .modal .power-grid button[aria-pressed='true']:hover:not(:disabled) {
+  background: #f1e174;
+  color: #263b2b;
+  border: 3px solid #ae9c3f;
+  box-shadow: 0 0 14px #e7d965a8;
+}
+.screen .modal .power-grid button small {
+  color: inherit;
+}
+@media (max-width: 520px) {
+  .power-grid {
+    max-width: 290px;
+  }
+  .power-grid button {
+    min-height: 60px;
+  }
+}
+
+/* Valve and signal consoles */
+.reservoir {
+  padding: 16px;
+  background: #224d67;
+  color: white;
+  font-weight: bold;
+  text-align: center;
+  border-radius: 8px;
+}
+.sluices {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 16px 0;
+}
+.sluices > div {
+  background: #dce8d2;
+  padding: 12px 8px;
+  text-align: center;
+  border-radius: 8px;
+}
+.sluices b {
+  font-size: 14px;
+}
+.sluices button,
+.signal-controls button {
+  padding: 12px;
+  background: #285361;
+  color: #fff;
+  border: 2px solid #587d81;
+  border-radius: 6px;
+  font-size: 16px;
+  min-height: 44px;
+}
+.flow-meter {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 3px;
+  margin: 12px auto;
+  width: 52px;
+}
+.flow-meter i {
+  height: 23px;
+  background: #b1c1b8;
+  color: #1d3940;
+  font-size: 16px;
+  font-style: normal;
+}
+.flow-meter i.filled {
+  background: #50c3df;
+}
+.signal-sequence {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  background: #193b50;
+  color: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  margin: 15px 0;
+}
+.signal-sequence span {
+  padding: 7px;
+  border: 1px solid #97c3d2;
+  font-size: 16px;
+}
+.signal-controls {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin: 15px 0;
+}
+.signal-controls button:disabled,
+.sluices button:disabled {
+  opacity: 0.4;
+}
+/* Route controls stay legible in each sluice column on phones. */
+.sluices button {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 9px 4px;
+  font-size: 14px;
+  line-height: 1.25;
+  white-space: normal;
+}
+@media (max-width: 520px) {
+  .sluices {
+    gap: 4px;
+  }
+  .sluices > div {
+    padding: 10px 3px;
+  }
+  .sluices button {
+    font-size: 13px;
+    min-height: 48px;
+  }
+}
+
+/* Rail switches and irrigation pipes */
+.rail-grid svg {
+  width: 100%;
+  max-height: 64px;
+}
+.rail-empty {
+  background: #c1c8b1;
+  border-radius: 5px;
+}
+.rail-grid button svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.rail-grid small {
+  position: absolute;
+  top: 2px;
+  left: 3px;
+  font-size: 12px;
+}
+.pipe-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+  width: min(100%, 330px);
+  margin: 16px auto;
+}
+.pipe-grid button {
+  padding: 0;
+  border: 1px solid #91aca0;
+  border-radius: 0;
+  box-shadow: none;
+  background: #dbe8ce;
+  aspect-ratio: 1;
+}
+.pipe-grid svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.screen .modal .pipe-grid .pipe-result {
+  box-sizing: border-box;
+  aspect-ratio: 1;
+  border: 1px solid #91aca0;
+  background: #dbe8ce;
+}
+.rail-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  max-width: 360px;
+  margin: 12px auto;
+  gap: 0;
+}
+.rail-grid button {
+  background: #e2e6ce;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  padding: 0;
+  border-radius: 0;
+  border: 1px solid #9eae91;
+  box-shadow: none;
+}
+
+/* Reservoir puzzles */
+.waduk-puzzle {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin: 20px 0;
+}
+.waduk-puzzle section {
+  padding: 12px;
+  background: #dde9d2;
+  text-align: center;
+}
+.puzzle-meter {
+  display: flex;
+  gap: 4px;
+  margin: 16px 0;
+}
+.puzzle-meter i {
+  height: 20px;
+  flex: 1;
+  background: #acb9a6;
+  border: 1px solid #54705b;
+}
+.puzzle-meter i.lit {
+  background: #39a8aa;
+}
+.gear-wheel {
+  width: 100%;
+  max-width: 120px;
+  display: block;
+  margin: 12px auto;
+}
+/* Activity screens use equal panels; finished results never look pressable. */
+.screen .modal .waduk-puzzle {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  width: 100%;
+  margin: 16px 0;
+}
+.screen .modal .waduk-puzzle .activity-panel {
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 156px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid #a3b9a1;
+  border-radius: 9px;
+  background: #e3ecdb;
+  text-align: center;
+}
+.screen .modal .waduk-puzzle .activity-panel b {
+  line-height: 1.25;
+}
+.screen .modal .waduk-puzzle .gear-wheel {
+  width: 70px;
+  height: 70px;
+  max-width: 100%;
+  margin: 0;
+}
+.screen .modal .waduk-puzzle .activity-panel button,
+.screen .modal .waduk-puzzle .activity-panel output {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 42px;
+  padding: 8px;
+  display: grid;
+  place-items: center;
+}
+.screen .modal .waduk-puzzle .activity-panel output {
+  border: 1px solid #b3c7b2;
+  border-radius: 7px;
+  background: #eef4e9;
+  color: #315545;
+  font-weight: 700;
+  box-shadow: none;
+  cursor: default;
+}
+.screen .modal .activity-complete {
+  padding: 12px 14px;
+  border: 1px solid #a2bd9d;
+  border-radius: 8px;
+  background: #e5efde;
+  color: #24543e;
+  font-weight: 700;
+}
+@media (max-width: 600px) {
+  .waduk-puzzle {
+    gap: 5px;
+  }
+  .waduk-puzzle section {
+    padding: 8px 3px;
+  }
+  .screen .modal .waduk-puzzle {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+  .screen .modal .waduk-puzzle .activity-panel {
+    min-height: 82px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 64px minmax(110px, 1fr);
+    text-align: left;
+  }
+  .screen .modal .waduk-puzzle .activity-panel .gear-wheel {
+    width: 56px;
+    height: 56px;
+  }
+  .screen .modal .waduk-puzzle .activity-panel button,
+  .screen .modal .waduk-puzzle .activity-panel output {
+    min-width: 0;
+  }
+  .screen .modal .waduk-puzzle.resonance .activity-panel {
+    grid-template-columns: minmax(0, 1fr) minmax(110px, 1fr);
+  }
+}
+
+/* League and hall of champions */
+.elite-line {
+  padding-left: 1.5rem;
+  display: grid;
+  gap: 0.5rem;
+}
+.elite-line li {
+  padding: 0.4rem;
+}
+.elite-line small {
+  display: block;
+}
+.elite-line .current {
+  background: #d5e8b6;
+  outline: 2px solid #24513c;
+}
+.hall-team {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.hall-team > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.hall-team .sprite {
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+}
+.hall-entry {
+  border-top: 1px solid #859577;
+  padding: 12px 0;
+}
+.hall-team span {
+  font-size: 14px;
+}
+@media (max-width: 600px) {
+  .hall-team {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .hall-team .sprite {
+    width: 42px;
+    height: 42px;
+  }
+}
+
+/* News desk */
+/* Atlas fallback is the wrong creature while async transparent portraits
+   are being cut. The generated species rule is appended after this sheet. */
+.news-arc {
+  margin-top: 20px;
+  border-top: 2px solid #aebfac;
+  padding-top: 16px;
+}
+.news-arc-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.news-arc-heading h3 {
+  margin: 0;
+}
+.news-arc-heading span {
+  border-radius: 999px;
+  background: #285a4e;
+  color: #fff;
+  padding: 5px 10px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.news-arc > p {
+  margin: 9px 0 16px;
+}
+.news-cases {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.news-case {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 7px;
+  padding: 13px;
+  border: 1px solid #aabca9;
+  border-radius: 10px;
+  background: #e5edda;
+}
+.news-case-kicker {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #587268;
+}
+.news-case h4 {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.2;
+}
+.news-case strong {
+  font-size: 13px;
+  margin-top: auto;
+}
+.screen .modal .news-case button {
+  width: 100%;
+  min-height: 42px;
+  margin-top: 5px;
+}
+.news-published {
+  font-size: 13px;
+  color: #276449;
+  font-weight: 700;
+}
+.news-arc-reward {
+  padding: 10px;
+  background: #d7e8c5;
+  border-left: 4px solid #467c54;
+}
+.news-case p {
+  font-size: 13px;
+  margin: 0;
+}
+@media (max-width: 780px) {
+  .news-cases {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Futsal penalty game */
+/* The minigame has its own readable surface, including on short mobile screens. */
+#modal:has(.futsal-game) {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  padding: 12px;
+  background: #081a20ed;
+}
+#modal .dialog:has(.futsal-game) {
+  max-width: 850px;
+  max-height: calc(100dvh - 24px);
+  overflow: auto;
+  padding: 18px;
+  border: 1px solid #537c70;
+  border-radius: 16px;
+  background: #102d2c;
+  color: #f4faf4;
+  box-shadow: 0 16px 60px #0008;
+}
+.futsal-game {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  text-align: left;
+}
+.futsal-game .futsal-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  height: auto;
+  padding: 0;
+  border: 0;
+}
+.futsal-heading small {
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  color: #a4c5b5;
+}
+.futsal-heading h2 {
+  font-size: 22px;
+  margin: 3px 0;
+  color: #f4faf4;
+}
+.futsal-heading > strong {
+  font-size: 20px;
+  color: #d2f58e;
+  white-space: nowrap;
+}
+.futsal-rounds {
+  display: flex;
+  gap: 7px;
+  justify-content: center;
+}
+.futsal-round {
+  display: grid;
+  place-items: center;
+  width: 27px;
+  height: 27px;
+  border: 1px solid #628076;
+  border-radius: 50%;
+  color: #c0d0c7;
+  font-size: 14px;
+}
+.futsal-round.current {
+  border-color: #e2fca6;
+  box-shadow: 0 0 0 2px #e2fca62b;
+}
+.futsal-round.goal {
+  background: #247c55;
+  color: #fff;
+}
+.futsal-round.saved,
+.futsal-round.wide {
+  background: #74483c;
+  color: #fff;
+}
+body.game-first .screen canvas#futsalCanvas {
+  width: 100%;
+  height: auto;
+  max-height: 38dvh;
+  aspect-ratio: 20/9;
+  object-fit: contain;
+  border-radius: 10px;
+  border: 1px solid #76998a;
+  touch-action: none;
+  image-rendering: auto;
+  cursor: crosshair;
+  background: #25674c;
+}
+.futsal-game p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.45;
+  color: #d2e2d8;
+}
+.futsal-game .futsal-instruction {
+  font-size: 15px;
+}
+.futsal-aim {
+  display: grid;
+  grid-template-columns: 70px minmax(0, 1fr);
+  align-items: center;
+  column-gap: 10px;
+  font-size: 15px;
+  font-weight: 600;
+}
+.futsal-aim input {
+  width: 100%;
+  min-height: 30px;
+  margin: 0;
+  accent-color: #bef47f;
+  cursor: pointer;
+}
+.futsal-aim input:disabled {
+  opacity: 0.5;
+}
+.futsal-aim-labels {
+  grid-column: 2;
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 400;
+  color: #c1d6c8;
+}
+.futsal-power-heading {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+}
+.futsal-meter {
+  position: relative;
+  height: 19px;
+  border: 1px solid #98b8a7;
+  border-radius: 5px;
+  background: linear-gradient(to right, #527a83 0 55%, #83d068 55% 78%, #c69e53 78% 90%, #c56957 90%);
+  overflow: hidden;
+}
+.futsal-sweet {
+  position: absolute;
+  left: 55%;
+  width: 23%;
+  height: 100%;
+  border-left: 2px solid #deffb3;
+  border-right: 2px solid #deffb3;
+}
+.futsal-meter i {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: #fff;
+  transform: translateX(-2px);
+  box-shadow: 0 0 3px #000;
+}
+.futsal-game .futsal-status {
+  min-height: 42px;
+  padding: 8px 10px;
+  border-radius: 7px;
+  background: #1b413d;
+  color: #f6faf6;
+}
+.futsal-status.goal {
+  border-left: 4px solid #9fea82;
+}
+.futsal-status.saved,
+.futsal-status.wide {
+  border-left: 4px solid #f1a585;
+}
+.futsal-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.futsal-actions button {
+  min-height: 46px;
+  padding: 10px 16px;
+  border: 1px solid #6f9384;
+  border-radius: 8px;
+  background: #284c45;
+  color: #f3faf4;
+  font-size: 15px;
+  font-weight: 600;
+}
+.futsal-actions #futsalAction {
+  flex: 1;
+  background: #bce989;
+  color: #13342b;
+  border-color: #bce989;
+}
+.futsal-actions button:disabled {
+  opacity: 0.45;
+  cursor: wait;
+}
+.futsal-actions button[hidden] {
+  display: none;
+}
+.futsal-game .futsal-reward,
+.futsal-keyboard {
+  font-size: 12px;
+  color: #aac7b7;
+  line-height: 1.4;
+}
+.futsal-keyboard {
+  display: block;
+}
+@media (max-width: 520px) {
+  #modal:has(.futsal-game) {
+    padding: 6px;
+  }
+  #modal .dialog:has(.futsal-game) {
+    padding: 12px;
+    max-height: calc(100dvh - 12px);
+  }
+  .futsal-game {
+    gap: 7px;
+  }
+  .futsal-heading h2 {
+    font-size: 20px;
+  }
+  .futsal-keyboard {
+    display: none;
+  }
+  .futsal-game .futsal-instruction {
+    font-size: 14px;
+  }
+  .futsal-actions button {
+    padding: 10px 12px;
+  }
+}
+@media (max-height: 550px) and (min-width: 650px) {
+  .futsal-game {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 8px 16px;
+  }
+  .futsal-heading,
+  .futsal-rounds {
+    grid-column: 1;
+  }
+  .futsal-instruction,
+  .futsal-aim,
+  .futsal-power-heading,
+  .futsal-meter,
+  .futsal-status,
+  .futsal-actions {
+    grid-column: 2;
+  }
+  .futsal-instruction {
+    grid-row: 1;
+  }
+  .futsal-aim {
+    grid-row: 2/4;
+  }
+  .futsal-power-heading {
+    grid-row: 4;
+  }
+  .futsal-meter {
+    grid-row: 5;
+  }
+  .futsal-status {
+    grid-row: 6;
+  }
+  .futsal-actions {
+    grid-row: 7;
+  }
+  .futsal-reward {
+    grid-column: 1/-1;
+  }
+  .futsal-keyboard {
+    display: none;
+  }
+  .futsal-game #futsalCanvas {
+    grid-column: 1;
+    grid-row: 3/8;
+    max-height: 56dvh;
+  }
+}
+/* Menara Tanding: the record as three pills, the rules as a numbered list. */
+.tower-record {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0 10px;
+}
+.tower-record span {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: #e4dcc0;
+  color: #3a3020;
+  font-weight: 700;
+  font-size: 0.9em;
+}
+.tower-rules {
+  margin: 6px 0 0;
+  padding-left: 22px;
+  line-height: 1.4;
+}
+/* Team codes: the player's own code and the box for a friend's. */
+.team-code-panel {
+  margin: 10px 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #ebe5cd;
+}
+.team-code-panel h3 {
+  margin-top: 0;
+}
+.team-code-panel label {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.team-code-panel input {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 8px;
+  font: inherit;
+}
+.team-code-text {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 6px 8px;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.95em;
+  word-break: break-all;
+  resize: vertical;
+}
+.dex-batik {
+  margin: 4px 0 0;
+  font-weight: 700;
+}
+
+/* Minigames (minigames.js, lomba.js): the futsal surface, a canvas and a pad of keyed buttons. */
+body.game-first .screen canvas#miniCanvas {
+  width: 100%;
+  height: auto;
+  max-height: 40dvh;
+  aspect-ratio: 32/15;
+  object-fit: contain;
+  border-radius: 10px;
+  border: 1px solid #76998a;
+  touch-action: none;
+  background: #14302d;
+}
+.mini-pad {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+.mini-pad .mini-control {
+  flex: 1 1 120px;
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 16px;
+  touch-action: manipulation;
+  user-select: none;
+}
+.mini-rhythm .mini-pad .mini-control {
+  flex: 1 1 0;
+  min-width: 0;
+}
+/* Congklak: two rows of seven holes between the two rumah (stores). */
+.congklak-board {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 40px;
+  background: #7b4a28;
+  overflow-x: auto;
+}
+.congklak-rows {
+  display: grid;
+  gap: 8px;
+  flex: 1;
+}
+.congklak-row {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(34px, 1fr));
+  gap: 6px;
+}
+.congklak-hole,
+.congklak-store {
+  display: grid;
+  place-items: center;
+  min-height: 46px;
+  border-radius: 50%;
+  background: #4d2c15;
+  color: #f8ecd4;
+  font-size: 16px;
+  padding: 2px;
+}
+.congklak-hole.mine {
+  border: 2px solid #f1d38a;
+  cursor: pointer;
+}
+.congklak-hole.mine:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.congklak-store {
+  min-width: 56px;
+  border-radius: 28px;
+}
+.congklak-store small {
+  font-size: 11px;
+  color: #e7cfa0;
+}
+.congklak-store.mine {
+  border: 2px solid #f1d38a;
+}
+/* Haggling: the offer between its minus and plus buttons. */
+.bargain-offer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 8px 0;
+}
+.bargain-offer strong {
+  min-width: 110px;
+  text-align: center;
+  font-size: 22px;
+}
+.seblak-levels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+/* Your holes are buttons: round wooden cups like Mbah's, dimmed while it is not your turn. */
+.screen .modal .congklak-board button.congklak-hole {
+  min-height: 46px;
+  padding: 2px;
+  border-radius: 50%;
+  background: #4d2c15;
+  color: #f8ecd4;
+  box-shadow: none;
+}
+.screen .modal .congklak-board button.congklak-hole:hover:not(:disabled) {
+  background: #6a3d1f;
+}
+.screen .modal .congklak-board button.congklak-hole:disabled {
+  background: #4d2c15;
+  color: #c9b28c;
+  border-color: #8a6a44;
+  opacity: 0.75;
+}

@@ -42,15 +42,9 @@ const CANON_REPLACEMENTS = [
   ['Anggun Cipta Bara', 'Anggema Cipta Bara'],
   ['Kopikuskus', 'Berumadu'],
 ];
+// Longest names first, so a short name never cuts into a longer one.
+const CANON_ORDER = CANON_REPLACEMENTS.slice().sort((a, b) => b[0].length - a[0].length);
 function canonicalText(text) {
-  for (const [a, b] of CANON_REPLACEMENTS.slice().sort((a, b) => b[0].length - a[0].length))
-    text = text.split(a).join(b);
+  for (const [a, b] of CANON_ORDER) text = text.split(a).join(b);
   return text;
-}
-function immersiveCopy(s) {
-  return s
-    .replace(/selesaikan puzzle panel listrik/gi, 'bantu kru menyalakan listrik')
-    .replace(/puzzle sudah selesai/gi, 'pekerjaan sudah selesai')
-    .replace(/puzzle/gi, 'tugas warga')
-    .replace(/UKS ARENA/g, 'KLINIK BETON');
 }

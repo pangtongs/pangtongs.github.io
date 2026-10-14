@@ -1,0 +1,418 @@
+/* Base: design tokens, resets, buttons, typography and shared pieces (portraits, bars, icons). */
+
+/* Page and resets */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+:root {
+  color-scheme: dark;
+  --bg: #101c28;
+  --panel: #192a38;
+  --line: #31414c;
+  --muted: #9bacb8;
+  --yellow: #e7f587;
+  --white: #f3f4ea;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--white);
+  font:
+    16px 'Space Grotesk',
+    Arial,
+    sans-serif;
+}
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+button:focus-visible,
+a:focus-visible {
+  outline: 3px solid #f6cb64;
+  outline-offset: 3px;
+}
+button {
+  font: inherit;
+  cursor: pointer;
+  color: inherit;
+  background: none;
+  border: 0;
+}
+header {
+  height: 90px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4vw;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -1px;
+  text-decoration: none;
+  color: var(--white);
+}
+.brand-icon {
+  background: var(--yellow);
+  color: #132536;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 26px;
+  padding: 3px 9px;
+  box-shadow: 3px 3px 0 #53664c;
+  transform: rotate(-6deg);
+}
+.edition {
+  font:
+    11px 'Space Mono',
+    monospace;
+  letter-spacing: 1px;
+  border-left: 1px solid var(--line);
+  padding-left: 16px;
+  margin-left: 5px;
+  max-width: 100px;
+  line-height: 1.6;
+}
+main {
+  max-width: 1536px;
+  margin: auto;
+  padding: 34px 4vw 20px;
+}
+.topline {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  margin-bottom: 24px;
+}
+.eyebrow {
+  font:
+    11px 'Space Mono',
+    monospace;
+  letter-spacing: 2px;
+  color: var(--yellow);
+}
+h1 {
+  font-size: 29px;
+  letter-spacing: -1px;
+  font-weight: 500;
+  margin: 7px 0 0;
+}
+.save-status {
+  font-size: 12px;
+  color: var(--muted);
+  padding-bottom: 3px;
+}
+kbd {
+  font:
+    10px 'Space Mono',
+    monospace;
+  background: #2c3e4b;
+  padding: 3px 5px;
+  border-radius: 3px;
+  border-bottom: 2px solid #425767;
+  margin: 0 1px;
+}
+em {
+  font-style: normal;
+  margin: 0 8px;
+  color: #66808d;
+}
+footer {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 23px;
+  border-top: 1px solid #293c48;
+  padding-top: 17px;
+  font:
+    10px 'Space Mono',
+    monospace;
+  color: #6d8796;
+  letter-spacing: 1px;
+}
+footer b {
+  margin: 0 8px;
+}
+footer button {
+  font-size: 11px;
+  color: #94a7b1;
+}
+footer a {
+  color: #d0e489;
+  text-decoration: none;
+  font-size: 11px;
+  margin-right: 15px;
+}
+.hidden {
+  display: none !important;
+}
+@media (max-width: 780px) {
+  .topline {
+    margin-bottom: 17px;
+  }
+  h1 {
+    font-size: 25px;
+  }
+  .save-status {
+    display: none;
+  }
+  .brand {
+    font-size: 18px;
+  }
+  header .brand-icon {
+    display: none;
+  }
+  body {
+    overflow-x: hidden;
+  }
+  main {
+    padding: 8px 6px;
+    max-width: 100%;
+  }
+  header {
+    height: 48px;
+    padding: 0 12px;
+  }
+  .edition,
+  .topline {
+    display: none;
+  }
+}
+
+/* Bars and pills */
+.hp {
+  height: 6px;
+  background: #40504f;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+.hp > i {
+  height: 100%;
+  display: block;
+  background: #c9e973;
+  transition: width 0.3s;
+}
+.tiny-note {
+  font-size: 11px;
+  line-height: 1.7;
+  color: #6f8998;
+  margin: 20px 0;
+}
+/* Distinct places, readable moves and a selectable type graph. */
+.status-pill {
+  display: inline-block;
+  background: var(--status);
+  color: white;
+  border-radius: 4px;
+  font-size: 11px;
+  padding: 3px 6px;
+  margin-top: 4px;
+  font-weight: 700;
+}
+.tactical-pill {
+  background: #44646b;
+  color: #fff;
+  margin-right: 3px;
+}
+.xp-progress {
+  margin-top: 7px;
+  min-width: 0;
+}
+.xp-caption {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: inherit;
+  opacity: 0.85;
+}
+.xp-track {
+  height: 7px;
+  margin-top: 3px;
+  overflow: hidden;
+  background: #163c5260;
+  border: 1px solid #5795ad;
+  border-radius: 4px;
+}
+.xp-track i {
+  display: block;
+  height: 100%;
+  background: #40bee8;
+  transition: width 0.3s ease;
+}
+@media (max-width: 780px) {
+  .tiny-note {
+    display: none;
+  }
+  .status-pill {
+    font-size: 9px;
+    padding: 2px 4px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .xp-track i {
+    transition: none;
+  }
+}
+
+/* Portraits and icons */
+.sprite {
+  image-rendering: pixelated;
+  width: 70px;
+  height: 70px;
+  flex-shrink: 0;
+}
+@keyframes bob {
+  50% {
+    translate: 0 -7px;
+  }
+}
+.trainer-sprite.t0 {
+  background-position: 0 0;
+}
+.trainer-sprite.t1 {
+  background-position: 33.333% 0;
+}
+.trainer-sprite.t2 {
+  background-position: 66.666% 0;
+}
+.trainer-sprite.t3 {
+  background-position: 100% 0;
+}
+.trainer-sprite.t4 {
+  background-position: 0 100%;
+}
+.trainer-sprite.t5 {
+  background-position: 33.333% 100%;
+}
+.trainer-sprite.t6 {
+  background-position: 66.666% 100%;
+}
+.trainer-sprite.t7 {
+  background-position: 100% 100%;
+}
+.parcel-icon {
+  font-size: 42px;
+  text-align: center;
+  margin: 8px;
+}
+.item-icon {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 48px;
+  width: 48px;
+  height: 48px;
+  background: #d6e9df;
+  border: 1px solid #85ac98;
+  border-radius: 12px;
+  color: #16664f;
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1;
+  vertical-align: middle;
+}
+img.sprite.portrait-failed {
+  cursor: pointer;
+  outline: 1px dashed #819782;
+  outline-offset: -2px;
+  border-radius: 10px;
+}
+img.sprite.portrait-failed:focus-visible {
+  outline: 3px solid #f6cb64;
+  outline-offset: 2px;
+}
+.trainer-sprite {
+  background-image: url('../img/characters/trainers.webp');
+  background-size: 400% 200%;
+  width: 100px;
+  height: 100px;
+  image-rendering: pixelated;
+  flex-shrink: 0;
+  mix-blend-mode: normal;
+  filter: none;
+  background-color: transparent;
+}
+.pixel-item {
+  image-rendering: pixelated;
+  vertical-align: middle;
+  object-fit: contain;
+  background: none;
+  display: inline-block;
+}
+/* Service portraits have the same frame in every menu. */
+.service-portrait {
+  filter: none;
+  mix-blend-mode: normal;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+img.pixel-item {
+  border: 0;
+  border-radius: 0;
+  width: 40px;
+  height: 40px;
+}
+/* Portraits are individual transparent images; no atlas fallback or temporary art. */
+img.sprite {
+  display: block;
+  object-fit: contain;
+  aspect-ratio: 1;
+  mix-blend-mode: normal;
+  border-radius: 0;
+  background: none;
+}
+/* A rare-coloured Wargamon, one wild encounter in 128, wears a batik palette (batik.js).
+   These filters only stand in while the recoloured portrait is being made. */
+.sprite.variant-colours {
+  filter: hue-rotate(150deg) saturate(1.35) brightness(1.05);
+}
+.sprite.variant-colours.batik-parang {
+  filter: sepia(0.9) saturate(1.6) hue-rotate(-12deg);
+}
+.sprite.variant-colours.batik-kawung {
+  filter: grayscale(0.4) sepia(0.6) hue-rotate(185deg) saturate(1.8);
+}
+.sprite.variant-colours.batik-megamendung {
+  filter: sepia(0.7) hue-rotate(165deg) saturate(2.4) brightness(1.08);
+}
+.sprite.variant-colours.batik-truntum {
+  filter: sepia(0.8) hue-rotate(290deg) saturate(1.9);
+}
+.sprite.variant-colours.batik-sidomukti {
+  filter: sepia(1) saturate(2.2) brightness(1.06);
+}
+.sprite.variant-colours.batik-lasem {
+  filter: sepia(0.85) hue-rotate(-35deg) saturate(2.6);
+}
+.batik-tag {
+  display: inline-block;
+  margin: 2px 0;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #5e3215, #b27434);
+  color: #fff6df;
+  font-size: 0.78em;
+  font-weight: 700;
+}
+.batik-tag-kawung {
+  background: linear-gradient(90deg, #0f1a33, #29487a);
+}
+.batik-tag-megamendung {
+  background: linear-gradient(90deg, #0a2440, #1a5c97);
+}
+.batik-tag-truntum {
+  background: linear-gradient(90deg, #1a0c1d, #55203b);
+}
+.batik-tag-sidomukti {
+  background: linear-gradient(90deg, #1b170b, #4c4220);
+}
+.batik-tag-lasem {
+  background: linear-gradient(90deg, #2a0909, #8a1b1b);
+}

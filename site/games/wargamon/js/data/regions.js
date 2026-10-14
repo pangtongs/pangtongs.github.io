@@ -1,4 +1,30 @@
-/* The fifteen regions: story text, wild rosters, levels and badges. */
+/* The nineteen regions: story text, wild rosters, levels and badges. Regions 15 to 18 are
+   chapter five, Seberang, across the sea after the League. */
+// Region numbers by name, for code that needs a particular map.
+const REGION = Object.freeze({
+  SUKAMAJU: 0,
+  PADANG_OJEK: 1,
+  HUTAN: 2,
+  PASAR_RAKYAT: 3,
+  BALAI_BETON: 4,
+  FESTIVAL: 5,
+  PESISIR: 6,
+  PUNCAK: 7,
+  STASIUN: 8,
+  WARGAMALL: 9,
+  BENGKEL: 10,
+  WADUK: 11,
+  KALDERA: 12,
+  OBSERVATORIUM: 13,
+  LIGA: 14,
+  TELUK_PINISI: 15,
+  RIMBA_ULIN: 16,
+  TONGKONAN: 17,
+  DIENG: 18,
+});
+// The leaders whose badge closes a chapter, by their region.
+const CHAPTER_LEADERS = Object.freeze({ 26: REGION.FESTIVAL, 29: REGION.PESISIR, 32: REGION.PUNCAK });
+const regionOfLeader = id => CHAPTER_LEADERS[id] ?? null;
 const REGIONS = [
   {
     name: 'Sukamaju',
@@ -8,7 +34,7 @@ const REGIONS = [
     levels: [3, 5],
     wild: [4, 5, 21, 24, 57, 59],
     signature: 59,
-    trainers: [0, 1, 2, 9],
+    trainers: [0, 1, 2, 9, 51],
     required: [0, 1, 2, 9],
     quest: 'parcel',
     questName: 'Bekal dari Bu Sari',
@@ -25,9 +51,9 @@ const REGIONS = [
     image: 'img/maps/exterior/1-2.webp',
     tile: -1,
     levels: [5, 7],
-    wild: [4, 5, 8, 22, 26, 38, 48, 55, 56, 60],
+    wild: [4, 5, 8, 22, 26, 38, 48, 55, 56, 60, 80],
     signature: 55,
-    trainers: [3, 18, 4, 11, 20],
+    trainers: [3, 18, 4, 11, 20, 52],
     required: [3, 18, 4],
     quest: 'delivery',
     questName: 'Antar bekal',
@@ -82,7 +108,7 @@ const REGIONS = [
     levels: [12, 15],
     wild: [3, 5, 6, 11, 50, 66],
     signature: 6,
-    trainers: [13, 14, 15, 23, 17, 22],
+    trainers: [13, 14, 15, 23, 17, 22, 53],
     required: [13, 14, 15, 23, 17],
     quest: 'arena',
     questName: 'Arena Beton',
@@ -116,17 +142,17 @@ const REGIONS = [
     name: 'Pesisir Suaka',
     subtitle: 'Arus jernih untuk rumah karang',
     levels: [26, 29],
-    wild: [7, 9, 11, 22, 25, 58, 62, 2],
+    wild: [7, 9, 11, 22, 25, 58, 62, 2, 80],
     signature: 9,
     trainers: [27, 28, 29, 16, 7, 8],
     required: [27, 28, 29],
     quest: 'tides',
     questName: 'Pulihkan saluran suaka',
     questText:
-      'Bantu dua relawan, bagi enam unit air di laboratorium, lalu tantang Susi. Rajapari datang setelah lencana; menangkapnya opsional.',
+      'Bantu dua relawan, bagi enam unit air di laboratorium, lalu tantang Sisilaut. Rajapari datang setelah lencana; menangkapnya opsional.',
     story:
-      'Festival telah menyala, tetapi sensor pesisir mengirim kabar: pompa suaka membagi air ke saluran yang salah. Greysia dan Nicholas membantu dari dermaga. Susi menjaga arena dan jalur menuju pari legenda.',
-    goal: 'Dua relawan → katup laboratorium → Susi → Rajapari opsional.',
+      'Festival telah menyala, tetapi sensor pesisir mengirim kabar: pompa suaka membagi air ke saluran yang salah. Gresipol dan Nikopel membantu dari dermaga. Sisilaut menjaga arena dan jalur menuju pari legenda.',
+    goal: 'Dua relawan → katup laboratorium → Sisilaut → Rajapari opsional.',
     badge: 'Lencana Pasang',
     image: 'img/maps/exterior/3-1.webp',
     tile: -1,
@@ -135,7 +161,7 @@ const REGIONS = [
     name: 'Puncak Sinyal',
     subtitle: 'Langit cerah, pikiran terbuka',
     levels: [41, 46],
-    wild: [10, 11, 15, 16, 20, 23, 26, 28, 18, 50, 62, 67],
+    wild: [10, 11, 15, 16, 20, 23, 26, 28, 18, 50, 62, 67, 83],
     signature: 10,
     trainers: [30, 31, 32, 5],
     required: [30, 31, 32],
@@ -187,9 +213,9 @@ const REGIONS = [
     name: 'Kampung Bengkel',
     subtitle: 'Rakit, rawat, berangkat',
     levels: [30, 33],
-    wild: [38, 39, 5, 8, 50, 63, 62],
+    wild: [38, 39, 5, 8, 50, 63, 62, 83],
     signature: 63,
-    trainers: [37, 38],
+    trainers: [37, 38, 54],
     required: [37, 38],
     quest: 'gears',
     questName: 'Selaraskan roda servis',
@@ -218,25 +244,25 @@ const REGIONS = [
   {
     name: 'Jalur Kaldera',
     subtitle: 'Undangan di atas awan',
-    levels: [47, 51],
+    levels: [50, 54],
     wild: [42, 44, 46, 38, 36, 48, 50, 56, 60, 0],
     signature: 42,
-    trainers: [41, 42],
+    trainers: [41, 42, 49],
     required: [41, 42],
     quest: 'kaldera',
     questName: 'Lintasi jalur kualifikasi',
     questText: 'Hadapi Fiersa dan Putri. Isi bekal sebelum naik ke observatorium.',
     story:
-      'Delapan lencana membawamu ke jalur kualifikasi Liga. Di balik kaldera, observatorium lama memancarkan sinyal yang sama setiap malam. Dua pendaki membantu mengamankan jalan.',
+      'Sembilan lencana membawamu ke jalur kualifikasi Liga. Di balik kaldera, observatorium lama memancarkan sinyal yang sama setiap malam. Dua pendaki membantu mengamankan jalan.',
     goal: 'Fiersa → Putri → Observatorium Sunyi.',
   },
   {
     name: 'Observatorium Sunyi',
     subtitle: 'Mata di balik kubah',
-    levels: [51, 55],
-    wild: [44, 46, 18, 39, 50, 67, 64],
+    levels: [54, 57],
+    wild: [44, 46, 18, 39, 50, 67, 64, 10],
     signature: 64,
-    trainers: [43],
+    trainers: [43, 50],
     required: [43],
     quest: 'observatory-pass',
     questName: 'Temui peneliti kubah',
@@ -256,10 +282,86 @@ const REGIONS = [
     quest: 'champion',
     questName: 'Menjadi Juara Liga',
     questText:
-      'Daftar satu rangkaian: Elite Four lalu Juara. HP dan bekal terbawa antarlaga. Keluar wilayah atau menyerah mengulang rangkaian.',
+      'Daftar satu rangkaian: Empat Penjaga lalu Juara. HP dan bekal terbawa antarlaga. Keluar wilayah atau menyerah mengulang rangkaian.',
     story:
-      'Semua perjalanan warga bermuara di Liga. Empat Elite menjaga Arus, Tempo, Bara, dan Tenaga; Prabu Wibawa mempertahankan gelar Juara dari podium.',
-    goal: 'Daftar → empat Elite → Lilincah Natsirup → Balai Juara.',
+      'Semua perjalanan warga bermuara di Liga. Empat Penjaga mengawal Arus, Tempo, Bara, dan Tenaga; Prabu Wibawa mempertahankan gelar Juara dari podium.',
+    goal: 'Daftar → Empat Penjaga → Lilincah Natsirup → Balai Juara.',
+  },
+  {
+    name: 'Teluk Pinisi',
+    subtitle: 'Layar tujuh, galangan satu',
+    image: 'img/maps/exterior/5-1.webp',
+    tile: -1,
+    levels: [60, 64],
+    wild: [81, 32, 73, 62, 9, 26, 31],
+    signature: 32,
+    trainers: [55, 56, 57, 58, 59],
+    required: [55, 56, 58, 59],
+    quest: 'pinisi',
+    questName: 'Luncurkan pinisi',
+    questText:
+      'Kumpulkan tiga pasak ulin di galangan, pasar ikan, dan ujung jalan dermaga, lalu pasang di lambung pinisi. Lewati {trainer55}, usir {trainer58}, lalu tantang {trainer59}.',
+    story:
+      'Pinisi Pak Darto berlabuh di teluk para pembuat kapal. Panrita lopi menyiapkan peluncuran, tetapi Barisan Bara menarik "iuran labuh" dari setiap perahu.\n\nDari dermaga, jalan naik ke Rimba Ulin. Kapal-kapal besar di teluk ini berlayar terus ke Kota Sagara.',
+    goal: 'Tiga pasak ulin → {trainer58} → {trainer59} → Cap Pinisi.',
+    badge: 'Cap Pinisi',
+  },
+  {
+    name: 'Rimba Ulin',
+    subtitle: 'Kayu besi, hati lembut',
+    image: 'img/maps/exterior/5-2.webp',
+    tile: -1,
+    levels: [63, 67],
+    wild: [90, 91, 13, 72, 76, 23, 82],
+    signature: 90,
+    trainers: [60, 61, 62, 63, 64],
+    required: [60, 62, 63, 64],
+    quest: 'ulin',
+    questName: 'Hapus tanda gergaji',
+    questText:
+      '{trainer62} dan {trainer63} menandai tiga pohon ulin dengan cat merah. Hapus ketiga tanda, bantu {trainer60}, lalu temui {trainer64} di pos jagawana.',
+    story:
+      'Hutan ulin tua menjadi rumah enggang dan orangutan. Tanda cat merah Barisan Bara muncul di batang-batang tertua: pohon yang ditandai akan ditebang malam ini.',
+    goal: 'Tiga tanda merah → {trainer62} dan {trainer63} → {trainer64} → Cap Ulin.',
+    badge: 'Cap Ulin',
+  },
+  {
+    name: 'Lembah Tongkonan',
+    subtitle: 'Rumah leluhur, atap perahu',
+    image: 'img/maps/exterior/5-3.webp',
+    tile: -1,
+    levels: [66, 70],
+    wild: [54, 51, 17, 53, 46, 72, 30],
+    signature: 54,
+    trainers: [65, 66, 67, 68, 69],
+    required: [65, 67, 68, 69],
+    quest: 'tongkonan',
+    questName: "Pulihkan ukiran pa'ssura'",
+    questText:
+      'Patok palsu {trainer67} menutup halaman. Putar tiga ukiran tongkonan sesuai pesan tetua, tanding dengan {trainer68}, lalu hadapi {trainer69} di titik pandang.',
+    story:
+      "Di lembah Toraja, tongkonan berdiri berjajar menghadap utara. Barisan Bara datang membawa sertifikat bercap bara dan patok-patok baru. Ne' Tominaa butuh bantuan memulihkan ukiran yang dicopot.",
+    goal: 'Ukiran → {trainer68} → {trainer69} → Cap Tongkonan.',
+    badge: 'Cap Tongkonan',
+  },
+  {
+    name: 'Kawah Dieng',
+    subtitle: 'Asap kawah, candi tua',
+    image: 'img/maps/exterior/5-4.webp',
+    tile: -1,
+    levels: [69, 73],
+    wild: [86, 51, 43, 38, 63, 75],
+    signature: 86,
+    trainers: [70, 71, 72, 73, 74],
+    required: [71, 72, 73, 70, 74],
+    quest: 'dieng',
+    questName: 'Matikan Mesin Bara',
+    questText:
+      'Kalahkan penjaga mesin, {trainer72} dan {trainer73}, matikan tiga Mesin Bara, minta restu {trainer70}, lalu hadapi {trainer74} di bibir kawah.',
+    story:
+      'Dataran tinggi Dieng berselimut kabut belerang. Mesin Bara memompa uap kawah ke pipa-pipa menuju Kota Sagara. Sejak itu candi berguncang dan elang besar penjaga langit menghilang.',
+    goal: 'Tiga mesin → {trainer70} → {trainer74} → Elangkasa.',
+    badge: 'Cap Dieng',
   },
 ];
 const REGION_TRAINER_REFS = {
@@ -280,7 +382,16 @@ const REGION_TRAINER_REFS = {
   11: { trainer39: 39, trainer40: 40 },
   12: { trainer41: 41, trainer42: 42 },
   14: { trainer47: 47, trainer48: 48 },
+  15: { trainer55: 55, trainer58: 58, trainer59: 59 },
+  16: { trainer60: 60, trainer62: 62, trainer63: 63, trainer64: 64 },
+  17: { trainer67: 67, trainer68: 68, trainer69: 69 },
+  18: { trainer70: 70, trainer72: 72, trainer73: 73, trainer74: 74 },
 };
+// Chapter five's local leaders give a Cap (a stamp in the Paspor Seberang) instead of a
+// Lencana; the admin and the boss of Barisan Bara wait behind them. Their gates are in
+// LEADER_GATES (progress.js).
+const SEBERANG_LEADERS = Object.freeze({ 59: 15, 64: 16, 68: 17, 70: 18 });
+const SEBERANG_GATED = Object.freeze([59, 64, 68, 69, 70, 74]);
 // Region text names trainers by ID, so a renamed trainer is renamed everywhere.
 for (const [region, refs] of Object.entries(REGION_TRAINER_REFS))
   for (const field of ['questText', 'story', 'goal']) {

@@ -26,6 +26,9 @@ const PORTRAIT_SHEETS = [
   { from: 41, to: 44, name: 'img/characters/expansion-npcs.webp', cut: id => castCells.has(id) },
   { from: 45, to: 48, name: 'img/characters/waduk-npcs.webp', cut: id => castCells.has(id) },
   { from: 49, to: 56, name: 'img/characters/league-npcs.webp', cut: id => castCells.has(id) },
+  { from: 66, to: 73, name: 'img/characters/late-npcs.webp', cut: id => castCells.has(id) },
+  { from: 100, to: 107, name: 'img/characters/residents-a.webp', cut: id => castCells.has(id) },
+  { from: 108, to: 115, name: 'img/characters/residents-b.webp', cut: id => castCells.has(id) },
   {
     from: 60,
     to: 65,
@@ -103,7 +106,9 @@ function imageState(image) {
   }
   return record.status;
 }
-function refreshLoadingState() {
+// `onScreen` is this frame's visibleActorAssets() when the caller already has it. Image
+// events and timers call this too, with an event or nothing.
+function refreshLoadingState(onScreen) {
   // Cached images can finish while the remaining story scripts are still loading.
   if (typeof inGang !== 'function') return;
   const name = currentMapAsset(),
@@ -114,7 +119,7 @@ function refreshLoadingState() {
     loadingSince = Date.now();
     retryCount = 0;
     paintFailure = null;
-    if (!state.room) warmNearbyRegions(state.region);
+    releaseOtherChapters();
   }
   const image = loadMapImage(name),
     mapState = imageState(image),
@@ -122,10 +127,12 @@ function refreshLoadingState() {
   // Everything on screen is requested, but outside only the region the player stands in
   // holds up the map: a neighbour coming into view near the border paints when ready
   // instead of flashing the loading screen.
-  const onScreen = visibleActorAssets(),
-    actors = state.room
-      ? onScreen
-      : visibleActorAssets(visibleRegionIndices().filter(i => i === state.region)),
+  if (!Array.isArray(onScreen)) onScreen = visibleActorAssets();
+  const regions = visibleRegionIndices(),
+    actors =
+      state.room || (regions.length === 1 && regions[0] === state.region)
+        ? onScreen
+        : visibleActorAssets(regions.filter(i => i === state.region)),
     allReady = ready && actors.every(asset => asset.ready);
   const failed = mapState === 'failed' || actors.some(asset => asset.failed),
     slow = Date.now() - loadingSince > 12000;
@@ -139,14 +146,15 @@ function refreshLoadingState() {
     warmedRegion = state.region;
     setTimeout(() => warmNearbyRegions(state.region), 0);
   }
-  const message = paintFailure
-    ? 'Peta belum berhasil digambar. Coba muat ulang peta.'
-    : failed
-      ? 'Gambar peta atau tokoh gagal dimuat. Coba lagi.'
-      : slow
-        ? 'Gambar masih diunduh. Koneksi sedang lambat.'
-        : 'Menyiapkan peta dan tokoh…';
-  const label = typeof tr === 'function' ? tr(message) : message,
+  const label = I18N.t(
+      paintFailure
+        ? 'loading.paintFailed'
+        : failed
+          ? 'loading.sceneFailed'
+          : slow
+            ? 'loading.sceneSlow'
+            : 'loading.scene',
+    ),
     title = node.querySelector('b');
   if (title && title.textContent !== label) title.textContent = label;
   const retry = node.querySelector('[data-load-retry]');
@@ -154,10 +162,12 @@ function refreshLoadingState() {
   node.setAttribute?.('aria-busy', String(!allReady && !failed && !paintFailure));
 }
 // Only pixels needed for the current frame may block the map. Trainer teams,
-// encounters, and unopened interiors load on demand or as background work.
+// encounters, unopened interiors and regions out of view load on demand or as
+// background work. Once the current map is painted, its neighbours and the rest of
+// the chapter download at low priority, so walking on rarely meets a loading screen;
+// a neighbour that comes into view first is requested at once by the frame itself.
 function warmNearbyRegions(index) {
   if (state.room) return;
-  for (const name of transitionSheets(index)) loadMapImage(name, false, 'high');
   const neighbors = new Set([index]);
   for (const link of WORLD_LINKS) {
     if (link.from === index) neighbors.add(link.to);
@@ -166,11 +176,51 @@ function warmNearbyRegions(index) {
   for (const i of neighbors) {
     const area = PLACES[i];
     if (!area) continue;
-    // Start direct neighbors with the active map, rather than waiting to reach
-    // their border or to finish a first painted frame.
-    const image = loadMapImage(area.image || 'img/maps/interior/interiors.webp', false, 'high');
-    if (image.complete && image.naturalWidth) imageState(image);
+    loadMapImage(area.image || 'img/maps/interior/interiors.webp', false, 'low');
     for (const name of facadeSheets(i)) loadMapImage(name, false, 'low');
+  }
+  for (const name of transitionSheets(index)) loadMapImage(name, false, 'low');
+}
+// Map paintings and room art of one chapter: its regions, the rooms behind their
+// doors (and rooms opening off those rooms).
+function chapterArt(chapter = chapterOf()) {
+  const regions = WORLD_CHAPTERS[chapter]?.order || [],
+    names = new Set(),
+    rooms = [];
+  for (const i of regions) {
+    if (i === GANG_GRID_INDEX) {
+      names.add(ROOMS.gangsenggol.image);
+      continue;
+    }
+    names.add(PLACES[i]?.image || 'img/maps/interior/interiors.webp');
+    for (const p of PLACES[i]?.points || []) if (p.room) rooms.push(p.room);
+  }
+  const seen = new Set();
+  while (rooms.length) {
+    const key = rooms.pop();
+    if (seen.has(key) || !ROOMS[key]) continue;
+    seen.add(key);
+    names.add(ROOMS[key].image || 'img/maps/interior/interiors.webp');
+    for (const p of ROOMS[key].points || []) if (p.room) rooms.push(p.room);
+  }
+  return names;
+}
+// A decoded map painting holds about 6 MB of memory. Paintings of the chapters the
+// player is not in are dropped when the chapter changes; walking back requests them
+// again through loadMapImage like any other unloaded image.
+let artChapter = -1;
+function releaseOtherChapters() {
+  const chapter = chapterOf();
+  if (chapter < 0 || chapter === artChapter) return;
+  artChapter = chapter;
+  const keep = chapterArt(chapter);
+  keep.add(currentMapAsset());
+  for (const name of Object.keys(images)) {
+    if (!name.startsWith('img/maps/') || keep.has(name)) continue;
+    const image = images[name];
+    delete images[name];
+    if (image?.removeAttribute) image.removeAttribute('src');
+    else if (image) image.src = '';
   }
 }
 function retryMap() {
@@ -208,8 +258,8 @@ function failedPortrait(img) {
   img.dataset.portraitRetry ||= img.currentSrc || img.src;
   img.src = missingPortrait;
   img.classList.add('portrait-failed');
-  img.title = 'Gambar gagal dimuat. Ketuk untuk mencoba lagi.';
-  img.setAttribute('aria-label', (img.alt || 'Wargamon') + ', gambar gagal dimuat, ketuk untuk mencoba lagi');
+  img.title = I18N.t('loading.portraitFailed');
+  img.setAttribute('aria-label', I18N.t('loading.portraitFailedLabel', { name: img.alt || 'Wargamon' }));
   img.tabIndex = 0;
 }
 function retryPortrait(img) {
@@ -256,7 +306,6 @@ document.addEventListener(
   },
   true,
 );
-let sceneLoading = refreshLoadingState;
 // The original retry handler now delegates here instead of restarting every sprite sheet.
 onClick(e => {
   const b = e.target.closest('[data-load-retry]');
@@ -266,9 +315,6 @@ for (const im of Object.values(images)) {
   im.addEventListener?.('load', refreshLoadingState);
   im.addEventListener?.('error', refreshLoadingState);
 }
-// Small shared UI art is fetched globally, so an opened shop or battle menu
-// never briefly shows iconless buttons.
-for (const name of Object.values(ITEM_ART || {})) if (name) loadMapImage(name, false, 'low');
 setInterval(refreshLoadingState, 1000);
 // A trainer preview is part of the encounter, not optional decoration. Fetch
 // and decode the whole roster before showing its cards or starting the fight.
@@ -313,68 +359,56 @@ function preparePortrait(id) {
   });
   return request;
 }
-// Begin fetching every creature and item when the game opens. A later match
-// can use decoded portraits immediately, even if the connection drops.
-let fullArtReady = false;
-async function preloadAllArt() {
-  const panel = document.getElementById('assetPreload');
-  if (!panel || fullArtReady) return;
-  const message = panel.querySelector('span'),
-    retry = panel.querySelector('[data-art-retry]'),
-    continueButton = panel.querySelector('[data-art-continue]');
-  panel.hidden = false;
-  retry.hidden = true;
-  continueButton.hidden = true;
-  const jobs = [
-    ...new Set(
-      [...SPECIES.map((_, id) => creaturePortraitPath(id)), ...Object.values(ITEM_ART)].filter(Boolean),
-    ),
-  ];
-  let done = 0,
-    next = 0,
-    failed = 0;
-  const fetchOne = async name => {
-    if (name.startsWith('img/creatures/'))
-      await preparePortrait(SPECIES.findIndex((_, id) => creaturePortraitPath(id) === name));
-    else
-      await new Promise((resolve, reject) => {
-        let image = loadMapImage(name, false, 'low');
-        if (imageState(image) === 'failed') image = loadMapImage(name, true, 'low');
-        const finish = () =>
-          image.naturalWidth ? image.decode?.().then(resolve, reject) || resolve() : reject(new Error(name));
-        if (image.complete) finish();
-        else {
-          image.addEventListener('load', finish, { once: true });
-          image.addEventListener('error', () => reject(new Error(name)), { once: true });
-        }
-      });
-  };
+// After the first map is painted, the remaining shared art downloads one or two files
+// at a time at low priority: item icons (so a shop or battle menu never shows iconless
+// buttons), the character sheets of the people in this chapter, then every Wargamon
+// portrait. Nothing waits for it: a fight still waits for its own portraits, and a
+// person coming into view requests their sheet at once. Data saver and slow links
+// keep only the item icons.
+let backgroundArtStarted = false;
+function slowConnection() {
+  const connection = typeof navigator === 'undefined' ? null : navigator.connection;
+  return !!connection && (connection.saveData || /(?:^|-)2g$|^3g$/.test(connection.effectiveType || ''));
+}
+function backgroundArtNames() {
+  const names = Object.values(typeof ITEM_ART === 'undefined' ? {} : ITEM_ART);
+  if (slowConnection()) return names.filter(Boolean);
+  for (const name of Object.keys(images)) if (name.startsWith('img/characters/')) names.push(name);
+  for (const sheet of PORTRAIT_SHEETS) names.push(sheet.name);
+  for (const mon of state.team || []) names.push(creaturePortraitPath(mon.id));
+  SPECIES.forEach((_, id) => names.push(creaturePortraitPath(id)));
+  return [...new Set(names.filter(Boolean))];
+}
+function whenLoaded(image) {
+  return new Promise(resolve => {
+    if (image.complete || typeof image.addEventListener !== 'function') return resolve();
+    image.addEventListener('load', resolve, { once: true });
+    image.addEventListener('error', resolve, { once: true });
+  });
+}
+function idle() {
+  return new Promise(resolve =>
+    typeof requestIdleCallback === 'function'
+      ? requestIdleCallback(() => resolve(), { timeout: 2000 })
+      : setTimeout(resolve, 50),
+  );
+}
+async function preloadBackgroundArt() {
+  if (backgroundArtStarted) return;
+  backgroundArtStarted = true;
+  const jobs = backgroundArtNames();
+  let next = 0;
   await Promise.all(
-    Array.from({ length: 8 }, async () => {
+    Array.from({ length: 2 }, async () => {
       while (next < jobs.length) {
         const name = jobs[next++];
-        try {
-          await fetchOne(name);
-        } catch {
-          failed++;
-        }
-        done++;
-        message.textContent = `Menyiapkan gambar Wargamon dan barang: ${done}/${jobs.length}`;
+        if (images[name]?.src) continue;
+        await idle();
+        await whenLoaded(loadMapImage(name, false, 'low'));
       }
     }),
   );
-  fullArtReady = failed === 0;
-  if (fullArtReady) panel.hidden = true;
-  else {
-    message.textContent = `${failed} gambar belum termuat. Coba lagi saat koneksi tersedia.`;
-    retry.hidden = false;
-    continueButton.hidden = false;
-  }
 }
-document.querySelector('[data-art-retry]')?.addEventListener?.('click', preloadAllArt);
-document.querySelector('[data-art-continue]')?.addEventListener?.('click', () => {
-  document.getElementById('assetPreload').hidden = true;
-});
 if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator)
   navigator.serviceWorker
     .register('service-worker.js')
@@ -386,17 +420,57 @@ if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator)
         .forEach(r => r.unregister()),
     )
     .catch(() => {});
+// A new worker takes over as soon as it is installed, but this page still runs the
+// scripts it started with. Offer a reload rather than mixing old and new code.
+// The first install (no previous worker) needs no notice.
+if (typeof navigator !== 'undefined' && navigator.serviceWorker?.controller)
+  navigator.serviceWorker.addEventListener?.('controllerchange', showUpdateNotice, { once: true });
+function showUpdateNotice() {
+  if (document.getElementById('updateNotice')) return;
+  const button = document.createElement('button');
+  button.id = 'updateNotice';
+  button.type = 'button';
+  button.textContent = I18N.t('update.available');
+  button.setAttribute('aria-live', 'polite');
+  Object.assign(button.style, {
+    position: 'fixed',
+    left: '50%',
+    bottom: 'max(16px, env(safe-area-inset-bottom))',
+    transform: 'translateX(-50%)',
+    zIndex: '1000',
+    width: 'max-content',
+    maxWidth: 'calc(100vw - 32px)',
+    whiteSpace: 'normal',
+    padding: '10px 16px',
+    border: '1px solid #f3dc9a',
+    borderRadius: '10px',
+    background: '#101d29',
+    color: '#f3dc9a',
+    font: 'inherit',
+    cursor: 'pointer',
+    boxShadow: '0 6px 18px #0008',
+  });
+  button.addEventListener('click', () => location.reload());
+  document.body.appendChild(button);
+}
 // The worker downloads the remaining art only after the first map is on
 // screen, so the offline copy never competes with the first playable frame.
 let offlineArtRequested = false;
 function requestOfflineArt() {
+  setTimeout(preloadBackgroundArt, 0);
   if (offlineArtRequested || typeof navigator === 'undefined' || !navigator.serviceWorker) return;
   offlineArtRequested = true;
+  // The worker stores this chapter's paintings and the team first.
+  const first = [
+    ...chapterArt(),
+    'img/characters/hero-traveler.webp',
+    'img/characters/trainers.webp',
+    ...(state.team || []).map(mon => creaturePortraitPath(mon.id)),
+  ].filter(Boolean);
   navigator.serviceWorker.ready
-    .then(registration => registration.active?.postMessage('warm-art'))
+    .then(registration => registration.active?.postMessage({ type: 'warm-art', first }))
     .catch(() => {});
 }
-window.addEventListener('load', () => preloadAllArt(), { once: true });
 function trainerPortraitIds(id) {
   return [
     ...new Set([
@@ -420,13 +494,13 @@ onClick(e => {
 });
 // A trainer preview is part of the encounter. Fetch and decode the whole
 // roster before showing its cards or starting the fight.
-function trainerIntro(id) {
+function trainerIntro(id, intro = null) {
   // Headless tests use a minimal Image stub. Browsers have the event API.
   if (typeof Image.prototype.addEventListener !== 'function' || !TRAINERS[id]?.team || !canChallenge(id))
-    return showTrainerIntro(id);
+    return showTrainerIntro(id, intro);
   const ids = trainerPortraitIds(id);
   if (ids.every(species => imageState(loadMapImage(creaturePortraitPath(species))) === 'ready'))
-    return showTrainerIntro(id);
+    return showTrainerIntro(id, intro);
   modal(
     `<h2>${TRAINERS[id].name}</h2><p>${I18N.t('loading.trainer')}</p><p role="status">${I18N.t('loading.trainerCount', { count: ids.length })}</p>`,
     'trainer-loading',
@@ -435,7 +509,7 @@ function trainerIntro(id) {
   const scene = sceneToken();
   Promise.all(ids.map(preparePortrait)).then(
     () => {
-      if (modalKind === 'trainer-loading' && sceneToken() === scene) showTrainerIntro(id);
+      if (modalKind === 'trainer-loading' && sceneToken() === scene) showTrainerIntro(id, intro);
     },
     () => {
       if (modalKind === 'trainer-loading' && sceneToken() === scene)
@@ -461,7 +535,7 @@ function visibleActorAssets(regions = visibleRegionIndices()) {
     };
   const visible = regions;
   for (const i of visible) need(PLACES[i].image || 'img/maps/interior/interiors.webp');
-  for (const i of visible) for (const name of [...facadeSheets(i), ...transitionSheets(i)]) need(name);
+  for (const i of visible) for (const name of facadeSheets(i)) need(name);
   if (visible.includes(13) && !ownsTarsion()) need(creaturePortraitPath(47));
   if (state.team?.length) {
     need('img/characters/hero-traveler.webp');

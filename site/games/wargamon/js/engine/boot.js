@@ -32,16 +32,16 @@ for (const [id, handler] of Object.entries({
 
 // --- First screen. The opening dialog comes first: update() reflects whether one is open.
 resetScene();
-if (!state.team.length) chooseStarter();
-else if (migration)
-  modal(
-    `<h2>Perjalananmu bertambah panjang!</h2><p>Tim, uang, dan koleksimu dari versi pertama tetap ikut. Liga baru dimulai di Sukamaju, dengan lima area dan Arena Beton sebagai tujuan akhir. Ambil bekal dari Bu Sari untuk berangkat.</p>${closeButton('Ayo, lanjut!')}`,
-  );
+if (floorEditorPage) openFloorEditor(floorEditorPage);
+else if (!state.team.length) chooseStarter();
 else story();
-if (initialEvolutions.length && modalKind !== 'starter')
+if (initialEvolutions.length && !floorEditorPage && modalKind !== 'starter')
   modal(
     `<h2>Teman lamamu tumbuh!</h2><p>${initialEvolutions.join('<br>')}</p>${closeButton('Lanjut perjalanan')}`,
   );
+// After a night away, a card says where the journey stands (it waits for the dialogs above).
+if (!floorEditorPage) welcomeBack();
+settleState();
 update();
 refreshLoadingState();
 updateWildLocator();

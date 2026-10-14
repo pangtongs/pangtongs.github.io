@@ -17,15 +17,22 @@ function ownsTarsion() {
   );
 }
 function leagueMenu() {
-  if (battle || locked || state.region !== 14) return;
+  if (battle || locked || state.region !== REGION.LIGA) return;
   const l = leagueState();
   modal(
-    `<h2>${l.active ? 'Rangkaian Liga' : 'Liga Nusantara'}</h2><p>Empat Elite, lalu Juara. Satu tim untuk lima pertandingan. Tidak ada pemulihan otomatis. Bekal boleh digunakan; klinik dan Titipan tutup selama rangkaian.</p><ol class="elite-line">${ELITE_IDS.map((id, i) => `<li class="${l.active && i === l.stage ? 'current' : ''}"><b>${l.active && i < l.stage ? '✓ ' : ''}${TRAINERS[id].name}</b><small>${TRAINERS[id].role}, ${TRAINERS[id].team.length} teman, Lv.${Math.min(80, TRAINERS[id].team.at(-1)[1] + l.clears * 5)}</small></li>`).join('')}</ol><p>${l.active ? 'Keluar wilayah, kalah, atau menyerah mengulang dari Elite pertama.' : 'Mulai saat HP dan bekal sudah siap. Menang membuka Balai Juara dan quest Tarsion.'}</p><div class="actions"><button class="action" data-league="${l.active ? 'continue' : 'begin'}">${l.active ? 'Lanjut, ' + (l.stage + 1) + '/5' : 'Mulai rangkaian'}</button>${closeButton('Siapkan tim')}</div>`,
+    `<h2>${I18N.t(l.active ? 'league.run' : 'league.name')}</h2><p>${I18N.t('league.rules')}</p><ol class="elite-line">${ELITE_IDS.map((id, i) => `<li class="${l.active && i === l.stage ? 'current' : ''}"><b>${l.active && i < l.stage ? '✓ ' : ''}${TRAINERS[id].name}</b><small>${I18N.t('league.eliteLine', { role: tr(TRAINERS[id].role), n: trainerLineup(id).length, level: Math.min(80, TRAINERS[id].team.at(-1)[1] + l.clears * 5) })}</small></li>`).join('')}</ol><p>${I18N.t(l.active ? 'league.restartRule' : 'league.startHint')}</p><div class="actions"><button class="action" data-league="${l.active ? 'continue' : 'begin'}">${l.active ? I18N.t('league.continue', { n: l.stage + 1 }) : I18N.t('league.begin')}</button>${closeButton(I18N.t('league.prepare'))}</div>`,
     'league',
   );
 }
 function beginLeague() {
-  if (battle || locked || state.region !== 14 || !gateReady(13) || !state.team.some(m => m.hp > 0)) return;
+  if (
+    battle ||
+    locked ||
+    state.region !== REGION.LIGA ||
+    !gateReady(REGION.OBSERVATORIUM) ||
+    !state.team.some(m => m.hp > 0)
+  )
+    return;
   const l = leagueState();
   if (!l.active) {
     l.active = true;
@@ -40,19 +47,17 @@ function abandonLeague() {
   l.active = false;
   l.stage = 0;
   save();
-  toast('Rangkaian Liga berakhir. Daftar lagi untuk mencoba dari awal.');
+  toast(I18N.t('league.ended'));
 }
 function tarsionMenu() {
-  if (state.region !== 13 || battle || locked) return;
+  if (state.region !== REGION.OBSERVATORIUM || battle || locked) return;
   if (ownsTarsion()) {
-    modal(
-      `<h2>Pelataran kembali tenang</h2><p>Tarsion sudah menjadi temanmu. Quest ini selesai; tidak ada tangkapan kedua.</p>${closeButton()}`,
-    );
+    modal(`<h2>${I18N.t('tarsion.done.title')}</h2><p>${I18N.t('tarsion.done.body')}</p>${closeButton()}`);
     return;
   }
   if (!has('champion')) {
     modal(
-      `<h2>Tarsion menunggu</h2><p>“Medannya terlalu kuat,” kata peneliti. “Raih gelar Juara, lalu kembali. Kita hanya perlu satu kalibrasi untuk membebaskannya.”</p>${closeButton()}`,
+      `<h2>${I18N.t('tarsion.waiting.title')}</h2><p>${I18N.t('tarsion.waiting.body')}</p>${closeButton()}`,
     );
     return;
   }
@@ -66,14 +71,19 @@ function tarsionMenu() {
     return;
   }
   modal(
-    `<div class="portrait-head">${art(47)}<div><h2>Tarsion, Lv.68</h2><p>${typeLabel(47)}</p></div></div><p>Medan penahan padam. Tarsion melangkah ke arahmu. Siapkan kapsul; jika kalah, kabur, atau membuatnya pingsan, ia tetap menunggu di sini.</p><div class="actions"><button class="action" data-league="legendfight" ${state.balls + (state.ultraballs || 0) < 1 ? 'disabled' : ''}>Dekati Tarsion</button>${closeButton('Siapkan tim')}</div>`,
+    `<div class="portrait-head">${art(47)}<div><h2>Tarsion, Lv.68</h2><p>${typeLabel(47)}</p></div></div><p>${I18N.t('tarsion.open.body')}</p><div class="actions"><button class="action" data-league="legendfight" ${state.balls + (state.ultraballs || 0) < 1 ? 'disabled' : ''}>${I18N.t('tarsion.approach')}</button>${closeButton(I18N.t('league.prepare'))}</div>`,
     'tarsion',
   );
 }
-const RESONANCE_NAMES = ['Bulan', 'Matahari', 'Bintang'],
-  RESONANCE_DIRS = ['↑ Utara', '→ Timur', '↓ Selatan', '← Barat'];
+const RESONANCE_NAMES = ['moon', 'sun', 'star'].map(k => I18N.t(`resonance.${k}`)),
+  RESONANCE_DIRS = [
+    ['↑', 'north'],
+    ['→', 'east'],
+    ['↓', 'south'],
+    ['←', 'west'],
+  ].map(([arrow, k]) => `${arrow} ${I18N.t(`direction.${k}`)}`);
 function resonanceMenu() {
-  if (state.region !== 13 || battle || locked) return;
+  if (state.region !== REGION.OBSERVATORIUM || battle || locked) return;
   if (!has('champion')) {
     tarsionMenu();
     return;
@@ -82,14 +92,14 @@ function resonanceMenu() {
   q.started = true;
   save();
   modal(
-    `<h2>Mata di Balik Kubah</h2><p>${q.open ? 'Medan penahan telah padam. Tarsion menunggu di pelataran.' : 'Catatan peneliti: <b>Matahari menghadap Timur.</b> Bulan berlawanan dengan Matahari. Bintang satu langkah searah jarum jam dari Bulan.'}</p><div class="waduk-puzzle resonance">${RESONANCE_NAMES.map((name, i) => `<section class="activity-panel"><b>${name}</b>${q.open ? `<output>${RESONANCE_DIRS[q.panels[i]]}</output>` : `<button data-league="rotate" data-id="${i}">${RESONANCE_DIRS[q.panels[i]]}</button>`}</section>`).join('')}</div><p class="${q.open ? 'activity-complete' : ''}" role="status">${q.open ? 'Medan terbuka. Tarsion menunggu di pelataran.' : q.message || 'Ketiga panel tersambung. Cocokkan arah lalu sinkronkan.'}</p>${q.open ? '' : `<div class="actions"><button class="action" data-league="align">Sinkronkan</button></div>`}${closeButton('Kembali ke pelataran')}`,
+    `<h2>${I18N.t('quest.tarsion.name')}</h2><p>${q.open ? I18N.t('resonance.opened') : `${I18N.t('resonance.notes')} <b>${I18N.t('resonance.notes.sun')}</b> ${I18N.t('resonance.notes.rest')}`}</p><div class="waduk-puzzle resonance">${RESONANCE_NAMES.map((name, i) => `<section class="activity-panel"><b>${name}</b>${q.open ? `<output>${RESONANCE_DIRS[q.panels[i]]}</output>` : `<button data-league="rotate" data-id="${i}">${RESONANCE_DIRS[q.panels[i]]}</button>`}</section>`).join('')}</div><p class="${q.open ? 'activity-complete' : ''}" role="status">${q.open ? I18N.t('resonance.openStatus') : q.message || I18N.t('resonance.hint')}</p>${q.open ? '' : `<div class="actions"><button class="action" data-league="align">${I18N.t('resonance.align')}</button></div>`}${closeButton(I18N.t('league.backToCourtyard'))}`,
     'resonance',
   );
 }
 function rotateResonance(i) {
   if (
     modalKind !== 'resonance' ||
-    state.region !== 13 ||
+    state.region !== REGION.OBSERVATORIUM ||
     !has('champion') ||
     legendQuest().open ||
     ![0, 1, 2].includes(i)
@@ -102,7 +112,13 @@ function rotateResonance(i) {
   resonanceMenu();
 }
 function alignResonance() {
-  if (modalKind !== 'resonance' || state.region !== 13 || !has('champion') || legendQuest().open) return;
+  if (
+    modalKind !== 'resonance' ||
+    state.region !== REGION.OBSERVATORIUM ||
+    !has('champion') ||
+    legendQuest().open
+  )
+    return;
   const q = legendQuest();
   if (q.panels.every((v, i) => v === [3, 1, 0][i])) {
     q.open = true;
@@ -113,22 +129,22 @@ function alignResonance() {
     }
     update();
     modal(
-      `<h2>Medan penahan padam</h2><p>Cincin Tarsion kembali berputar. Peneliti menyerahkan tiga Kapsul Ultra. Dekati Tarsion yang menunggu di pelataran utara.</p>${closeButton('Temui Tarsion')}`,
+      `<h2>${I18N.t('resonance.unsealed.title')}</h2><p>${I18N.t('resonance.unsealed.body')}</p>${closeButton(I18N.t('resonance.meet'))}`,
       'resonance-open',
     );
   } else {
-    q.message = 'Sinyal belum bertemu. Periksa arah yang berlawanan dan urutan jarum jam.';
+    q.message = I18N.t('resonance.wrong');
     save();
     resonanceMenu();
   }
 }
 // The legendary is an actual world sprite; the same point handles hover, walking and E.
-const tarsionWorldPortrait = new Image();
-tarsionWorldPortrait.src = creaturePortraitPath(47);
+// Shared with the loading gate, which requests it when the observatory is in view.
+const tarsionWorldPortrait = (images[creaturePortraitPath(47)] ||= new Image());
 function atTutor() {
   return (
     !state.room &&
-    [9, 12].includes(state.region) &&
+    [REGION.WARGAMALL, REGION.KALDERA].includes(state.region) &&
     spots().some(p => p.key === 'tutor' && Math.hypot(p.x - state.x, p.y - state.y) <= 70)
   );
 }
@@ -155,7 +171,12 @@ onClick(async e => {
       alignResonance();
       break;
     case 'legendfight':
-      if (modalKind === 'tarsion' && legendQuest().open && !ownsTarsion() && state.region === 13)
+      if (
+        modalKind === 'tarsion' &&
+        legendQuest().open &&
+        !ownsTarsion() &&
+        state.region === REGION.OBSERVATORIUM
+      )
         startBattle(null, [[47, 68]]);
       break;
     case 'equipment':
@@ -172,59 +193,62 @@ onClick(async e => {
       break;
   }
 });
+function prepareEightCast(image, firstPortrait) {
+  registerCastSheet(image, 4, 2, firstPortrait, { css: 'filter:none;mix-blend-mode:normal' });
+}
 const leagueNPCImage = new Image();
 images['img/characters/league-npcs.webp'] = leagueNPCImage;
-leagueNPCImage.onload = () => {
-  for (let i = 0; i < 8; i++) {
-    const c = document.createElement('canvas');
-    c.width = leagueNPCImage.naturalWidth / 4;
-    c.height = leagueNPCImage.naturalHeight / 2;
-    c.getContext('2d').drawImage(
-      leagueNPCImage,
-      (i % 4) * c.width,
-      Math.floor(i / 4) * c.height,
-      c.width,
-      c.height,
-      0,
-      0,
-      c.width,
-      c.height,
-    );
-    const bounds = isolateSprite(c),
-      id = 49 + i;
-    castCells.set(id, { canvas: c, bounds });
-    const style = document.createElement('style');
-    style.textContent = `.trainer-sprite.cast${id}{background-image:url(${c.toDataURL()});background-size:contain;background-position:center;background-repeat:no-repeat;filter:none;mix-blend-mode:normal}`;
-    document.head.appendChild(style);
-  }
+leagueNPCImage.onload = () => prepareEightCast(leagueNPCImage, 49);
+const lateNPCImage = new Image();
+images['img/characters/late-npcs.webp'] = lateNPCImage;
+lateNPCImage.onload = () => {
+  prepareEightCast(lateNPCImage, 66);
+  refreshLoadingState();
 };
-leagueNPCImage.src = 'img/characters/league-npcs.webp';
+for (const [name, firstPortrait] of [
+  ['img/characters/residents-a.webp', 100],
+  ['img/characters/residents-b.webp', 108],
+]) {
+  const image = new Image();
+  images[name] = image;
+  image.onload = () => {
+    prepareEightCast(image, firstPortrait);
+    refreshLoadingState();
+  };
+}
+// Cast sheets are requested when one of their people is on screen; see visibleActorAssets.
 function continueLeague() {
   // The Elite fights happen inside the arena; step in first when resuming elsewhere.
-  if (state.region === 14 && !battle && !locked && leagueState().active && state.room !== 'leaguearena') {
+  if (
+    state.region === REGION.LIGA &&
+    !battle &&
+    !locked &&
+    leagueState().active &&
+    state.room !== 'leaguearena'
+  ) {
     closeModal();
     if (state.room) exitRoom();
     if (state.room !== 'leaguearena') enterRoom('leaguearena');
   }
   const l = leagueState();
-  if (battle || locked || !l.active || state.region !== 14) return;
+  if (battle || locked || !l.active || state.region !== REGION.LIGA) return;
   closeModal();
   trainerIntro(ELITE_IDS[l.stage]);
 }
 function hallMenu() {
   const l = leagueState();
   modal(
-    `<img class="hall-preview" src="img/maps/interior/championhall.webp" alt=""><h2>Balai Juara</h2><p>${l.clears} kemenangan Liga. Pertandingan ulang naik 5 level per gelar, maksimal Lv.80.</p>${
+    `<img class="hall-preview" src="img/maps/interior/championhall.webp" alt=""><h2>${I18N.t('league.hall')}</h2><p>${I18N.t('hall.wins', { n: l.clears })}</p>${towerHallNote()}${
       l.hall.length
         ? l.hall
             .slice()
             .reverse()
             .map(
               h =>
-                `<section class="hall-entry"><b>Tim Juara #${h.number}</b><div class="hall-team">${h.team.map(m => `<div>${art(m.id)}<span>${SPECIES[m.id].name}<br>Lv.${m.level}</span></div>`).join('')}</div></section>`,
+                `<section class="hall-entry"><b>${I18N.t('hall.team', { n: h.number })}</b><div class="hall-team">${h.team.map(m => `<div>${art(m.id)}<span>${SPECIES[m.id].name}<br>Lv.${m.level}</span></div>`).join('')}</div></section>`,
             )
             .join('')
-        : '<p>Kalahkan Elite Four dan Juara untuk mencatat tim pertamamu.</p>'
+        : `<p>${I18N.t('hall.empty')}</p>`
     }${closeButton()}`,
     'hall',
   );

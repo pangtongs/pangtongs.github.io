@@ -1,0 +1,1496 @@
+/* Battle screen. */
+
+/* Battle panel */
+.battle {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  background:
+    linear-gradient(#b3d9c6dd, #d9e7bfee 60%, #f4f1dcee),
+    url('../img/maps/exterior/1-1.webp') center/cover;
+  color: #173633;
+}
+.fighter {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.fighter.you {
+  left: 7%;
+  bottom: 29%;
+}
+.fighter .sprite {
+  width: clamp(80px, 14vw, 170px);
+  height: clamp(80px, 14vw, 170px);
+  mix-blend-mode: multiply;
+  border-radius: 50%;
+  animation: bob 2s ease-in-out infinite;
+}
+.fighter-art {
+  position: relative;
+  flex-shrink: 0;
+}
+.fighter.you .sprite {
+  transform: scaleX(-1);
+}
+.fighter-info strong {
+  font-size: 17px;
+}
+.fighter-info small {
+  font-size: 12px;
+  display: block;
+  margin-top: 4px;
+}
+.fighter-info .hp i {
+  background: #679539;
+}
+.battle-log {
+  font-size: 15px;
+  line-height: 1.55;
+  align-self: center;
+}
+.fighter.enemy {
+  right: 7%;
+  flex-direction: row-reverse;
+  top: 17%;
+}
+.battle .fainted {
+  opacity: 0.35;
+}
+.battle-menu {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 18px 22px;
+  display: grid;
+  gap: 20px;
+  background: #f0f2df;
+  border-top: 3px solid #405a43;
+  grid-template-columns: 0.8fr 1.4fr;
+  min-height: 31%;
+}
+.status-combat .battle-log {
+  font-size: 14px;
+  line-height: 1.4;
+  align-self: stretch;
+  min-height: 20px;
+}
+.battle .fighter.you {
+  bottom: 51%;
+}
+.battle .fighter.enemy {
+  top: 9%;
+}
+.battle-head {
+  position: absolute;
+  left: 24px;
+  font:
+    12px 'Space Mono',
+    monospace;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 90%;
+  top: 6px;
+  font-size: 11px;
+  z-index: 1;
+}
+.battle-head .trainer-sprite {
+  width: 35px;
+  height: 35px;
+}
+.fighter-info {
+  background: #fafce7e8;
+  border: 2px solid #60745a;
+  box-shadow: 3px 3px 0 #66866e;
+  min-width: 140px;
+  padding: 9px;
+}
+.battle-intent {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  background: #1d4250;
+  color: #f3fbef;
+  font-size: 14px;
+}
+.battle-intent span:first-child {
+  white-space: nowrap;
+}
+.fighter-info .xp-caption {
+  font-size: 12px;
+}
+.fighter-info .hp {
+  background: #9ca68c;
+  margin-bottom: 3px;
+}
+.fighter-info .xp-progress {
+  margin: 7px 0;
+  margin-top: 8px;
+}
+.fighter-info .status-pill {
+  font-size: 12px;
+}
+.battle .fighter.you .sprite {
+  transform: scaleX(1);
+}
+.battle .fighter.enemy .sprite {
+  transform: scaleX(-1);
+}
+.battle .fighter.you .sprite.mon0,
+.battle .fighter.you .sprite.mon1,
+.battle .fighter.you .sprite.mon2,
+.battle .fighter.you .sprite.mon4,
+.battle .fighter.you .sprite.mon5,
+.battle .fighter.you .sprite.mon16,
+.battle .fighter.you .sprite.mon19,
+.battle .fighter.you .sprite.mon21,
+.battle .fighter.you .sprite.mon22,
+.battle .fighter.you .sprite.mon23,
+.battle .fighter.you .sprite.mon25,
+.battle .fighter.you .sprite.mon27,
+.battle .fighter.you .sprite.mon28,
+.battle .fighter.you .sprite.mon32,
+.battle .fighter.you .sprite.mon35,
+.battle .fighter.you .sprite.mon36,
+.battle .fighter.you .sprite.mon37,
+.battle .fighter.you .sprite.mon39,
+.battle .fighter.you .sprite.mon41,
+.battle .fighter.you .sprite.mon43 {
+  transform: scaleX(-1);
+}
+.battle .fighter.enemy .sprite.mon0,
+.battle .fighter.enemy .sprite.mon1,
+.battle .fighter.enemy .sprite.mon2,
+.battle .fighter.enemy .sprite.mon4,
+.battle .fighter.enemy .sprite.mon5,
+.battle .fighter.enemy .sprite.mon16,
+.battle .fighter.enemy .sprite.mon19,
+.battle .fighter.enemy .sprite.mon21,
+.battle .fighter.enemy .sprite.mon22,
+.battle .fighter.enemy .sprite.mon23,
+.battle .fighter.enemy .sprite.mon25,
+.battle .fighter.enemy .sprite.mon27,
+.battle .fighter.enemy .sprite.mon28,
+.battle .fighter.enemy .sprite.mon32,
+.battle .fighter.enemy .sprite.mon35,
+.battle .fighter.enemy .sprite.mon36,
+.battle .fighter.enemy .sprite.mon37,
+.battle .fighter.enemy .sprite.mon39,
+.battle .fighter.enemy .sprite.mon41,
+.battle .fighter.enemy .sprite.mon43 {
+  transform: scaleX(1);
+}
+.battle .fighter.you .sprite.mon48,
+.battle .fighter.you .sprite.mon49,
+.battle .fighter.you .sprite.mon50,
+.battle .fighter.you .sprite.mon52,
+.battle .fighter.you .sprite.mon53,
+.battle .fighter.you .sprite.mon54 {
+  transform: scaleX(-1);
+}
+.battle .fighter.enemy .sprite.mon48,
+.battle .fighter.enemy .sprite.mon49,
+.battle .fighter.enemy .sprite.mon50,
+.battle .fighter.enemy .sprite.mon52,
+.battle .fighter.enemy .sprite.mon53,
+.battle .fighter.enemy .sprite.mon54 {
+  transform: scaleX(1);
+}
+/* Battle status owns its height, so the Tempo label cannot overlap the log. */
+.battle .status-combat {
+  display: flex;
+  flex-direction: column;
+  max-height: 49%;
+  overflow: auto;
+  padding: 12px 16px;
+  min-height: 35%;
+  gap: 10px;
+}
+.battle .battle-intent {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  min-height: 48px;
+  padding: 10px 16px;
+  line-height: 1.25;
+  overflow: visible;
+  flex: none;
+}
+.battle .battle-intent .tempo-caption {
+  font-size: 15px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.tempo-pips {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+.tempo-pips i {
+  display: block;
+  width: 15px;
+  height: 15px;
+  border: 2px solid #e3f5d8;
+  border-radius: 50%;
+  background: transparent;
+}
+.tempo-pips i.filled {
+  background: #e8f68e;
+  border-color: #e8f68e;
+}
+.battle .status-combat .battle-log {
+  margin: 0;
+  position: static;
+  line-height: 1.4;
+}
+.battle .battle-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: min(90%, 420px);
+  min-height: 56px;
+}
+.screen .battle .battle-intent {
+  grid-column: 1;
+  grid-row: 1;
+  min-height: 34px;
+  padding: 5px 10px;
+}
+/* Status badges extend the fighter row instead of being clipped by a fixed row. */
+.screen .battle:not(.hidden) {
+  grid-template-rows: 52px auto minmax(0, 1fr);
+}
+.screen .battle .fighter-info {
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 142px;
+  height: auto;
+}
+.screen .battle .fighter-info .status-pill {
+  display: table;
+  max-width: 100%;
+  white-space: normal;
+  line-height: 1.2;
+}
+/* Portraits already have alpha: a circular mask cut tails and horns. */
+.screen .battle .fighter .sprite {
+  border-radius: 0;
+  mix-blend-mode: normal;
+  object-fit: contain;
+  overflow: visible;
+}
+.screen .battle .battle-head {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+.screen .battle .battle-head > span {
+  min-width: 0;
+}
+.screen .battle .battle-run:disabled {
+  opacity: 0.45;
+}
+.screen .battle:not(.hidden) .status-combat {
+  position: static;
+  grid-column: 1/-1;
+  grid-row: 3;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto auto auto;
+  align-content: start;
+  align-self: stretch;
+  max-height: none;
+  width: 100%;
+  padding: 10px 16px 12px;
+  gap: 7px;
+  overflow: auto;
+  height: auto;
+  min-height: 100%;
+  overflow-y: auto;
+}
+/* The battle log shows the last two events; the older one is dimmed. */
+.battle .battle-log p {
+  margin: 0;
+}
+.battle .battle-log .earlier {
+  opacity: 0.6;
+}
+/* No row of the battle panel may be squeezed below its content; a short window scrolls instead. */
+.screen .battle .status-combat > div {
+  min-height: auto;
+}
+.battle .fighter .sprite {
+  max-width: 112px;
+  max-height: 112px;
+  animation: none;
+}
+/* The log always holds two lines, so the buttons never jump under the pointer. */
+.screen .battle .battle-log {
+  grid-column: 1;
+  grid-row: 2;
+  min-height: 3.1em;
+}
+@media (max-width: 780px) {
+  .battle-head {
+    left: 15px;
+  }
+  .fighter {
+    gap: 5px;
+  }
+  .fighter .sprite {
+    width: 88px;
+    height: 88px;
+  }
+  .battle-log {
+    font-size: 11px;
+  }
+  .fighter.you {
+    left: 5%;
+    bottom: 32%;
+  }
+  .fighter.enemy {
+    right: 5%;
+    top: 17%;
+  }
+  .fighter-info {
+    width: 95%;
+  }
+  .fighter-info .hp {
+    margin-top: 4px;
+    height: 5px;
+  }
+  .battle-menu {
+    min-height: 43%;
+    padding: 8px;
+    gap: 7px;
+    grid-template-columns: 0.65fr 1.35fr;
+  }
+  .fighter-info strong {
+    font-size: 11px;
+  }
+  .fighter-info small {
+    margin-top: 2px;
+    font-size: 9px;
+  }
+  /* Battle has its own phone layout and scrollable actions; it cannot overflow the map. */
+  .screen .battle {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    height: 100dvh;
+    overflow-y: auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto 1fr;
+    align-content: start;
+    padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+  }
+  .battle .fighter.you {
+    grid-column: 1;
+  }
+  .battle .fighter.enemy {
+    grid-column: 2;
+  }
+  .battle .fighter .sprite {
+    width: 80px;
+    height: 80px;
+    max-width: 80px;
+    max-height: 80px;
+  }
+  .battle .fighter-info {
+    width: 100%;
+    min-width: 0;
+    padding: 8px;
+    overflow-wrap: anywhere;
+  }
+  .battle .fighter-info strong {
+    font-size: 15px;
+  }
+  .battle .fighter-info small {
+    font-size: 12px;
+  }
+  .battle .status-pill {
+    font-size: 12px;
+  }
+  .battle .status-combat {
+    position: static;
+    grid-column: 1/-1;
+    grid-row: 3;
+    min-height: 0;
+    max-height: none;
+    overflow: visible;
+    display: flex;
+    align-self: start;
+    padding: 12px;
+  }
+  .status-combat .battle-log {
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  .battle .battle-intent {
+    min-height: 52px;
+    padding: 10px 12px;
+  }
+  .battle .battle-head {
+    position: static;
+    grid-column: 1/-1;
+    padding: 10px;
+    max-width: 100%;
+    font-size: 12px;
+  }
+  .screen .battle:not(.hidden) .status-combat {
+    padding: 7px 10px 12px;
+    gap: 5px;
+  }
+  .screen .battle .battle-head {
+    min-height: 0;
+    padding: 4px 7px;
+  }
+  .screen .battle .fighter .sprite {
+    width: 70px;
+    height: 70px;
+    max-width: 70px;
+    max-height: 70px;
+  }
+  .screen .battle .battle-intent {
+    display: grid;
+    grid-template-columns: auto auto minmax(0, 1fr);
+    align-items: center;
+    justify-content: start;
+    gap: 4px 8px;
+    min-height: 38px;
+    padding: 5px 8px;
+    text-align: left;
+  }
+  .screen .battle .battle-intent .tempo-caption {
+    font-size: 13px;
+  }
+  .screen .battle .battle-intent .tempo-pips i {
+    width: 12px;
+    height: 12px;
+  }
+  .screen .battle:not(.hidden) {
+    overflow: auto;
+    grid-template-rows: 42px auto minmax(0, 1fr);
+  }
+  .screen .battle .fighter,
+  .screen .battle .fighter.you,
+  .screen .battle .fighter.enemy {
+    min-width: 0;
+    gap: 3px;
+    padding: 2px 6px;
+    align-self: stretch;
+    justify-content: flex-start;
+    align-items: stretch;
+  }
+  .screen .battle .fighter-info {
+    width: 100%;
+    padding: 6px;
+    align-self: stretch;
+    min-height: 118px;
+    flex: 1;
+  }
+  .battle .fighter,
+  .battle .fighter.you,
+  .battle .fighter.enemy {
+    grid-row: 2;
+    left: auto;
+    right: auto;
+    width: auto;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px;
+    position: static;
+    top: auto;
+    bottom: auto;
+    flex-direction: column;
+  }
+}
+@media (max-width: 600px) {
+  .battle-intent {
+    flex-direction: column;
+    gap: 3px;
+  }
+  .battle .fighter .sprite {
+    max-height: 130px;
+  }
+}
+@media (min-width: 781px) {
+  /* Battle has its own viewport; moves no longer inherit the map's half-height scroll box. */
+  .screen .battle:not(.hidden) {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    box-sizing: border-box;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100vw;
+    height: 100dvh;
+    padding: 8px 16px 12px;
+    overflow: auto;
+  }
+  .battle .battle-head {
+    position: static;
+    grid-column: 1/-1;
+    grid-row: 1;
+    max-width: none;
+    min-height: 0;
+    padding: 4px 10px;
+  }
+  .battle .fighter.you {
+    grid-column: 1;
+  }
+  .battle .fighter.enemy {
+    grid-column: 2;
+  }
+  .battle .fighter .sprite {
+    width: min(13vh, 125px);
+    height: min(13vh, 125px);
+    max-width: 125px;
+    max-height: 125px;
+    flex: none;
+  }
+  .battle .fighter-info {
+    min-width: 0;
+    width: min(42%, 260px);
+    min-height: 142px;
+  }
+  .battle .fighter,
+  .battle .fighter.you,
+  .battle .fighter.enemy {
+    grid-row: 2;
+    width: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    padding: 4px;
+    position: static;
+    top: auto;
+    bottom: auto;
+    left: auto;
+    right: auto;
+  }
+}
+
+/* Hit effects */
+.battle-hit-effect {
+  position: absolute;
+  inset: 0;
+  background-image: url('../img/effects/hit-effects.webp');
+  background-size: 400% 200%;
+  background-repeat: no-repeat;
+  pointer-events: none;
+  animation: battle-impact 300ms ease-out forwards;
+}
+.battle-damage-number {
+  position: absolute;
+  top: 12%;
+  left: 50%;
+  color: #fff;
+  font-weight: 900;
+  font-size: 24px;
+  text-shadow:
+    2px 2px #4f2025,
+    -1px -1px #4f2025;
+  pointer-events: none;
+  animation: battle-number 300ms ease-out forwards;
+}
+.fighter-hit .fighter-art {
+  animation: battle-shake 300ms linear;
+}
+@keyframes battle-impact {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  20% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.15);
+  }
+}
+@keyframes battle-number {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -25px);
+  }
+}
+@keyframes battle-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20%,
+  60% {
+    transform: translateX(-4px);
+  }
+  40%,
+  80% {
+    transform: translateX(4px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fighter-hit .fighter-art {
+    animation: none;
+  }
+  .battle-hit-effect,
+  .battle-damage-number {
+    animation-timing-function: steps(1, end);
+  }
+}
+
+/* Move buttons */
+.creature-moves {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+.creature-moves b {
+  font-size: 14px;
+  display: block;
+}
+.creature-moves button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.creature-moves button:hover:not(:disabled) {
+  background: #dfecba;
+}
+.move-matchup {
+  display: block;
+  font-size: 12px;
+  color: #445e65;
+  margin: 3px 0;
+}
+.move-matchup.effective {
+  color: #126d46;
+  font-weight: bold;
+}
+.move-matchup.resisted {
+  color: #995018;
+}
+.creature-moves button {
+  background: #fffdf0;
+  color: #244734;
+  border: 2px solid #849b70;
+  padding: 8px 11px;
+  border-radius: 4px;
+  min-height: 51px;
+  text-align: left;
+}
+.creature-moves small {
+  display: block;
+  font-size: 13px;
+  margin: 0;
+  line-height: 1.45;
+}
+.creature-moves .move-matchup {
+  margin-top: auto;
+  padding-top: 6px;
+}
+.creature-moves .move-heading b {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.creature-moves .cooldown {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  min-width: 54px;
+  min-height: 30px;
+  padding: 3px 8px;
+  border: 1px solid #78927d;
+  border-radius: 999px;
+  background: #edf3dd;
+  color: #244b3d;
+  font-size: 13px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+.creature-moves .move-tags {
+  margin: 0;
+  align-content: flex-start;
+  gap: 6px;
+  line-height: 1.4;
+}
+.creature-moves .move-tags > span {
+  padding: 3px 6px;
+  border-radius: 6px;
+}
+.battle .creature-moves {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  align-items: stretch;
+}
+/* The level-36 move is a fifth card: it takes a whole row instead of leaving a gap. */
+.battle .creature-moves > button:nth-child(5) {
+  grid-column: 1 / -1;
+}
+.battle .creature-moves > button {
+  height: 100%;
+  min-width: 0;
+  text-align: left;
+}
+.battle .creature-moves .move-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+.battle .creature-moves .move-heading b {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.screen .battle .creature-moves .move-tags {
+  gap: 3px;
+  margin: 0;
+}
+.screen .battle .creature-moves .move-tags > span {
+  padding: 2px 5px;
+}
+.screen .battle .creature-moves .move-matchup {
+  padding-top: 0;
+}
+.screen .battle .creature-moves small {
+  -webkit-box-orient: vertical;
+  font-size: 12px;
+  display: block;
+  overflow: visible;
+  -webkit-line-clamp: unset;
+  line-height: 1.35;
+}
+/* Let move text set card height on phones. The fixed rows and two-line clamp
+   hid the effect of a move and left the third card floating between columns. */
+/* Long move effects grow the card instead of collapsing its title beneath tags. */
+.screen .battle .creature-moves {
+  grid-column: 1;
+  grid-row: 3;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  grid-template-rows: none;
+  align-items: stretch;
+  grid-auto-rows: minmax(max-content, auto);
+}
+.screen .battle .creature-moves > button {
+  box-sizing: border-box;
+  padding: 8px 11px;
+  gap: 4px;
+  overflow: visible;
+  min-height: max-content;
+  height: 100%;
+  align-self: stretch;
+}
+.screen .battle .creature-moves .move-heading {
+  padding: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 6px;
+  flex: none;
+  min-height: max-content;
+}
+.screen .battle .creature-moves .move-heading b {
+  display: block;
+  min-width: 0;
+  line-height: 1.25;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.screen .battle .creature-moves .cooldown {
+  justify-self: end;
+}
+.screen .battle .creature-moves .move-tags,
+.screen .battle .creature-moves small,
+.screen .battle .creature-moves .move-matchup {
+  flex: none;
+  min-height: max-content;
+}
+/* Battle cards align content at the top, regardless of description length. */
+.creature-moves > button {
+  flex-direction: column;
+  align-items: stretch;
+  text-align: left;
+  gap: 7px;
+  display: flex;
+  justify-content: flex-start;
+  position: relative;
+}
+/* Battle status badges are readable labels, not unexplained floating numbers. */
+.creature-moves .move-heading {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 0;
+  padding-bottom: 4px;
+}
+@media (max-width: 780px) {
+  .creature-moves {
+    gap: 8px;
+  }
+  .creature-moves button {
+    min-height: 70px;
+    padding: 10px;
+  }
+  .creature-moves b {
+    font-size: 15px;
+  }
+  .screen .battle .creature-moves .move-heading b {
+    font-size: 13px;
+  }
+  .screen .battle .creature-moves .cooldown {
+    min-width: 42px;
+    min-height: 26px;
+    height: 26px;
+    padding: 2px 5px;
+    font-size: 11px;
+  }
+  .screen .battle .creature-moves .move-tags > span {
+    font-size: 11px;
+    padding: 1px 4px;
+  }
+  .screen .battle .creature-moves small {
+    font-size: 11px;
+  }
+  .screen .battle .creature-moves {
+    gap: 7px;
+  }
+  .screen .battle .creature-moves > button {
+    gap: 3px;
+    padding: 7px 8px;
+  }
+  .screen .battle .creature-moves .move-matchup {
+    margin-top: 0;
+  }
+}
+@media (max-width: 600px) {
+  .creature-moves small {
+    font-size: 12px;
+  }
+}
+@media (max-width: 640px) {
+  .battle .creature-moves {
+    gap: 8px;
+  }
+}
+@media (max-width: 400px) {
+  .screen .battle .creature-moves .move-tags {
+    gap: 2px;
+  }
+  .screen .battle .creature-moves .move-tags > span {
+    font-size: 10px;
+    padding: 1px 3px;
+  }
+  .screen .battle .creature-moves .move-heading b {
+    font-size: 12px;
+  }
+}
+
+/* Battle actions */
+.battle-tools {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+.battle-tools button:disabled {
+  opacity: 0.5;
+}
+.battle-tools button[data-move='brace'] {
+  background: #a9d8de;
+  color: #14383b;
+}
+.battle-tools button {
+  background: #d3dfbd;
+  border: 1px solid #9baa85;
+  padding: 7px 10px;
+  color: #2a4635;
+  border-radius: 4px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.battle-tools .item-icon {
+  flex-shrink: 0;
+}
+.battle .battle-tools {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  align-items: stretch;
+}
+.battle .battle-tools button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 62px;
+  padding: 10px;
+  text-align: center;
+  line-height: 1.25;
+}
+.battle .battle-tools button .item-icon {
+  flex: none;
+}
+/* A phone has room for the map or a readable menu, never three floating panels. */
+.screen .battle .battle-tools button .battle-team-icon {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  object-fit: contain;
+}
+.screen .battle .battle-tools button {
+  min-height: 50px;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.screen .battle .battle-tools .battle-run {
+  justify-self: center;
+  border: 1px solid #8ca49b;
+  border-radius: 6px;
+  background: #e7eedc;
+  color: #254636;
+  grid-column: 1/-1;
+  width: 100%;
+}
+/* Actions stay reachable: on a short window the moves scroll underneath them.
+   On wide screens Kabur sits in the same row as the other actions. */
+.screen .battle .battle-tools {
+  grid-column: 1;
+  grid-row: 4;
+  flex: none;
+  min-height: 50px;
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  padding-top: 7px;
+  background: #f0f2df;
+}
+@media (max-width: 780px) {
+  .battle-tools {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .battle-tools button {
+    min-height: 44px;
+    font-size: 14px;
+    padding: 10px;
+  }
+  .battle .battle-tools {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .battle .battle-tools button {
+    min-height: 62px;
+    font-size: 15px;
+  }
+  .screen .battle .battle-tools button .battle-team-icon {
+    width: 32px;
+    height: 32px;
+  }
+  .screen .battle .battle-tools {
+    gap: 7px;
+    min-height: 0;
+    grid-auto-rows: minmax(48px, auto);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .screen .battle .battle-tools button {
+    height: 100%;
+    padding: 5px 7px;
+    min-height: 52px;
+  }
+  .screen .battle .battle-tools .battle-run {
+    width: 100%;
+  }
+}
+@media (min-width: 781px) {
+  .screen .battle .battle-tools {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+  }
+  .screen .battle .battle-tools .battle-run {
+    grid-column: auto;
+  }
+}
+
+/* Move cards */
+.move-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.move-heading b {
+  font-size: 16px;
+}
+.cooldown {
+  display: inline-grid;
+  place-items: center;
+  min-width: 28px;
+  height: 28px;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  font-weight: 700;
+}
+.move-tags {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin: 8px 0;
+}
+.move-tags > span {
+  font-size: 13px;
+  border-radius: 6px;
+  background: #f4f7e9;
+  padding: 4px 7px;
+  color: #203e35;
+}
+.move-tags > span:first-child {
+  color: white;
+}
+/* A heavy move lands after the foe acts; the tag says so on every card. */
+.move-tags > .move-slow {
+  background: #f6e2c0;
+  color: #6a3b0c;
+  font-weight: 700;
+}
+@media (max-width: 600px) {
+  .move-tags > span {
+    font-size: 12px;
+    padding: 3px;
+  }
+  .move-heading b {
+    font-size: 14px;
+  }
+}
+
+/* Trainer roster */
+.trainer-roster {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+.trainer-roster small {
+  font-size: 11px;
+  line-height: 1.3;
+  color: #24483e;
+}
+.roster-icons {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+/* A woven case, not a split sphere, marks the capture device and trainer roster. */
+.roster-capsule {
+  position: relative;
+  display: block;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 0;
+  overflow: visible;
+  background: url('../img/items/item-balls.webp') center/contain no-repeat;
+}
+.roster-capsule i {
+  position: absolute;
+  left: 5px;
+  top: 5px;
+  width: 5px;
+  height: 5px;
+  background: #fff5d6;
+  border: 1px solid #264839;
+  border-radius: 50%;
+  display: none;
+}
+.roster-capsule.active {
+  background: url('../img/items/item-balls.webp') center/contain no-repeat;
+  box-shadow: none;
+  filter: drop-shadow(0 0 4px #f3d177);
+}
+.roster-capsule.fallen {
+  filter: grayscale(1);
+  opacity: 0.45;
+}
+
+/* Battle keys and hints */
+/* Battle keyboard keys: printed on every control for the whole fight. */
+.screen .battle .battle-key {
+  display: inline-grid;
+  background: #fffdf4;
+  color: #1d3b33;
+  box-shadow: none;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  margin-right: 6px;
+  padding: 0 5px;
+  border: 1px solid currentColor;
+  border-bottom-width: 3px;
+  border-radius: 5px;
+  font:
+    800 12px/1 ui-monospace,
+    Menlo,
+    monospace;
+  opacity: 0.85;
+  vertical-align: middle;
+}
+.screen .battle .creature-moves > button > .battle-key {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  margin: 0;
+}
+.move-reason {
+  display: block;
+  margin-top: 4px;
+  font-weight: 700;
+  font-size: 12px;
+  color: #8a3b1f;
+}
+.tempo-full {
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #f0c654;
+  color: #3a2a00;
+  font-weight: 800;
+  font-size: 12px;
+}
+.battle-speed {
+  margin-left: auto;
+  padding: 4px 10px;
+  font-size: 12px;
+}
+.catch-odds,
+.switch-matchup {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+}
+.switch-matchup span + span {
+  margin-left: 8px;
+}
+.switch-matchup .effective {
+  color: #1f7a3f;
+}
+.switch-matchup .resisted {
+  color: #a3361f;
+}
+.battle-tips {
+  margin: 8px 0;
+  padding: 10px 14px;
+  border: 2px solid #f0c654;
+  border-radius: 10px;
+  background: #fff8dc;
+  color: #2b2410;
+  font-size: 13px;
+}
+.battle-tips ol {
+  margin: 6px 0 8px 18px;
+  padding: 0;
+}
+
+/* Compact battle panel. All five moves and the action row fit without scrolling at
+   1024×768 and on a 375×812 phone: each move card is three short lines (name and
+   readiness; type, power, Tempo, Lambat and matchup; a one-line effect). The panel is a
+   column in source order, so the first-fight tips sit above the moves. */
+.screen .battle:not(.hidden) .status-combat {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 14px 10px;
+  min-height: 0;
+  height: auto;
+  overflow-y: auto;
+}
+.screen .battle:not(.hidden) .status-combat > * {
+  flex: none;
+}
+.screen .battle .battle-log {
+  min-height: 2.8em;
+  font-size: 14px;
+  line-height: 1.4;
+}
+.screen .battle .battle-tips {
+  margin: 0;
+  padding: 8px 12px;
+  font-size: 13px;
+  line-height: 1.35;
+}
+.screen .battle .battle-tips ol {
+  margin: 4px 0 6px 18px;
+}
+.screen .battle .battle-tips li + li {
+  margin-top: 2px;
+}
+.screen .battle .creature-moves {
+  gap: 6px;
+  grid-auto-rows: auto;
+}
+.screen .battle .creature-moves > button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'head reason'
+    'tags match'
+    'effect key';
+  align-items: center;
+  gap: 3px 8px;
+  height: auto;
+  min-height: 0;
+  padding: 6px 10px;
+}
+.screen .battle .creature-moves > button > .battle-key {
+  grid-area: key;
+  position: static;
+  justify-self: end;
+  margin: 0;
+}
+.screen .battle .creature-moves .move-heading {
+  grid-area: head;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  min-height: 0;
+  padding: 0;
+}
+.screen .battle .creature-moves .move-heading b {
+  flex: 0 1 auto;
+  font-size: 15px;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.screen .battle .creature-moves .cooldown {
+  min-width: 0;
+  min-height: 0;
+  height: 20px;
+  padding: 0 7px;
+  font-size: 12px;
+}
+.screen .battle .creature-moves .move-tags {
+  grid-area: tags;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin: 0;
+}
+.screen .battle .creature-moves .move-tags > span {
+  padding: 1px 5px;
+  font-size: 12px;
+  line-height: 1.35;
+}
+.screen .battle .creature-moves .move-matchup {
+  grid-area: match;
+  margin: 0;
+  padding: 0;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.screen .battle .creature-moves small {
+  grid-area: effect;
+  min-width: 0;
+  font-size: 12px;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.screen .battle .creature-moves .move-reason {
+  grid-area: reason;
+  margin: 0;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.screen .battle .battle-tools {
+  margin-top: auto;
+  padding-top: 6px;
+}
+/* The arena rule stays in the header for the whole fight. */
+.field-chip {
+  display: inline-block;
+  margin-left: 10px;
+  padding: 3px 9px;
+  border: 1px solid #1d4250;
+  border-radius: 999px;
+  background: #fff3c4;
+  color: #3a2a00;
+  font:
+    700 12px/1.3 system-ui,
+    sans-serif;
+  letter-spacing: 0;
+  white-space: normal;
+}
+.field-chip.field-tide {
+  background: #cfe9f7;
+  color: #0f3a52;
+}
+.field-chip.field-blackout {
+  background: #3a3a46;
+  color: #f4f1dc;
+}
+@media (min-width: 781px) {
+  .screen .battle:not(.hidden) {
+    grid-template-rows: auto auto minmax(0, 1fr);
+    padding: 6px 16px 10px;
+  }
+  .screen .battle .fighter-info {
+    min-height: 0;
+  }
+  .screen .battle .fighter .sprite {
+    width: min(12vh, 112px);
+    height: min(12vh, 112px);
+  }
+  .screen .battle .battle-tools button {
+    min-height: 50px;
+    padding: 6px 10px;
+  }
+}
+@media (max-width: 780px) {
+  .screen .battle:not(.hidden) {
+    grid-template-rows: auto auto minmax(0, 1fr);
+  }
+  .screen .battle .battle-head {
+    min-height: 0;
+    padding: 4px 8px;
+  }
+  .screen .battle .fighter,
+  .screen .battle .fighter.you,
+  .screen .battle .fighter.enemy {
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 6px;
+  }
+  .screen .battle .fighter.enemy {
+    flex-direction: row-reverse;
+  }
+  .screen .battle .fighter .sprite {
+    width: 50px;
+    height: 50px;
+    max-width: 50px;
+    max-height: 50px;
+  }
+  .screen .battle .fighter-info {
+    min-height: 0;
+    padding: 5px 6px;
+  }
+  .screen .battle .fighter-info strong {
+    font-size: 14px;
+  }
+  .screen .battle .fighter-info small {
+    margin-top: 1px;
+    font-size: 12px;
+  }
+  .screen .battle .fighter-info .status-pill {
+    margin-top: 2px;
+    padding: 1px 5px;
+  }
+  .screen .battle:not(.hidden) .status-combat {
+    padding: 6px 8px 8px;
+    gap: 5px;
+  }
+  .screen .battle .battle-intent {
+    min-height: 32px;
+  }
+  .screen .battle .battle-log {
+    font-size: 13px;
+  }
+  /* One column: each move keeps a whole line for its effect. */
+  .screen .battle .creature-moves {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 5px;
+  }
+  .screen .battle .creature-moves > button {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      'head match match'
+      'tags tags tags'
+      'effect reason key';
+    padding: 5px 9px;
+    gap: 2px 8px;
+  }
+  .screen .battle .creature-moves .move-tags {
+    flex-wrap: nowrap;
+    overflow: hidden;
+  }
+  .screen .battle .creature-moves .move-tags > span {
+    flex: none;
+  }
+  .screen .battle .creature-moves .move-heading b {
+    font-size: 14px;
+  }
+  /* The action row is one line of five small buttons, not a quarter of the screen. */
+  .screen .battle .battle-tools {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    grid-auto-rows: auto;
+    gap: 4px;
+    min-height: 0;
+  }
+  .screen .battle .battle-tools .battle-run {
+    grid-column: auto;
+  }
+  .screen .battle .battle-tools button {
+    flex-direction: column;
+    gap: 2px;
+    height: auto;
+    min-height: 48px;
+    padding: 4px 3px;
+    font-size: 12px;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+  }
+  .screen .battle .battle-tools button .item-icon,
+  .screen .battle .battle-tools button .battle-team-icon {
+    width: 20px;
+    height: 20px;
+  }
+  .screen .battle .battle-tools button .battle-key {
+    margin: 0;
+  }
+  .field-chip {
+    margin: 2px 0 0;
+  }
+}
+/* Keyboard badges are hidden only where there is no keyboard to press them on. */
+@media (hover: none) and (pointer: coarse) {
+  .screen .battle .battle-key,
+  .pick-key {
+    display: none;
+  }
+}

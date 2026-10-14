@@ -1,14 +1,16 @@
 /* Items: the bag, shops, held gear and medicine. */
+// Name and description come from the catalog: item.<key>.name and item.<key>.desc.
+const itemText = (key, price) => ({
+  name: I18N.t(`item.${key}.name`),
+  price,
+  desc: I18N.t(`item.${key}.desc`),
+});
 const LEAGUE_ITEMS = {
-  maxpotion: { name: 'Jamu Pekat', price: 8000, desc: 'HP satu teman sadar penuh; status tetap.' },
-  revive: { name: 'Balsem Sadar', price: 6000, desc: 'Bangunkan teman pingsan dengan 50% HP.' },
-  ultraballs: {
-    name: 'Kapsul Ultra',
-    price: 6000,
-    desc: 'Peluang tangkap lebih tinggi; tetap perlu melemahkan lawan.',
-  },
-  scarf: { name: 'Syal Semangat', price: 12000, desc: 'Dipegang satu teman: damage +12%.' },
-  vest: { name: 'Rompi Pelindung', price: 12000, desc: 'Dipegang satu teman: damage masuk −12%.' },
+  maxpotion: itemText('maxpotion', 8000),
+  revive: itemText('revive', 6000),
+  ultraballs: itemText('ultraballs', 6000),
+  scarf: itemText('scarf', 12000),
+  vest: itemText('vest', 12000),
 };
 // Medicine is cheap enough to carry; capsules stay the main expense.
 const PRICES = {
@@ -22,24 +24,10 @@ const PRICES = {
   vest: 150000,
 };
 for (const [k, v] of Object.entries(LEAGUE_ITEMS)) v.price = PRICES[k] || v.price;
-LEAGUE_ITEMS.turbine = { name: 'Dinamo Industri', price: 0, desc: 'Listrik +20%; hadiah kontrak bengkel.' };
-const ITEM_LABELS = {
-  balls: ['Kapsul Rantau', 'Tangkap Wargamon liar.'],
-  potions: ['Jamu', 'Pulih 40 HP; status tetap.'],
-  antidotes: ['Penawar', 'Bersihkan status satu teman.'],
-};
-// A one-time stipend keeps old and new saves playable under the new economy.
-function economyMigration() {
-  if (state.economyRevision === 24) return;
-  state.economyRevision = 24;
-  state.money += 100000;
-  for (const m of [...state.team, ...(state.storage || [])])
-    if (m.id === 19) {
-      const extra = Math.max(0, SPECIES[19].base + m.level * 5 - m.max);
-      m.max += extra;
-      if (m.hp > 0) m.hp += extra;
-    }
-}
+LEAGUE_ITEMS.turbine = itemText('turbine', 0);
+const ITEM_LABELS = Object.fromEntries(
+  ['balls', 'potions', 'antidotes'].map(k => [k, [I18N.t(`item.${k}.name`), I18N.t(`item.${k}.desc`)]]),
+);
 function canUseMedicine(k, m) {
   return (
     !!m &&
@@ -56,10 +44,15 @@ function medicineInfo(k) {
   return LEAGUE_ITEMS[k] || { name: ITEM_LABELS[k][0], desc: ITEM_LABELS[k][1] };
 }
 function medicineUnavailable(k, m) {
-  if (!itemCount(k)) return 'Habis';
-  if (k === 'revive') return m.hp > 0 ? 'Masih sadar' : 'Pingsan';
-  if (k === 'antidotes') return hasCondition(m) ? '' : 'Tidak ada status';
-  return m.hp === 0 ? 'Perlu dibangunkan' : m.hp === m.max ? 'HP penuh' : '';
+  if (!itemCount(k)) return I18N.t('medicine.unavailable.empty');
+  if (k === 'revive')
+    return I18N.t(m.hp > 0 ? 'medicine.unavailable.conscious' : 'medicine.unavailable.fainted');
+  if (k === 'antidotes') return hasCondition(m) ? '' : I18N.t('medicine.unavailable.noStatus');
+  return m.hp === 0
+    ? I18N.t('medicine.unavailable.needsRevive')
+    : m.hp === m.max
+      ? I18N.t('medicine.unavailable.fullHp')
+      : '';
 }
 const ITEM_ART = Object.freeze({
   balls: 'img/items/item-balls.webp',
@@ -96,37 +89,14 @@ const gearKeys = [
   'umbrella',
 ];
 Object.assign(LEAGUE_ITEMS, {
-  lunchbox: {
-    name: 'Rantang Hangat',
-    price: 180000,
-    desc: 'Pulih 5% HP setiap giliran; serangan berkurang 10%.',
-  },
-  sambal: { name: 'Sambal Nekat', price: 170000, desc: 'Kerusakan +25%; kehilangan 4% HP setiap giliran.' },
-  coil: { name: 'Obat Nyamuk', price: 190000, desc: 'Kebal Tidur; menerima kerusakan Api 25% lebih besar.' },
-  rescue: {
-    name: 'Jimat Siaga',
-    price: 230000,
-    desc: 'Bangkit dengan 25% HP sekali per pertarungan; serangan berkurang 10%.',
-  },
-  capacitor: {
-    name: 'Kapasitor Impor',
-    price: 600000,
-    desc: 'Mulai dengan 3 Tempo; serangan +15%, kerusakan diterima +15%.',
-  },
-  medkit: {
-    name: 'Medkit Impor',
-    price: 650000,
-    desc: 'Pulih 8% HP setiap giliran dan cegah satu status; serangan berkurang 10%.',
-  },
-  umbrella: {
-    name: 'Payung Lipat',
-    price: 180000,
-    desc: 'Kerusakan Air berkurang 30%; kerusakan Listrik bertambah 25%.',
-  },
+  lunchbox: itemText('lunchbox', 180000),
+  sambal: itemText('sambal', 170000),
+  coil: itemText('coil', 190000),
+  rescue: itemText('rescue', 230000),
+  capacitor: itemText('capacitor', 600000),
+  medkit: itemText('medkit', 650000),
+  umbrella: itemText('umbrella', 180000),
 });
-LEAGUE_ITEMS.scarf.desc = 'Kerusakan +12%; kerusakan diterima +10%.';
-LEAGUE_ITEMS.vest.desc = 'Kerusakan diterima berkurang 12%; serangan berkurang 10%.';
-ITEM_LABELS.potions[1] = 'Pulih 30% HP, minimal 40; status tetap.';
 for (const k of gearKeys) PRICES[k] = LEAGUE_ITEMS[k].price;
 function itemCount(k) {
   return gearKeys.includes(k) ? state.gear?.[k] || 0 : state[k] || 0;
@@ -144,8 +114,16 @@ function medicineAmount(k, m) {
       ? m.max
       : Math.max(40, Math.ceil(m.max * 0.3));
 }
-async function useMedicine(k, i) {
-  if (modalKind !== 'medicine' || locked || battle?.busy || !canUseMedicine(k, state.team[i])) return;
+// `direct`: chosen from the bag with only one teammate, so no target dialog was shown.
+async function useMedicine(k, i, direct = false) {
+  if (
+    (modalKind !== 'medicine' && !direct) ||
+    locked ||
+    battle?.busy ||
+    battle?.guest?.noItems ||
+    !canUseMedicine(k, state.team[i])
+  )
+    return;
   const m = state.team[i],
     b = battle;
   addItem(k, -1);
@@ -154,7 +132,12 @@ async function useMedicine(k, i) {
   update();
   save();
   if (!b) {
-    medicineMenu(k);
+    if (!direct) {
+      medicineMenu(k);
+      return;
+    }
+    teamMenu();
+    toast(I18N.t('medicine.usedOn', { item: medicineInfo(k).name, name: tr(SPECIES[m.id].name) }));
     return;
   }
   closeModal();
@@ -162,7 +145,7 @@ async function useMedicine(k, i) {
   locked = true;
   passTurn(state.team[0]);
   state.team[0].interrupted = false;
-  b.log = medicineInfo(k).name + ' digunakan. ' + tick(state.team[0]);
+  b.log = I18N.t('medicine.used', { item: medicineInfo(k).name }) + ' ' + tick(state.team[0]);
   renderBattle();
   if (await partyFaint()) return;
   await enemyTurn();
@@ -175,14 +158,18 @@ const STALL_STOCK = {
   food: ['potions', 'maxpotion', 'lunchbox', 'sambal'],
 };
 function shopStock() {
-  if (['clinic', 'festivalclinic', 'researchlab'].includes(state.room)) return BAG_MEDICINES;
-  const stall = nearest();
-  if (stall?.key === 'shop' && STALL_STOCK[stall.sells]) return STALL_STOCK[stall.sells];
+  if (['clinic', 'researchlab'].includes(state.room)) return BAG_MEDICINES;
+  const stall = nearest(),
+    // The costly gear arrives with chapter three's Stasiun Sela, not at Wargamall.
+    lateGear = storyReached(REGION.STASIUN);
+  if (stall?.key === 'shop' && STALL_STOCK[stall.sells])
+    return STALL_STOCK[stall.sells].filter(k => lateGear || !['capacitor', 'medkit'].includes(k));
   const stock = ['balls', 'potions', 'antidotes'];
-  if (state.region >= 4 || state.room === 'shop') stock.push('ultraballs', 'maxpotion', 'revive');
+  if (storyReached(REGION.BALAI_BETON) || state.room === 'shop')
+    stock.push('ultraballs', 'maxpotion', 'revive');
   if (!['mbg', 'warung'].includes(state.room))
     stock.push(
-      ...gearKeys.filter(k => k !== 'turbine' && (state.region >= 8 || !['capacitor', 'medkit'].includes(k))),
+      ...gearKeys.filter(k => k !== 'turbine' && (lateGear || !['capacitor', 'medkit'].includes(k))),
     );
   return stock;
 }
@@ -229,24 +216,24 @@ function equipmentMenu(i = 0) {
     it = LEAGUE_ITEMS[m.heldItem],
     owned = gearKeys.filter(k => itemCount(k) > 0);
   modal(
-    `<h2>Perlengkapan</h2><p class="equipment-explainer">Barang yang dipakai Wargamon untuk membantu saat bertarung. <b>Satu teman memakai satu barang.</b></p><div class="equipment-owner">${art(m.id)}<h3>${SPECIES[m.id].name}</h3></div><section class="equipped-slot">${it ? itemIcon(m.heldItem) : '<span class="guide-icon">🎒</span>'}<div><b>${it?.name || 'Slot kosong'}</b><p>${it?.desc || 'Pilih barang dari tas untuk dipasang.'}</p></div>${it ? `<button data-league="equip" data-id="${i}" data-key="none">Lepas</button>` : ''}</section><h3>Di dalam tas</h3>${owned.length ? `<div class="equipment-grid">${owned.map(k => `<section class="equipment-card">${itemIcon(k)}<h3>${LEAGUE_ITEMS[k].name}</h3><p>${LEAGUE_ITEMS[k].desc}</p><small>Tersedia: ${itemCount(k)}</small><button data-league="equip" data-id="${i}" data-key="${k}">${it ? 'Ganti perlengkapan' : 'Pasang'}</button></section>`).join('')}</div>` : '<p class="equipment-empty">Belum ada perlengkapan di tas. Cari di kios sepanjang perjalanan.</p>'}`,
+    `<h2>${I18N.t('equipment.title')}</h2><p class="equipment-explainer">${I18N.t('equipment.explainer')} <b>${I18N.t('equipment.oneEach')}</b></p><div class="equipment-owner">${art(m.id)}<h3>${SPECIES[m.id].name}</h3></div><section class="equipped-slot">${it ? itemIcon(m.heldItem) : '<span class="guide-icon">🎒</span>'}<div><b>${it?.name || I18N.t('equipment.emptySlot')}</b><p>${it?.desc || I18N.t('equipment.emptyHint')}</p></div>${it ? `<button data-league="equip" data-id="${i}" data-key="none">${I18N.t('equipment.unequip')}</button>` : ''}</section><h3>${I18N.t('equipment.inBag')}</h3>${owned.length ? `<div class="equipment-grid">${owned.map(k => `<section class="equipment-card">${itemIcon(k)}<h3>${LEAGUE_ITEMS[k].name}</h3><p>${LEAGUE_ITEMS[k].desc}</p><small>${I18N.t('equipment.available', { n: itemCount(k) })}</small><button data-league="equip" data-id="${i}" data-key="${k}">${I18N.t(it ? 'equipment.change' : 'equipment.equip')}</button></section>`).join('')}</div>` : `<p class="equipment-empty">${I18N.t('equipment.none')}</p>`}`,
     'equipment',
-    '<button data-over="backbag">Tim & Tas</button>',
+    `<button data-over="backbag">${I18N.t('bag.teamAndBag')}</button>`,
   );
 }
 function medicineMenu(k) {
   if (locked || !BAG_MEDICINES.includes(k)) return;
   const it = medicineInfo(k);
   modal(
-    `<h2>${itemIcon(k)}${it.name} <span class="bag-quantity">×${itemCount(k)}</span></h2><p>${it.desc}${battle ? ' Memakai satu giliran.' : ''}</p><div class="medicine-target-grid">${state.team
+    `<h2>${itemIcon(k)}${it.name} <span class="bag-quantity">×${itemCount(k)}</span></h2><p>${it.desc}${battle ? ' ' + I18N.t('medicine.usesTurn') : ''}</p><div class="medicine-target-grid">${state.team
       .map((m, i) => {
         const eligible = canUseMedicine(k, m);
-        return `<button class="medicine-target" data-over="medicine" data-key="${k}" data-id="${i}" ${eligible ? '' : 'disabled'}>${art(m.id)}<span class="medicine-target-info"><b>${SPECIES[m.id].name}</b><span>Lv.${m.level}, HP ${m.hp}/${m.max}</span>${health(m)}${statusBadge(m)}<span class="medicine-target-result">${eligible ? (k === 'revive' ? `Bangun → ${Math.ceil(m.max * 0.5)} HP` : k === 'antidotes' ? 'Bersihkan status' : `Pulih → ${Math.min(m.max, m.hp + medicineAmount(k, m))} HP`) : medicineUnavailable(k, m)}</span></span></button>`;
+        return `<button class="medicine-target" data-over="medicine" data-pick data-key="${k}" data-id="${i}" ${eligible ? '' : 'disabled'}>${pickKey(i)}${art(m.id)}<span class="medicine-target-info"><b>${SPECIES[m.id].name}</b><span>Lv.${m.level}, HP ${m.hp}/${m.max}</span>${health(m)}${statusBadge(m)}<span class="medicine-target-result">${eligible ? (k === 'revive' ? I18N.t('medicine.result.revive', { n: Math.ceil(m.max * 0.5) }) : k === 'antidotes' ? I18N.t('medicine.result.cleanse') : I18N.t('medicine.result.heal', { n: Math.min(m.max, m.hp + medicineAmount(k, m)) })) : medicineUnavailable(k, m)}</span></span></button>`;
       })
       .join('')}</div>`,
     'medicine',
     battle
-      ? '<button data-every="bag">← Barang</button><button data-act="close">Kembali bertarung</button>'
-      : '<button data-over="backbag">Tim & Tas</button><button data-act="close">Tutup</button>',
+      ? `<button data-every="bag">${I18N.t('battle.item.back')}</button><button data-act="close">${I18N.t('battle.backToFight')}</button>`
+      : `<button data-over="backbag">${I18N.t('bag.teamAndBag')}</button><button data-act="close">${I18N.t('common.close')}</button>`,
   );
 }

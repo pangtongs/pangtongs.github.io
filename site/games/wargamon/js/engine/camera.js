@@ -43,7 +43,7 @@ function canvasToWorld(clientX, clientY, box = canvas.getBoundingClientRect()) {
   };
 }
 function mapClick(e) {
-  if (modalKind || battle || locked) return;
+  if (busy()) return;
   const point = canvasToWorld(e.clientX, e.clientY);
   if (state.room) {
     const p = findHitPoint(spots(), point);
@@ -61,7 +61,7 @@ function mapClick(e) {
     }
   }
   if (worldWalkable(point.x, point.y)) followWorldPath(worldRoute(worldPosition(), point));
-  else toast('Ikuti jalan. Jalur antarwilayah terbuka setelah tujuan selesai.');
+  else toast(I18N.t('route.followRoad'));
 }
 function insideRect(x, y, r) {
   return x >= r[0] && y >= r[1] && x <= r[2] && y <= r[3];
@@ -97,6 +97,29 @@ function recoverFloor() {
   followerTrail = [];
   cameraPosition(true);
 }
+// A player put somewhere (not walked there) who stands where nobody can stand moves to
+// the nearest floor. Called wherever the game places the player: a load or a new game,
+// the starter choice, a room entered or left, an arrival, a debug change to the floors.
+// Walking never needs it: every step is checked.
+function settlePosition() {
+  if (
+    !state.room &&
+    !battle &&
+    state.team.length &&
+    !groundWalkable(state.x + worldOrigin()[0], state.y + worldOrigin()[1]) &&
+    // Gang Senggol's lane sits beside Sukamaju, in its save coordinates.
+    !(state.region === REGION.SUKAMAJU && state.x >= 960 && state.x < 1920 && state.y >= 0 && state.y < 640)
+  ) {
+    const cells = floorCells(state.region);
+    if (cells?.length) {
+      [state.x, state.y] = cells.reduce((a, b) =>
+        Math.hypot(b[0] - state.x, b[1] - state.y) < Math.hypot(a[0] - state.x, a[1] - state.y) ? b : a,
+      );
+      resetScene();
+    }
+  }
+  recoverFloor();
+}
 function resetScene() {
   navigation++;
   held = null;
@@ -109,7 +132,7 @@ function resetScene() {
 }
 // Choose an actually reachable approach, then interact without landing on a character.
 async function walkWorldTarget(p, i = state.region, activate = true) {
-  if (modalKind || battle || locked || !p) return;
+  if (busy() || !p) return;
   const target = globalPoint(i, p),
     start = worldPosition(),
     candidates = [];
@@ -135,7 +158,7 @@ async function walkWorldTarget(p, i = state.region, activate = true) {
     }
   }
   if (!path) {
-    toast('Jalur belum terbuka. Gunakan Ke tujuan untuk petunjuk.');
+    toast(I18N.t('route.closed'));
     return;
   }
   if (await followWorldPath(path)) {
@@ -195,13 +218,15 @@ function showPlaceLabel(p) {
   );
 }
 // spots() returns trainer copies; identity must not depend on object reference equality.
+// Two maps can hold a point of the same kind at the same spot (Bu Ratna at the station and
+// Kak Lala at the festival), so the map the player stands on is asked first.
 function pointIdentity(p) {
   let r = p.regionIndex;
+  const same = q =>
+    q.key === p.key && q.id === p.id && q.room === p.room && q.x === p.x && q.y === p.y && q.name === p.name;
   if (r === undefined)
-    r = PLACES.findIndex(place =>
-      place.points.some(
-        q => q.key === p.key && q.id === p.id && q.room === p.room && q.x === p.x && q.y === p.y,
-      ),
-    );
+    r = PLACES[state.region]?.points.some(same)
+      ? state.region
+      : PLACES.findIndex(place => place.points.some(same));
   return [state.room || (r < 0 ? state.region : r), p.key, p.id ?? p.room ?? '', p.x, p.y].join(':');
 }

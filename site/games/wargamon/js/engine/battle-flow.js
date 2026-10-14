@@ -1,7 +1,8 @@
 /* A battle as it happens: turns, capture, the start and end of a fight, and enemy switches. */
 
 // --- Turns.
-// A full team defeat ends the fight without healing or moving the player.
+// A full team defeat ends the fight without healing or moving the player, for a small
+// fee (defeatFee).
 // With another teammate still standing, a charm or the next teammate can step in.
 // Returns true when the whole team is down and the battle has ended.
 async function partyFaint() {
@@ -11,24 +12,47 @@ async function partyFaint() {
   if (lead && lead.hp === 0 && lead.heldItem === 'rescue' && !lead.rescueUsed) {
     lead.rescueUsed = true;
     lead.hp = Math.ceil(lead.max * 0.25);
-    if (battle) battle.log += ' Jimat Siaga: ' + SPECIES[lead.id].name + ' bangkit!';
+    if (battle) battle.log += ' ' + I18N.t('battle.log.rescue', { name: tr(SPECIES[lead.id].name) });
     renderBattle();
     return false;
   }
   const i = state.team.findIndex(m => m.hp > 0);
-  if (i < 0) {
+  if (i < 0 && battle?.guest) {
+    // A tower floor or a ghost team: no fee, the record says what happens next.
+    const b = battle;
     endBattle();
+    update();
+    save();
+    guestBattleOver(b, false);
+    return true;
+  }
+  if (i < 0) {
+    if (battle?.ronda) rondaAfter('lose');
+    battle?.after?.('lose');
+    endBattle();
+    const fee = defeatFee();
+    state.money -= fee;
+    update();
+    save();
     modal(
-      `<h2>${I18N.t('battle.fainted.title')}</h2><p>${I18N.t('battle.fainted.body')}</p>${closeButton(I18N.t('battle.fainted.walk'))}`,
+      `<h2>${I18N.t('battle.fainted.title')}</h2><p>${I18N.t('battle.fainted.body')}</p>${fee ? `<p>${I18N.t('battle.fainted.fee', { fee: money(fee) })}</p>` : ''}${closeButton(I18N.t('battle.fainted.walk'))}`,
       'defeat',
     );
     return true;
   }
   [state.team[0], state.team[i]] = [state.team[i], state.team[0]];
-  if (battle) battle.log += ' ' + SPECIES[state.team[0].id].name + ' maju!';
+  if (battle) battle.log += ' ' + I18N.t('battle.log.sendIn', { name: tr(SPECIES[state.team[0].id].name) });
   return false;
 }
-async function enemyTurn() {
+// Losing the whole team costs a little: what slips out of your pocket while you carry
+// everyone off. Rp2.000 plus Rp1.500 per badge, never over Rp15.000 and never more than
+// a tenth of your money, so a loss stings without leaving you unable to heal.
+function defeatFee() {
+  const badges = BADGE_REGIONS.filter(r => gateReady(r)).length;
+  return Math.max(0, Math.min(Math.floor(state.money / 10), 2000 + badges * 1500, 15000));
+}
+// `windUp` is a heavy move the player started this turn: it lands after the enemy acts.
+async function enemyTurn(windUp = null) {
   const b = battle;
   if (!b) return;
   // A trainer may swap to a better matchup instead of attacking, but never twice in a row.
@@ -41,8 +65,10 @@ async function enemyTurn() {
     b.enemy = b.enemies[b.index];
     b.enemySwaps = (b.enemySwaps || 0) + 1;
     b.noSwapNext = true;
+    b.enemyGuard = false;
+    b.enemyPotion = false;
     b.log = I18N.t('battle.enemySwap', {
-      trainer: TRAINERS[b.trainer].name,
+      trainer: battleTrainer(b).name,
       old: SPECIES[outgoing.id].name,
       next: SPECIES[b.enemy.id].name,
     });
@@ -50,6 +76,10 @@ async function enemyTurn() {
     renderBattle();
     save();
     await delay(400);
+    if (windUp) {
+      await windUp();
+      return;
+    }
     b.busy = false;
     locked = false;
     update();
@@ -61,16 +91,40 @@ async function enemyTurn() {
     m = normalise(state.team[0]);
   b.busy = true;
   locked = true;
-  // Cooldowns are read before the turn begins, the same rule as the player's moves.
-  const ready = b.intent >= 0 && !(e.cooldowns[b.intent] > 0),
-    skip = beginTurn(e);
-  if (skip) b.log = skip;
-  else if (ready && tempo(e) >= tempoCost(kit(e.id, e)[b.intent])) b.log = useMove(e, m, b.intent);
-  else {
-    e.tempo = Math.min(3, tempo(e) + 1);
-    e.braced = true;
-    e.focused = true;
-    b.log = SPECIES[e.id].name + ' bersiap: membangun Tempo dan menahan pukulan.';
+  if (b.potions > 0 && !b.enemyPotion && e.hp <= e.max * 0.3) {
+    // A trainer gives one Jamu to a creature that is nearly down: the player's own Jamu,
+    // with the same amount, and like the player's medicine (useMedicine in items.js) it
+    // takes the turn. Medicine is the trainer's action, not the creature's, so on both
+    // sides it works on a creature that is asleep or paralysed; the creature's turn still
+    // passes (cooldowns count down, sleep and other conditions tick in tick() below).
+    b.potions--;
+    b.enemyPotion = true;
+    passTurn(e);
+    e.interrupted = false;
+    const healed = Math.min(e.max - e.hp, medicineAmount('potions', e));
+    e.hp += healed;
+    b.log = I18N.t('battle.log.enemyPotion', {
+      trainer: tr(battleTrainer(b).name),
+      item: medicineInfo('potions').name,
+      name: tr(SPECIES[e.id].name),
+      n: healed,
+    });
+  } else {
+    // A guard-style trainer braces once with each creature when it drops to half HP.
+    const guarding = b.style === 'guard' && !b.enemyGuard && e.hp <= e.max * 0.5 && !e.braced;
+    // Cooldowns are read before the turn begins, the same rule as the player's moves.
+    const ready = b.intent >= 0 && !(e.cooldowns[b.intent] > 0),
+      skip = beginTurn(e);
+    if (skip) b.log = skip;
+    else if (ready && !guarding && tempo(e) >= tempoCost(kit(e.id, e)[b.intent]))
+      b.log = useMove(e, m, b.intent);
+    else {
+      if (guarding) b.enemyGuard = true;
+      e.tempo = Math.min(3, tempo(e) + 1);
+      e.braced = true;
+      e.focused = true;
+      b.log = I18N.t('battle.log.enemyBrace', { name: tr(SPECIES[e.id].name) });
+    }
   }
   b.log += ' ' + tick(e);
   renderBattle();
@@ -82,6 +136,10 @@ async function enemyTurn() {
     return;
   }
   if (await partyFaint()) return;
+  if (windUp) {
+    await windUp();
+    return;
+  }
   b.busy = false;
   locked = false;
   planEnemy();
@@ -91,11 +149,26 @@ async function enemyTurn() {
 
 // --- Wild encounters and capture.
 // Ronda Malam: from 19:00 to 05:00 on the player's clock, night guests join the wild:
-// glowing Mangglow in the grass and Lumilaut in the water.
+// glowing Mangglow in the grass and Lumilaut in the water. Resting can also wait for
+// night (or for morning), which lasts 20 minutes of play.
+const WAIT_MS = 20 * 60 * 1000;
 const isNight = () => {
+  const now = Date.now();
+  if (state.dayUntil > now) return false;
+  if (state.nightUntil > now) return true;
   const h = new Date().getHours();
   return h >= 19 || h < 5;
 };
+function waitForTime() {
+  const night = !isNight();
+  state.nightUntil = night ? Date.now() + WAIT_MS : 0;
+  state.dayUntil = night ? 0 : Date.now() + WAIT_MS;
+  save();
+  closeModal();
+  toast(I18N.t(night ? 'wait.night.done' : 'wait.day.done'));
+}
+const waitButton = () =>
+  `<button class="action secondary" data-wait="time">${I18N.t(isNight() ? 'wait.day' : 'wait.night')}</button>`;
 function nightGuests(r = state.region) {
   if (!isNight() || r === 14) return [];
   return [
@@ -108,10 +181,18 @@ function encounterWeights(r = state.region) {
   return (
     REGIONS[r].wild
       // The other starters are a lucky find (about 1 in 300), the rare bird is uncommon,
-      // and each region's own signature species turns up now and then.
+      // each region's own signature species turns up now and then, and a species with its
+      // own wildWeight (12 is common) keeps that rarity wherever it lives.
       .map(id => ({
         id,
-        weight: id < 3 ? 0.5 * rareBoost() : id === 18 ? rareBoost() : id === REGIONS[r].signature ? 5 : 12,
+        weight:
+          id < 3
+            ? 0.5 * rareBoost()
+            : id === 18
+              ? rareBoost()
+              : id === REGIONS[r].signature
+                ? 5
+                : (SPECIES[id].wildWeight ?? 12),
       }))
       .filter(v => !(r === 11 && v.id === 44 && c.choices.contract === 0 && !c.resolved.includes('contract')))
       .map(v => ({
@@ -121,7 +202,7 @@ function encounterWeights(r = state.region) {
             ? v.weight * (v.id === 22 ? 0.1 : 1)
             : v.weight,
       }))
-      .concat(nightGuests(r))
+      .concat(nightGuests(r), dailyGuests(r))
   );
 }
 async function advancedCatch(ultra = false) {
@@ -134,44 +215,58 @@ async function advancedCatch(ultra = false) {
     save();
   }
 }
+// The chance a capsule holds: weaker and sleeping or stunned targets are easier;
+// legends are hard. The catch menu shows this number.
+function catchChance(e, ultra = false) {
+  const bonus = hasCondition(e, 'sleep') || hasCondition(e, 'paralysis') ? 0.25 : hasCondition(e) ? 0.12 : 0,
+    rare = SPECIES[e.id].legendary;
+  return Math.min(
+    0.97,
+    (rare ? 0.06 : 0.18) +
+      (rare ? 0.55 : 0.7) * (1 - e.hp / e.max) +
+      bonus +
+      (ultra ? 0.18 : 0) +
+      basketBonus(),
+  );
+}
 async function throwCapsule(ultra) {
   const b = battle;
-  if (!b || locked || b.busy || b.trainer !== null) return;
+  if (!b || locked || b.busy || b.trainer !== null || b.noCatch) return;
   const key = ultra ? 'ultraballs' : 'balls',
     e = b.enemy;
   if (!(state[key] > 0)) {
-    toast('Kapsul habis.');
+    toast(I18N.t('battle.capsule.empty'));
     return;
   }
   state[key]--;
   spendEnergy(state.team[0]);
   b.busy = true;
   locked = true;
-  b.log = (ultra ? 'Kapsul Ultra' : 'Kapsul Rantau') + ' dilempar…';
+  b.log = I18N.t('battle.log.throw', { capsule: I18N.t(ultra ? 'item.ultraballs.name' : 'item.balls.name') });
   renderBattle();
   save();
   await delay(650);
-  const bonus = hasCondition(e, 'sleep') || hasCondition(e, 'paralysis') ? 0.25 : hasCondition(e) ? 0.12 : 0,
-    rare = SPECIES[e.id].legendary;
-  const chance = Math.min(
-    0.97,
-    (rare ? 0.06 : 0.18) + (rare ? 0.55 : 0.7) * (1 - e.hp / e.max) + bonus + (ultra ? 0.18 : 0),
-  );
+  const chance = catchChance(e, ultra);
+  spendBasket();
   if (Math.random() < chance) {
     // A catch counts as a win for the team: it earns XP before the newcomer joins.
     const xp = gainXP(e),
       reserve = state.team.length >= 6;
     (reserve ? (state.storage ??= []) : state.team).push({ ...e, cooldowns: {}, xp: 0 });
     if (!state.seen.includes(e.id)) state.seen.push(e.id);
-    b.log = SPECIES[e.id].name + ' ditangkap! ' + xp + '.';
+    b.log = I18N.t('battle.log.caught', { name: tr(SPECIES[e.id].name), xp });
     renderBattle();
     await delay(500);
     endBattle();
-    toast(SPECIES[e.id].name + (reserve ? ' dikirim ke Titipan.' : ' bergabung!'));
+    toast(
+      I18N.t(reserve ? 'battle.toast.toDaycare' : 'battle.toast.joined', { name: tr(SPECIES[e.id].name) }),
+    );
+    if (b.ronda) rondaAfter('win');
+    b.after?.('caught');
   } else {
     passTurn(state.team[0]);
     state.team[0].interrupted = false;
-    b.log = 'Kapsul terbuka. Lemahkan HP dan beri status.';
+    b.log = I18N.t('battle.log.capsuleOpened');
     b.log += ' ' + tick(state.team[0]);
     renderBattle();
     update();
@@ -196,7 +291,7 @@ function battleBackdrop() {
       tile < 0 ? 'center,center' : `center,${(tile % 2) * 100}% ${Math.floor(tile / 2) * 100}%`;
   }
   // Sukamaju and its alley share one painted street as the outdoor backdrop.
-  if (!room() && state.region === 0)
+  if (!room() && state.region === REGION.SUKAMAJU)
     arena.style.backgroundImage = `${wash},url('img/maps/exterior/1-1.webp')`;
 }
 
@@ -220,8 +315,17 @@ function clearBattleFlags(m) {
   m.healBlock = 0;
 }
 let healTipShown = false;
-function startBattle(id, team) {
-  openBattle(id, team);
+// Who the player is facing: a trainer from TRAINERS, or a guest (a Menara Tanding floor
+// or a ghost team from a code) that brings its own name, portrait and plan.
+const battleTrainer = b => b.guest || TRAINERS[b.trainer];
+// A guest battle: `guest` is { kind, name, portrait, style, potions, noItems, team }, with
+// team entries { sid, lv, item, variant, batik, learnedMoves }. It plays like a trainer
+// fight; the end goes to guestBattleOver (tower.js, team-codes.js) instead of the prize.
+function startGuestBattle(guest) {
+  startBattle(guest.kind, null, guest);
+}
+function startBattle(id, team, guest = null) {
+  openBattle(id, team, guest);
   if (!battle) return;
   for (const m of state.team) {
     m.tempo = 1;
@@ -232,6 +336,7 @@ function startBattle(id, team) {
     m.tempo = 1;
     m.braced = false;
   });
+  beginFieldRule(id);
   planEnemy();
   for (const m of [...state.team, ...battle.enemies]) {
     m.rescueUsed = false;
@@ -241,12 +346,40 @@ function startBattle(id, team) {
   renderBattle();
 }
 // Leaves `battle` untouched when the fight is not allowed yet or nobody can stand.
-function openBattle(id, team) {
-  if (ELITE_IDS.includes(id)) {
+// The team a trainer actually brings: Elites grow five levels per League clear, and a
+// rematch keeps up with the player (never below the original levels, never far behind).
+// The trainer preview shows exactly this team.
+const LEVEL_CAP = 80;
+function trainerTeam(id, t = TRAINERS[id].team) {
+  if (ELITE_IDS.includes(id))
+    return t.map(([sid, lv]) => [sid, Math.min(LEVEL_CAP, lv + leagueState().clears * 5)]);
+  if (!state.defeated.includes(id) || !state.team.length) return t;
+  const average = Math.round(state.team.reduce((n, m) => n + m.level, 0) / state.team.length);
+  return t.map(([sid, lv]) => [sid, Math.min(LEVEL_CAP, Math.max(lv, average - 2))]);
+}
+// Who a trainer sends, in order, with held gear: the team, plus the reserve before the ace
+// when the player brings a full team of six conscious creatures (TRAINER_TACTICS).
+function trainerLineup(id, team = trainerTeam(id)) {
+  const tactics = id === null ? null : TRAINER_TACTICS[id],
+    lineup = team.map(([sid, lv], i) => ({ sid, lv, item: tactics?.items[i] ?? null }));
+  if (!tactics || id === 48 || state.team.length < 6 || state.team.some(m => m.hp <= 0)) return lineup;
+  const base = TRAINERS[id].team,
+    reserve = tactics.reserve ?? { mon: [base[1][0], Math.max(...base.map(([, lv]) => lv)) - 2], item: null },
+    [[sid, lv]] = trainerTeam(id, [reserve.mon]);
+  lineup.splice(lineup.length - 1, 0, { sid, lv, item: reserve.item ?? null });
+  return lineup;
+}
+function openBattle(id, team, guest = null) {
+  if (guest) {
+    if (!guest.team?.length) return;
+  } else if (ELITE_IDS.includes(id)) {
     if (!canChallenge(id)) return;
-    team = TRAINERS[id].team.map(([sid, lv]) => [sid, Math.min(80, lv + leagueState().clears * 5)]);
+    team = trainerTeam(id);
   }
-  if (team?.some(([sid]) => sid === 47) && (!legendQuest().open || ownsTarsion() || state.region !== 13))
+  if (
+    team?.some(([sid]) => sid === 47) &&
+    (!legendQuest().open || ownsTarsion() || state.region !== REGION.OBSERVATORIUM)
+  )
     return;
   state.team.forEach(m => {
     m.shell = 0;
@@ -254,15 +387,12 @@ function openBattle(id, team) {
     m.sugar = 0;
     m.healBlock = 0;
   });
-  if (id !== null && !canChallenge(id)) {
+  if (!guest && id !== null && !canChallenge(id)) {
     trainerIntro(id);
     return;
   }
-  // A rematch keeps up with the player: never below the original levels, never far behind.
-  if (id !== null && !ELITE_IDS.includes(id) && state.defeated.includes(id) && state.team.length) {
-    const average = Math.round(state.team.reduce((n, m) => n + m.level, 0) / state.team.length);
-    team = team.map(([sid, lv]) => [sid, Math.min(80, Math.max(lv, average - 2))]);
-  }
+  if (!guest && id !== null && !ELITE_IDS.includes(id) && state.defeated.includes(id))
+    team = trainerTeam(id, team);
   state.team.forEach(m => {
     normalise(m);
     m.cooldowns = {};
@@ -280,25 +410,39 @@ function openBattle(id, team) {
   }
   navigation++;
   held = null;
-  const enemies = team.map(([sid, lv]) => makeMon(sid, lv));
+  const tactics = guest || (id === null ? null : TRAINER_TACTICS[id]),
+    lineup = guest ? guest.team : trainerLineup(id, team),
+    enemies = lineup.map(({ sid, lv, item, variant, batik, learnedMoves }) => ({
+      ...makeMon(sid, lv),
+      heldItem: item ?? null,
+      ...(variant ? { variant: true, batik } : {}),
+      ...(learnedMoves ? { learnedMoves: { ...learnedMoves } } : {}),
+    }));
   // Every creature faced is recorded as met in the Wargadex, owned or not.
   state.met ??= [];
   for (const m of enemies) if (!state.met.includes(m.id)) state.met.push(m.id);
   battle = {
     trainer: id,
+    guest,
     enemies,
     index: 0,
     enemy: enemies[0],
     busy: false,
-    focus: false,
-    guard: false,
+    // A trainer's plan (TRAINER_TACTICS): move style and Jamu left in the bag.
+    style: tactics?.style ?? null,
+    potions: tactics?.potions ?? 0,
+    // What the creature in front has already spent: its emergency brace and its Jamu.
     enemyGuard: false,
     enemyPotion: false,
-    rematch: id !== null && state.defeated.includes(id),
+    // Guests teach at the rematch rate: a streak is not an XP farm.
+    rematch: !!guest || (id !== null && state.defeated.includes(id)),
     log:
       id === null
-        ? `${SPECIES[enemies[0].id].name} liar muncul!`
-        : `${TRAINERS[id].name} mengirim ${SPECIES[enemies[0].id].name}!`,
+        ? I18N.t('battle.log.wildAppears', { name: tr(SPECIES[enemies[0].id].name) })
+        : I18N.t('battle.log.trainerSends', {
+            trainer: tr((guest || TRAINERS[id]).name),
+            name: tr(SPECIES[enemies[0].id].name),
+          }),
   };
   $('battle').classList.remove('hidden');
   renderBattle();
@@ -308,6 +452,7 @@ function openBattle(id, team) {
 }
 function endBattle() {
   for (const m of [...state.team, ...(state.storage || [])]) clearBattleFlags(m);
+  endFieldRule(battle);
   const b = battle,
     isElite = ELITE_IDS.includes(b?.trainer),
     won = isElite && b.index === b.enemies.length - 1 && b.enemy.hp <= 0;
@@ -350,9 +495,11 @@ function endBattle() {
   locked = false;
   $('battle').classList.add('hidden');
   $('battle').innerHTML = '';
+  // Collection gifts wait for the fight to end.
+  settleState();
   update();
   // First-time players are told once where to recover on the opening maps.
-  if (!healTipShown && state.region <= 1 && state.team.some(m => m.hp < m.max * 0.5)) {
+  if (!healTipShown && state.region <= REGION.PADANG_OJEK && state.team.some(m => m.hp < m.max * 0.5)) {
     healTipShown = true;
     setTimeout(() => {
       if (!modalKind && !battle) toast(I18N.t('tip.heal'));
@@ -363,15 +510,15 @@ function endBattle() {
     save();
   }
 }
-// The player's choice for this turn: a move (m0..m3), brace, or running.
+// The player's choice for this turn: a move (m0..m4), brace, or running.
 // Capsules, items and switching have their own dialogs.
 async function action(move) {
   if (!battle || battle.busy || locked) return;
   const b = battle,
     lead = state.team[0],
-    slot = /^m[0-3]$/.test(move) ? Number(move[1]) : -1;
+    slot = /^m[0-4]$/.test(move) ? Number(move[1]) : -1;
   if (slot >= 0 && tempo(lead) < tempoCost(kit(lead.id, lead)[slot])) {
-    toast('Bangun Tempo dengan jurus ringan atau Bersiap.');
+    toast(I18N.t('battle.toast.needTempo'));
     return;
   }
   if (move === 'brace') {
@@ -383,7 +530,7 @@ async function action(move) {
       lead.tempo = Math.min(3, tempo(lead) + 1);
       lead.braced = true;
       lead.focused = true;
-      b.log = 'Bersiap: +1 Tempo, akurasi berikutnya +12%, pukulan berikutnya berkurang 55%.';
+      b.log = I18N.t('battle.log.brace');
     }
     b.log += ' ' + tick(lead);
     renderBattle();
@@ -393,20 +540,32 @@ async function action(move) {
     return;
   }
   if (move === 'run') {
+    if (b.ronda) rondaAfter('run');
+    b.after?.('run');
     endBattle();
-    toast('Kembali ke tempat semula. Status belum hilang.');
+    toast(I18N.t('battle.toast.ran'));
     return;
   }
   if (slot < 0) return;
   const m = normalise(lead),
     e = normalise(b.enemy);
   if (!kit(m.id, m)[slot] || m.cooldowns[slot] > 0) {
-    toast('Jurus masih dalam jeda. Pilih jurus lain.');
+    toast(I18N.t('battle.toast.cooling'));
     return;
   }
   b.busy = true;
   locked = true;
-  b.log = beginTurn(m) || useMove(m, e, slot);
+  const skip = beginTurn(m);
+  // A heavy move (2 Tempo) needs a wind-up: the enemy acts first, then it lands if the
+  // creature that started it is still in front and standing.
+  if (!skip && isHeavy(kit(m.id, m)[slot])) {
+    b.log = I18N.t('battle.log.windUp', { name: tr(SPECIES[m.id].name), move: tr(kit(m.id, m)[slot].name) });
+    renderBattle();
+    await delay(400);
+    await enemyTurn(() => landWindUp(m, slot));
+    return;
+  }
+  b.log = skip || useMove(m, e, slot);
   b.log += ' ' + tick(m);
   renderBattle();
   update();
@@ -417,6 +576,40 @@ async function action(move) {
   }
   if (await partyFaint()) return;
   await enemyTurn();
+}
+// The second half of a heavy move's turn, after the enemy has acted. The move is lost
+// if the creature fell or left, fell asleep, had the move sealed or was whistled down.
+async function landWindUp(m, slot) {
+  const b = battle;
+  if (!b) return;
+  const e = b.enemy,
+    broken = m.interrupted || hasCondition(m, 'sleep') || m.cooldowns[slot] > 0;
+  m.interrupted = false;
+  if (state.team[0] === m && m.hp > 0 && !broken) {
+    b.log = useMove(m, e, slot) + ' ' + tick(m);
+    renderBattle();
+    update();
+    await delay(650);
+    if (!e.hp) {
+      await enemyDefeated();
+      return;
+    }
+    if (await partyFaint()) return;
+  } else {
+    b.log += ' ' + I18N.t('battle.log.windUpLost', { move: tr(kit(m.id, m)[slot].name) });
+    // A lost wind-up still ends the creature's turn: poison, burn and sleep tick as usual.
+    if (state.team[0] === m && m.hp > 0) {
+      b.log += ' ' + tick(m);
+      renderBattle();
+      update();
+      if (await partyFaint()) return;
+    }
+  }
+  b.busy = false;
+  locked = false;
+  planEnemy();
+  update();
+  renderBattle();
 }
 // The enemy's HP reached zero: a charm may revive it, the trainer may send the next
 // creature, or the fight is won and its rewards and story consequences follow.
@@ -442,7 +635,11 @@ async function enemyDefeated() {
     await partyFaint();
     if (battle) renderBattle();
   }
-  if (firstWin && state.defeated.includes(id)) celebrateBadge(id);
+  if (firstWin && state.defeated.includes(id)) {
+    celebrateBadge(id);
+    celebrateMudik(id);
+    celebrateSeberang(id);
+  }
   if (last) {
     if (id === 42 && !has('kaldera')) {
       state.quests.push('kaldera');
@@ -458,7 +655,7 @@ async function enemyDefeated() {
       if (id === 48) {
         update();
         modal(
-          `<h2>Juara Liga Nusantara!</h2><p>${TRAINERS[48].name} menyerahkan piala. Warga Sukamaju memenuhi tribun: perjalanan dari bekal Bu Sari kini tercatat di Balai Juara.</p><p>Hadiah Juara: Rp30.000. Peneliti mengirim kabar: Tarsion sudah mengenali sinyal timmu. Kembali ke observatorium untuk quest <b>Mata di Balik Kubah</b>.</p><div class="actions"><button class="action" data-league="hall">Balai Juara</button>${closeButton('Kembali ke pelataran')}</div>`,
+          `<h2>${I18N.t('league.champion.title')}</h2><p>${I18N.t('league.champion.trophy', { name: tr(TRAINERS[48].name) })}</p><p>${I18N.t('league.champion.reward')} <b>${I18N.t('quest.tarsion.name')}</b>.</p>${mudikNews()}<div class="actions"><button class="action" data-league="hall">${I18N.t('league.hall')}</button>${closeButton(I18N.t('league.backToCourtyard'))}</div>`,
           'champion',
         );
       } else leagueMenu();
@@ -471,11 +668,12 @@ async function enemyDefeated() {
 }
 // The whole prize for a fight, shown exactly as paid. A wild creature leaves a little
 // pocket money; a trainer pays by region and level. A rematch pays in full once a day
-// per trainer, so repeating one fight is not a money farm.
+// per trainer and day on the player's clock (dayNumber, like every other daily reset),
+// so repeating one fight is not a money farm.
 function battleReward(b) {
   if (b.trainer === null) return b.enemy.level * 150;
-  if (!b.rematch) return 31000 + state.region * 1500 + b.enemy.level * 500;
-  const today = new Date().toISOString().slice(0, 10);
+  if (!b.rematch) return 31000 + Math.max(0, storyStep(state.region)) * 1500 + b.enemy.level * 500;
+  const today = dayNumber();
   state.rematchPaid ??= {};
   if (state.rematchPaid[b.trainer] === today) return 2000;
   state.rematchPaid[b.trainer] = today;
@@ -485,7 +683,7 @@ function battleReward(b) {
 async function concludeEnemy() {
   const b = battle,
     e = b.enemy;
-  b.log = `${SPECIES[e.id].name} kalah! +${gainXP(e)}.`;
+  b.log = I18N.t('battle.log.defeated', { name: tr(SPECIES[e.id].name), xp: gainXP(e) });
   renderBattle();
   save();
   await delay(700);
@@ -494,13 +692,28 @@ async function concludeEnemy() {
     b.enemy = b.enemies[b.index];
     b.enemyGuard = false;
     b.enemyPotion = false;
-    b.log = `${TRAINERS[b.trainer].name} mengirim ${SPECIES[b.enemy.id].name}! ${b.enemies.length - b.index} lawan tersisa.`;
+    b.log = I18N.t('battle.log.trainerNext', {
+      trainer: tr(battleTrainer(b).name),
+      name: tr(SPECIES[b.enemy.id].name),
+      n: b.enemies.length - b.index,
+    });
     renderBattle();
     await delay(500);
     b.busy = false;
     locked = false;
     update();
     renderBattle();
+    return;
+  }
+  if (b.guest) {
+    state.wins++;
+    b.log = I18N.t('battle.win.guest', { name: b.guest.name });
+    renderBattle();
+    beep(880, 0.2);
+    await delay(700);
+    endBattle();
+    save();
+    guestBattleOver(b, true);
     return;
   }
   const reward = battleReward(b),
@@ -516,8 +729,8 @@ async function concludeEnemy() {
   if (ti === 17) state.finished = true;
   b.log =
     ti === null
-      ? `Menang! Seluruh tim mendapat XP. +${money(reward)}`
-      : `Menang! +${money(reward)}${!b.rematch ? ', bonus 1 jamu' : ''}`;
+      ? `${I18N.t('battle.win.wild')} +${money(reward)}`
+      : I18N.t(b.rematch ? 'battle.win.trainer' : 'battle.win.trainerBonus', { reward: money(reward) });
   renderBattle();
   beep(880, 0.2);
   await delay(700);
@@ -527,19 +740,22 @@ async function concludeEnemy() {
     return;
   }
   if (ti === null) {
-    toast(`Menang! Seluruh tim mendapat XP. +${money(reward)}`);
+    toast(`${I18N.t('battle.win.wild')} +${money(reward)}. ${leadProgressText()}`);
+    if (b.ronda) rondaAfter('win');
+    // An event battle (calendar.js) settles its own prize.
+    b.after?.('win');
     return;
   }
   const t = TRAINERS[ti],
     line = (b.rematch && TRAINER_REMATCH_LINES[ti]) || t.win;
   modal(
-    `<div class="portrait-head">${trainerArt(t.portrait)}<div><span class="eyebrow">PERTANDINGAN SELESAI</span><h2>${I18N.t('battle.victory.title', { name: t.name })}</h2></div></div><p>“${line}”</p><p>+${money(reward)}${!gateWasReady && gateReady(state.region) ? ', Semua syarat area selesai. Gerbang berikutnya terbuka!' : ''}</p>${closeButton('Lanjut perjalanan')}`,
+    `<div class="portrait-head">${trainerArt(t.portrait)}<div><span class="eyebrow">${I18N.t('battle.victory.eyebrow')}</span><h2>${I18N.t('battle.victory.title', { name: t.name })}</h2></div></div><p>“${line}”</p><p>${!gateWasReady && gateReady(state.region) ? I18N.t('battle.victory.gateOpen', { reward: money(reward) }) : '+' + money(reward)}</p>${victoryProgress(b)}${closeButton(I18N.t('common.continueJourney'))}`,
   );
 }
 // First win against a badge holder: the reward and the chapter's closing dialog.
 function celebrateBadge(id) {
-  if ([26, 29, 32].includes(id)) {
-    const r = id === 26 ? 5 : id === 29 ? 6 : 7;
+  if (regionOfLeader(id) !== null) {
+    const r = regionOfLeader(id);
     // The badge heals the team and fills the bag; levels are earned in battle.
     state.team.forEach(m => {
       m.hp = m.max;
@@ -551,7 +767,7 @@ function celebrateBadge(id) {
     addItem('maxpotion', 2);
     update();
     modal(
-      `<span class="eyebrow">${REGIONS[r].badge.toUpperCase()}</span><h2>${id === 26 ? 'Festival kembali menyala!' : id === 29 ? 'Suaka kembali bernapas!' : 'Langit kembali terbaca!'}</h2><p>${TRAINERS[id].win}</p><p>Semua teman pulih penuh. Bekal perjalanan: 5 kapsul, 2 Kapsul Ultra, 5 jamu dan 2 Jamu Pekat.</p><p>${id === 26 ? 'Lampu panggung menyala. Lanjutkan ke atrium Wargamall untuk kiriman kuliner dan Arena Rasa.' : id === 29 ? 'Rajapari muncul di dermaga suaka. Menangkapnya opsional; jalur gunung sudah terbuka.' : 'Empat lencana lengkap! Jalur Stasiun Sela terbuka di timur gunung. Jalakawatt tetap menunggu di gardu.'}</p>${closeButton(id === 32 ? 'Lanjut mencari legenda' : 'Lanjut perjalanan')}`,
+      `<span class="eyebrow">${REGIONS[r].badge.toUpperCase()}</span><h2>${I18N.t(`badge.win.${id}.title`)}</h2><p>${TRAINERS[id].win}</p><p>${I18N.t('badge.win.supplies')}</p><p>${I18N.t(`badge.win.${id}.next`)}</p>${closeButton(I18N.t(id === 32 ? 'badge.win.findLegend' : 'common.continueJourney'))}`,
       'chapterwin',
     );
   } else if ([34, 36].includes(id)) {
@@ -559,7 +775,7 @@ function celebrateBadge(id) {
     state.potions += 3;
     update();
     modal(
-      `<h2>${id === 34 ? 'Lencana Peron!' : 'Lencana Rasa!'}</h2><p>${TRAINERS[id].win}</p><p>Bekal: 5 kapsul dan 3 jamu.</p><p>${id === 34 ? 'Bab Air & Taman berlanjut di jalur yang sudah terbuka.' : 'Selesaikan seluruh kegiatan bab Pusat Kota, lalu gunakan penghubung di dermaga Pasar Rakyat menuju Pesisir Suaka.'}</p>${closeButton('Lanjut')}`,
+      `<h2>${I18N.t(`badge.win.${id}.title`)}</h2><p>${TRAINERS[id].win}</p><p>${I18N.t('badge.win.smallSupplies')}</p><p>${I18N.t(`badge.win.${id}.next`)}</p>${closeButton()}`,
       'chapterwin',
     );
   } else if ([38, 40].includes(id)) {
@@ -567,7 +783,7 @@ function celebrateBadge(id) {
     state.potions += 3;
     update();
     modal(
-      `<h2>${REGIONS[id === 38 ? 10 : 11].badge}!</h2><p>${TRAINERS[id].win}</p><p>Bekal: 5 kapsul dan 3 jamu.</p>${closeButton('Lanjut')}`,
+      `<h2>${REGIONS[id === 38 ? 10 : 11].badge}!</h2><p>${TRAINERS[id].win}</p><p>${I18N.t('badge.win.smallSupplies')}</p>${closeButton()}`,
       'chapterwin',
     );
   }

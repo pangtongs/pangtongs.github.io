@@ -1,12 +1,10 @@
 /* New story progression, persistent world puzzles, legendary encounters and a path follower. */
+// Later rooms download when entered (or after the first frame of their chapter).
 for (const name of [
   'img/maps/interior/chapter-interiors.webp',
   ...['warungcity', 'gym', 'stage', 'mallatrium'].map(key => ROOMS[key].image),
-]) {
-  const im = new Image();
-  im.src = name;
-  images[name] = im;
-}
+])
+  deferMapImage(name);
 function chapterState() {
   state.puzzles ??= {};
   state.legendCaught ??= [];
@@ -23,7 +21,7 @@ function awardQuest(key) {
 // A completed first arena remains sufficient for old saves to open the expansion.
 function ending() {
   modal(
-    `<span class="eyebrow">LENCANA BETON, BAB KERAMAIAN BERLANJUT</span><h2>Lencana Beton milikmu!</h2><p>${TRAINERS[17].name} menyerahkan undangan: “Festival di selatan balai sedang mati listrik. Kru panggung butuh bantuan.”</p><p>Lanjutkan ke Festival Arus, lalu selesaikan kiriman kuliner Wargamall. Setelah bab ini selesai, dermaga Pasar Rakyat menghubungkan perjalanan ke Pesisir Suaka.</p><div class="actions"><button class="action" data-chapter="depart">Ke Festival Arus</button>${closeButton('Siapkan tim dulu')}</div>`,
+    `<span class="eyebrow">${I18N.t('ending.beton.eyebrow')}</span><h2>${I18N.t('ending.beton.title')}</h2><p>${I18N.t('ending.beton.invite', { name: tr(TRAINERS[17].name) })}</p><p>${I18N.t('ending.beton.next')}</p><div class="actions"><button class="action" data-chapter="depart">${I18N.t('ending.beton.depart')}</button>${closeButton(I18N.t('trainer.prepare'))}</div>`,
     'ending',
   );
 }
@@ -53,7 +51,7 @@ function powerMenu() {
   const p = (chapterState().power ??= newPower()),
     done = has('circuit');
   modal(
-    `<span class="eyebrow">FESTIVAL ARUS, PANEL PANGGUNG</span><h2>${done ? 'Sembilan lampu menyala!' : 'Nyalakan semua lampu'}</h2><p>${done ? 'Aliran listrik pulih. Panggung aman untuk pertunjukan.' : 'Tekan satu sakelar untuk membalik lampunya dan lampu tepat di atas, bawah, kiri, kanan. Semua <b>9 lampu harus ON</b> agar panggung aman.'}</p><div class="power-grid">${p.board.map((on, i) => (done ? `<div class="power-result lit">${i + 1}<small>ON</small></div>` : `<button data-chapter="power" data-id="${i}" class="${on ? 'lit' : ''}" aria-pressed="${on}">${i + 1}<small>${on ? 'ON' : 'OFF'}</small></button>`)).join('')}</div><p class="${done ? 'activity-complete' : ''}" role="status">${done ? trainerText('story.power.ready', '{trainer26} siap di panggung. Bonus 3 kapsul + 3 jamu diterima.', { trainer26: 26 }) : `${p.board.filter(Boolean).length}/9 menyala, ${p.moves} tekanan. Progres tersimpan saat panel ditutup.`}</p>${done ? '' : `<details><summary>Catatan teknisi / bantuan</summary><p>Dari posisi awal: tekan 1, lalu 5, lalu 9. Jika sudah berubah, reset dahulu. Tidak ada hukuman untuk mencoba.</p></details><div class="actions"><button class="action secondary" data-chapter="powerreset">Reset panel</button></div>`}${closeButton()}`,
+    `<span class="eyebrow">${I18N.t('power.eyebrow')}</span><h2>${I18N.t(done ? 'power.titleDone' : 'power.title')}</h2><p>${done ? I18N.t('power.done') : `${I18N.t('power.help.before')} <b>${I18N.t('power.help.bold')}</b> ${I18N.t('power.help.after')}`}</p><div class="power-grid">${p.board.map((on, i) => (done ? `<div class="power-result lit">${i + 1}<small>ON</small></div>` : `<button data-chapter="power" data-id="${i}" class="${on ? 'lit' : ''}" aria-pressed="${on}">${i + 1}<small>${on ? 'ON' : 'OFF'}</small></button>`)).join('')}</div><p class="${done ? 'activity-complete' : ''}" role="status">${done ? I18N.t('story.power.ready', { trainer26: trainerName(26) }) : I18N.t('power.progress', { n: p.board.filter(Boolean).length, moves: p.moves })}</p>${done ? '' : `<details><summary>${I18N.t('power.notes')}</summary><p>${I18N.t('power.notes.body')}</p></details><div class="actions"><button class="action secondary" data-chapter="powerreset">${I18N.t('power.reset')}</button></div>`}${closeButton()}`,
     'power',
   );
 }
@@ -67,27 +65,11 @@ function pressPower(i) {
   powerMenu();
 }
 // Conserved water: six units must be split by the sluices, never manufactured by a button.
-function tideT(key, fallback, params = {}) {
-  return typeof I18N === 'undefined'
-    ? fallback.replace(/\{(\w+)\}/g, (_, name) => params[name] ?? `{${name}}`)
-    : I18N.t(key, params);
-}
+// Each round's clue is the catalog entry tide.clue.<round>.
 const TIDE_ROUNDS = [
-  {
-    start: [0, 4, 2],
-    target: [2, 1, 3],
-    clue: 'Mangrove perlu satu unit lebih banyak dari bak penelitian. Karang perlu satu unit lebih banyak dari mangrove.',
-  },
-  {
-    start: [3, 0, 3],
-    target: [1, 3, 2],
-    clue: 'Bak penelitian perlu paling banyak. Karang perlu satu unit lebih sedikit dari bak; mangrove satu unit lebih sedikit dari karang.',
-  },
-  {
-    start: [1, 4, 1],
-    target: [3, 2, 1],
-    clue: 'Mangrove perlu paling banyak. Bak penelitian perlu satu unit lebih sedikit; karang satu unit lebih sedikit lagi.',
-  },
+  { start: [0, 4, 2], target: [2, 1, 3] },
+  { start: [3, 0, 3], target: [1, 3, 2] },
+  { start: [1, 4, 1], target: [3, 2, 1] },
 ];
 function valveState() {
   const p = (chapterState().valves ??= {});
@@ -101,23 +83,16 @@ function valveState() {
 function valveMenu() {
   const p = valveState(),
     done = has('tides'),
-    round = TIDE_ROUNDS[Math.min(p.round, 2)],
-    names = ['Mangrove', 'Bak penelitian', 'Karang'];
-  const clue = tideT(`tide.clue.${p.round}`, round.clue);
-  const intro = done
-    ? tideT('tide.doneIntro', 'Sensor menyala di semua saluran.')
-    : tideT(
-        'tide.intro',
-        'Uji {round} dari 3. Pompa mengalirkan tepat 6 unit. Pindahkan air antar saluran, lalu uji sensor. {clue}',
-        { round: p.round + 1, clue },
-      );
+    names = [0, 1, 2].map(i => I18N.t(`tide.channel.${i}`));
+  const clue = I18N.t(`tide.clue.${Math.min(p.round, 2)}`);
+  const intro = done ? I18N.t('tide.doneIntro') : I18N.t('tide.intro', { round: p.round + 1, clue });
   const feedback = done
-    ? tideT('tide.done', 'Sensor stabil. {trainer} siap bertanding. Bonus 3 kapsul + 3 jamu diterima.', {
+    ? I18N.t('tide.done', {
         trainer: trainerName(29),
       })
-    : p.feedback || tideT('tide.hint', 'Setiap tombol memindahkan satu unit; total air tetap enam.');
+    : p.feedback || I18N.t('tide.hint');
   modal(
-    `<span class="eyebrow">PESISIR SUAKA, KONSOL KATUP</span><h2>${done ? tideT('tide.titleDone', 'Arus suaka seimbang') : tideT('tide.title', 'Alihkan air ke tiga saluran')}</h2><p>${intro}</p><div class="reservoir">${tideT('tide.total', 'Total aliran: {flow} / 6 unit', { flow: p.flow.reduce((a, b) => a + b, 0) })}</div><div class="sluices">${names.map((n, i) => `<div><b>${tideT(`tide.channel.${i}`, n)}</b><div class="flow-meter" aria-label="${n}: ${p.flow[i]} unit">${Array.from({ length: 6 }, (_, j) => `<i class="${j < p.flow[i] ? 'filled' : ''}"></i>`).join('')}</div><p>${tideT('tide.amount', '{flow} unit', { flow: p.flow[i] })}</p>${done ? '' : names.map((dest, j) => (i === j ? '' : `<button data-chapter="valve" data-id="${i}" data-delta="${j}" ${p.flow[i] === 0 ? 'disabled' : ''}>${tideT('tide.send', 'Ke {name}', { name: tideT(`tide.channel.${j}`, dest) })}</button>`)).join(' ')}</div>`).join('')}</div><p role="status" class="${done ? 'activity-complete' : ''}">${feedback}</p>${done ? '' : `<button class="action" data-chapter="valvetest">${tideT('tide.test', 'Uji sensor')}</button>`}${closeButton()}`,
+    `<span class="eyebrow">${I18N.t('tide.eyebrow')}</span><h2>${done ? I18N.t('tide.titleDone') : I18N.t('tide.title')}</h2><p>${intro}</p><div class="reservoir">${I18N.t('tide.total', { flow: p.flow.reduce((a, b) => a + b, 0) })}</div><div class="sluices">${names.map((n, i) => `<div><b>${n}</b><div class="flow-meter" aria-label="${n}: ${I18N.t('tide.amount', { flow: p.flow[i] })}">${Array.from({ length: 6 }, (_, j) => `<i class="${j < p.flow[i] ? 'filled' : ''}"></i>`).join('')}</div><p>${I18N.t('tide.amount', { flow: p.flow[i] })}</p>${done ? '' : names.map((dest, j) => (i === j ? '' : `<button data-chapter="valve" data-id="${i}" data-delta="${j}" ${p.flow[i] === 0 ? 'disabled' : ''}>${I18N.t('tide.send', { name: dest })}</button>`)).join(' ')}</div>`).join('')}</div><p role="status" class="${done ? 'activity-complete' : ''}">${feedback}</p>${done ? '' : `<button class="action" data-chapter="valvetest">${I18N.t('tide.test')}</button>`}${closeButton()}`,
     'valves',
   );
 }
@@ -142,13 +117,9 @@ function testValves() {
       p.feedback = '';
     } else {
       p.flow = TIDE_ROUNDS[p.round].start.slice();
-      p.feedback = tideT('tide.next', 'Sensor stabil. Arus berubah; atur pembagian berikutnya.');
+      p.feedback = I18N.t('tide.next');
     }
-  } else
-    p.feedback = tideT(
-      'tide.retry',
-      'Sensor belum stabil. Periksa selisih aliran sesuai petunjuk, lalu coba lagi.',
-    );
+  } else p.feedback = I18N.t('tide.retry');
   update();
   valveMenu();
 }
@@ -157,19 +128,19 @@ const SIGNAL_PATTERNS = [
   [3, 0, 2, 1],
   [1, 3, 2, 0, 1],
 ];
-const SIGNAL_NAMES = ['Utara', 'Timur', 'Selatan', 'Barat'];
+const SIGNAL_NAMES = ['north', 'east', 'south', 'west'].map(k => I18N.t(`direction.${k}`));
 function signalMenu() {
   const p = (chapterState().signals ??= { round: 0, input: [], revealed: true });
   if (has('orbit')) {
     modal(
-      `<h2>Teleskop terkalibrasi!</h2><p>Tiga pola tersambung ke satelit cuaca. Bachar Hitung siap menerima tantangan final. Bonus 3 kapsul + 3 jamu diterima.</p>${closeButton()}`,
+      `<h2>${I18N.t('signal.doneTitle')}</h2><p>${I18N.t('signal.doneBody')}</p>${closeButton()}`,
       'signals',
     );
     return;
   }
   const seq = SIGNAL_PATTERNS[p.round];
   modal(
-    `<span class="eyebrow">PUNCAK SINYAL, KALIBRASI ${p.round + 1}/3</span><h2>Ikuti pulsa satelit</h2><p>Amati arah sinyal, tekan <b>Mulai input</b>, lalu ulangi urutannya. Tidak ada batas waktu. Salah satu arah? Hanya putaran ini yang diulang.</p><div class="signal-sequence" role="status">${p.revealed ? seq.map((n, i) => `<span>${i + 1}. ${SIGNAL_NAMES[n]}</span>`).join('') : `${p.input.length}/${seq.length} pulsa dimasukkan`}</div><div class="signal-controls">${SIGNAL_NAMES.map((n, i) => `<button data-chapter="signal" data-id="${i}" ${p.revealed ? 'disabled' : ''}>${n}</button>`).join('')}</div><div class="actions"><button class="action" data-chapter="signalstart">${p.revealed ? 'Mulai input' : 'Lihat pola lagi'}</button>${closeButton('Simpan & tutup')}</div>`,
+    `<span class="eyebrow">${I18N.t('signal.eyebrow', { n: p.round + 1 })}</span><h2>${I18N.t('signal.title')}</h2><p>${I18N.t('signal.help.before')} <b>${I18N.t('signal.start')}</b>${I18N.t('signal.help.after')}</p><div class="signal-sequence" role="status">${p.revealed ? seq.map((n, i) => `<span>${i + 1}. ${SIGNAL_NAMES[n]}</span>`).join('') : I18N.t('signal.progress', { n: p.input.length, total: seq.length })}</div><div class="signal-controls">${SIGNAL_NAMES.map((n, i) => `<button data-chapter="signal" data-id="${i}" ${p.revealed ? 'disabled' : ''}>${n}</button>`).join('')}</div><div class="actions"><button class="action" data-chapter="signalstart">${I18N.t(p.revealed ? 'signal.start' : 'signal.showAgain')}</button>${closeButton(I18N.t('signal.saveClose'))}</div>`,
     'signals',
   );
 }
@@ -179,7 +150,7 @@ function pressSignal(i) {
   if (SIGNAL_PATTERNS[p.round][p.input.length] !== i) {
     p.input = [];
     p.revealed = true;
-    toast('Arah belum cocok. Amati lagi; putaran sebelumnya tetap aman.');
+    toast(I18N.t('signal.wrong'));
   } else {
     p.input.push(i);
     beep(300 + i * 130);
@@ -198,18 +169,18 @@ function legendMenu(id) {
   const legendary = SPECIES[id].legendary;
   if (!legendReady(id)) {
     modal(
-      `<h2>${legendary ? 'Suaka belum tenang' : 'Gardu belum terjangkau'}</h2><p>${id === 19 ? 'Pulihkan arus dan dapatkan Lencana Pasang.' : 'Buka jalur Puncak Sinyal setelah Lencana Pasang.'} Setelah itu, kembali ke sini.</p>${closeButton()}`,
+      `<h2>${I18N.t(legendary ? 'legend.locked.legendary' : 'legend.locked.rare')}</h2><p>${I18N.t(id === 19 ? 'legend.locked.19' : 'legend.locked.18')}</p>${closeButton()}`,
     );
     return;
   }
   if (legendary && (state.legendCaught.includes(id) || state.seen.includes(id))) {
     modal(
-      `<h2>${SPECIES[id].name} sudah mengenalmu</h2><p>Legenda ini hanya bisa ditangkap satu kali.</p>${closeButton()}`,
+      `<h2>${I18N.t('legend.known.title', { name: tr(SPECIES[id].name) })}</h2><p>${I18N.t('legend.known.body')}</p>${closeButton()}`,
     );
     return;
   }
   modal(
-    `<span class="eyebrow">${legendary ? 'LEGENDA SUAKA' : 'WARGAMON LANGKA'}, OPSIONAL</span><div class="portrait-head">${art(id)}<div><h2>${SPECIES[id].name}</h2><p>${typeLabel(id)}</p></div></div><p>${SPECIES[id].desc}</p><p>Lv.${id === 19 ? 27 : REGIONS[7].levels[1]}. ${legendary ? 'Satu per perjalanan. Bisa dicoba lagi jika kabur atau kalah.' : 'Bukan legenda. Bisa ditangkap lagi di gardu dan jarang muncul di semak gunung.'}</p><p>${state.team.length >= 6 ? 'Tim penuh: tangkapan dikirim ke Titipan.' : ''}</p><div class="actions"><button class="action" data-chapter="legend" data-id="${id}" ${!state.balls && !legendary ? 'disabled' : ''}>${legendary ? 'Dekati legenda' : 'Periksa gardu'}</button>${closeButton('Siapkan tim dulu')}</div>`,
+    `<span class="eyebrow">${I18N.t(legendary ? 'legend.eyebrow.legendary' : 'legend.eyebrow.rare')}</span><div class="portrait-head">${art(id)}<div><h2>${SPECIES[id].name}</h2><p>${typeLabel(id)}</p></div></div><p>${SPECIES[id].desc}</p><p>Lv.${id === 19 ? 27 : REGIONS[REGION.PUNCAK].levels[1]}. ${I18N.t(legendary ? 'legend.oncePerTrip' : 'legend.notLegendary')}</p><p>${state.team.length >= 6 ? I18N.t('legend.teamFull') : ''}</p><div class="actions"><button class="action" data-chapter="legend" data-id="${id}" ${!state.balls && !legendary ? 'disabled' : ''}>${I18N.t(legendary ? 'legend.approach' : 'legend.inspect')}</button>${closeButton(I18N.t('trainer.prepare'))}</div>`,
     'legend',
   );
 }
@@ -224,7 +195,7 @@ onClick(e => {
     i = Number(b.dataset.id);
   if (a === 'depart') {
     closeModal();
-    travel(5);
+    travel(REGION.FESTIVAL);
   }
   if (a === 'power') pressPower(i);
   if (a === 'powerreset' && !has('circuit')) {
@@ -249,18 +220,18 @@ onClick(e => {
   ) {
     if (!state.balls) {
       if (!SPECIES[i].legendary) {
-        toast('Beli kapsul dulu di koperasi.');
+        toast(I18N.t('legend.buyCapsules'));
         return;
       }
       // The volunteers lend capsules once; after that the player brings their own.
       if (state.legendLoan) {
-        toast('Beli kapsul dulu di koperasi.');
+        toast(I18N.t('legend.buyCapsules'));
         return;
       }
       state.legendLoan = true;
       state.balls = 3;
-      toast('Relawan meminjamkan tiga kapsul untuk penelitian.');
+      toast(I18N.t('legend.loan'));
     }
-    startBattle(null, [[i, i === 19 ? 27 : REGIONS[7].levels[1]]]);
+    startBattle(null, [[i, i === 19 ? 27 : REGIONS[REGION.PUNCAK].levels[1]]]);
   }
 });

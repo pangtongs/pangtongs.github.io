@@ -3,7 +3,7 @@ deferMapImage('img/maps/interior/wargamaret-staff.webp').src = 'img/maps/interio
 for (const name of ['kasir', 'sela'])
   deferMapImage(`img/characters/wargamaret-${name}.webp`).src = `img/characters/wargamaret-${name}.webp`;
 // The terminal minimarket has its own cashier.
-const terminalCashier = { name: 'Bu Nita, kasir', portrait: 3 };
+const terminalCashier = { name: I18N.t('terminal.shop.cashier'), portrait: 3 };
 bindCharacter(
   ROOMS.terminalshop.points.find(p => p.key === 'shop'),
   terminalCashier,
@@ -14,6 +14,9 @@ function martState() {
 function martPortrait(name) {
   return `<img class="mart-portrait" src="img/characters/wargamaret-${name}.webp" alt="">`;
 }
+// Sela and the price board serve only inside the minimarket.
+addInteraction(TEAM_INTERACTIONS, 'mart_sela', () => state.room === 'shop' && martSela());
+addInteraction(TEAM_INTERACTIONS, 'mart_prices', () => state.room === 'shop' && martPrices());
 function martSela() {
   const story = martState();
   let line,
@@ -31,7 +34,7 @@ function martSela() {
     buttons = `<button data-mart="start">${I18N.t('mart.sela.help')}</button>`;
   }
   modal(
-    `<div class="mart-dialog-head">${martPortrait('sela')}<div><span>${I18N.t('mart.sela.role')}</span><h2>${I18N.t('mart.sela.name')}</h2><p>${line}</p></div></div>${buttons ? `<div class="mart-actions">${buttons}</div>` : ''}`,
+    `<div class="mart-dialog-head">${martPortrait('sela')}<div><span>${I18N.t('mart.sela.role')}</span><h2>${I18N.t('mart.sela.name')}</h2><p>${line}</p></div></div>${buttons ? `<div class="mart-actions">${buttons}</div>` : ''}${dailyNewsPanel()}`,
     'mart',
   );
 }

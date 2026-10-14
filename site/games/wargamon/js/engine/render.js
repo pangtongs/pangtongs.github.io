@@ -1,28 +1,32 @@
 /* Drawing the map: the frame loop, region art, actors and place signs. */
 
 // --- Frame loop.
-// One animation frame. A frame that throws is reported through the loading
-// overlay and retried; it must never stop the loop for good.
+// One animation frame: tickWorld() moves the world on, then paintFrame() draws it. A frame
+// that throws is reported through the loading overlay and retried; it must never stop
+// the loop for good. What is on screen (visibleActorAssets) is gathered once per frame
+// and shared with the loading overlay.
 function draw(t) {
+  let onScreen = null;
   try {
-    heroMotion.time = t;
-    paintFrame(t);
-    sceneLoading();
-    if (state.region === 9 && deliveryState().carry && !battle)
-      $('hint').textContent =
-        'Pesanan hangat, ' + deliveryRemaining() + ' langkah, ' + DELIVERY_ORDERS[deliveryState().done].name;
-    if (!battle && !modalKind) {
-      const p = nearest();
-      if (p && Math.hypot(p.x - state.x, p.y - state.y) <= reachOf(p))
-        $('hint').textContent = 'E, ' + shortPlaceName(p);
+    // The battle screen covers the whole map; repainting it underneath is wasted work.
+    if (battleCoversMap()) {
+      requestAnimationFrame(draw);
+      refreshLoadingState();
+      return;
     }
+    frameCanvasBox = canvasResizeObserved ? null : canvas.getBoundingClientRect();
+    paintFrame(t, tickWorld(t));
+    frameCanvasBox = null;
+    requestAnimationFrame(draw);
     lastPaintAt = Date.now();
     paintFailure = null;
-    if (visibleActorAssets().every(asset => asset.ready)) {
+    onScreen = visibleActorAssets();
+    if (onScreen.every(asset => asset.ready)) {
       paintedScene = sceneToken();
       requestOfflineArt();
     }
   } catch (error) {
+    frameCanvasBox = null;
     paintFailure = error;
     console.error('Map rendering failed', error);
     try {
@@ -31,12 +35,142 @@ function draw(t) {
     } catch {}
     setTimeout(() => requestAnimationFrame(draw), 1000);
   }
-  refreshLoadingState();
+  refreshLoadingState(onScreen);
 }
-// Match the browser's backing pixels without changing the camera or map scale.
+// --- The world between frames.
+// tickWorld() is the only part of a frame that changes anything: the step of a held key, the
+// camera following the hero, the follower's trail, the hero's and the follower's walking
+// poses, and the hint bar. paintFrame() draws the state as it is plus what tickWorld()
+// returns, and changes nothing (tests/render-tick.cjs).
+// Walking by key is a fixed step of WALK_STEP px, at most one per frame and none sooner
+// than WALK_INTERVAL ms after the last, so the pace is the same at any frame rate above
+// about 22 per second.
+const WALK_STEP = 7,
+  WALK_INTERVAL = 45;
+const HELD_STEPS = {
+  up: [0, -WALK_STEP],
+  down: [0, WALK_STEP],
+  left: [-WALK_STEP, 0],
+  right: [WALK_STEP, 0],
+};
+// t is the frame's timestamp, as requestAnimationFrame gives it.
+function tickWorld(t) {
+  fitCamera();
+  if (held && t - lastStep > WALK_INTERVAL) {
+    movement(...HELD_STEPS[held]);
+    lastStep = t;
+  }
+  cameraPosition();
+  const frame = { follower: trackFollower(), heroPose: null, followerPose: null };
+  // Posed back to front, the order they are drawn in: a hero's step can turn the hero
+  // (state.facing), and a follower that has just appeared takes the hero's facing.
+  const poseHero = () => {
+      if (state.team.length && heroSheetReady()) frame.heroPose = heroPose(t);
+    },
+    poseFollower = () => {
+      if (frame.follower && followingMon()) frame.followerPose = followerPose(frame.follower, t);
+    };
+  if (frame.follower && frame.follower.y <= state.y + 0.5) {
+    poseFollower();
+    poseHero();
+  } else {
+    poseHero();
+    poseFollower();
+  }
+  if (state.region === REGION.WARGAMALL && deliveryState().carry && !battle) setHint(deliveryHint());
+  if (!battle && !modalKind) refreshReachHint();
+  return frame;
+}
+const heroSheetReady = () => {
+  const im = images['img/characters/hero-traveler.webp'];
+  return !!(im?.complete && im.naturalWidth);
+};
+// A warm order on its way across Wargamall (story/expansion.js).
+function deliveryHint() {
+  return 'Pesanan hangat, ' + deliveryRemaining() + ' langkah, ' + DELIVERY_ORDERS[deliveryState().done].name;
+}
+// What E (or the touch INTERAKSI button) would do right now: pick up a find underfoot, or
+// use the nearest point in reach. The hint and the button's label both say it, in key
+// wording on a keyboard and touch wording on a phone.
+const INTERACT_VERBS = {
+  talk: [
+    'trainer',
+    'chat',
+    'tutor',
+    'quest',
+    'uda',
+    'mace',
+    'daeng',
+    'bli',
+    'stamp',
+    'daycare',
+    'civic',
+    'news',
+    'dispatch',
+  ],
+  enter: ['door', 'district', 'hall', 'latehall', 'league'],
+  go: ['exit', 'next', 'back'],
+  shop: ['shop', 'pharmacy', 'latefood'],
+  eat: ['meal', 'tea'],
+  rest: ['camp', 'pitstop', 'clinic'],
+  search: ['wild'],
+};
+function interactVerb(p) {
+  const verb =
+    Object.keys(INTERACT_VERBS).find(v => INTERACT_VERBS[v].includes(p.key)) || (p.room ? 'enter' : 'look');
+  return I18N.t(`interact.verb.${verb}`);
+}
+function reachHintText(p) {
+  return touchOnly()
+    ? I18N.t('hint.reach.touch', { name: shortPlaceName(p), verb: interactVerb(p) })
+    : 'E, ' + shortPlaceName(p);
+}
+function setInteractLabel(text) {
+  const node = $('interactLabel');
+  if (node && node.textContent !== text) node.textContent = text;
+}
+function refreshReachHint() {
+  const find = state.room ? null : findUnderfoot(),
+    p = nearest(),
+    inReach = p && Math.hypot(p.x - state.x, p.y - state.y) <= reachOf(p);
+  if (find) setHint(I18N.t(touchOnly() ? 'hint.find.touch' : 'hint.find.keys'));
+  else if (inReach) setHint(reachHintText(p));
+  else if (findUnderfoot(FIND_SPARKLE)) setHint(I18N.t('hint.find.near'));
+  setInteractLabel(
+    find
+      ? I18N.t('interact.find')
+      : inReach
+        ? `${interactVerb(p)}: ${shortPlaceName(p)}`
+        : I18N.t('interact.idle'),
+  );
+}
+// Writing the same text every frame still costs the browser a style and layout pass.
+function setHint(text) {
+  const node = $('hint');
+  if (node.textContent !== text) node.textContent = text;
+}
+function battleCoversMap() {
+  const screen = battle && $('battle');
+  return !!screen && !screen.classList.contains('hidden');
+}
+// The canvas size is read once per resize when the browser can report resizes,
+// otherwise once per frame; never several times in one frame.
+let worldCanvasBox = null,
+  frameCanvasBox = null,
+  canvasResizeObserved = false;
+if (typeof ResizeObserver === 'function') {
+  new ResizeObserver(() => (worldCanvasBox = null)).observe(canvas);
+  canvasResizeObserved = true;
+}
+function canvasBox() {
+  if (canvasResizeObserved) return (worldCanvasBox ||= canvas.getBoundingClientRect());
+  return frameCanvasBox || canvas.getBoundingClientRect();
+}
+// Match the browser's backing pixels without changing the camera or map scale. Beyond
+// twice the CSS size a phone's extra pixels are invisible but cost fill rate and memory.
 function resizeWorldCanvas() {
-  const box = canvas.getBoundingClientRect(),
-    ratio = typeof devicePixelRatio === 'number' ? devicePixelRatio : 1,
+  const box = canvasBox(),
+    ratio = Math.min(2, typeof devicePixelRatio === 'number' ? devicePixelRatio : 1),
     width = Math.max(1, Math.round(box.width * ratio)),
     height = Math.max(1, Math.round(box.height * ratio));
   if (canvas.width !== width || canvas.height !== height) {
@@ -47,22 +181,14 @@ function resizeWorldCanvas() {
 // A frame wider than 3:2 shows the standard 600×400 view. A taller frame, such as a
 // phone held upright, keeps the height and narrows the width, so nothing is squashed.
 function fitCamera() {
-  const box = canvas.getBoundingClientRect(),
+  const box = canvasBox(),
     aspect = box.height > 0 ? box.width / box.height : 1.5;
   camera.height = 400;
   camera.width = aspect >= 1.5 ? 600 : Math.max(240, Math.round(400 * aspect));
 }
-function paintFrame(t) {
-  fitCamera();
-  mapFontSize = Math.round(
-    Math.max(14, Math.min(25, (14 * camera.width) / Math.max(1, canvas.getBoundingClientRect().width))),
-  );
-  if (held && t - lastStep > 45) {
-    const dirs = { up: [0, -7], down: [0, 7], left: [-7, 0], right: [7, 0] };
-    movement(...dirs[held]);
-    lastStep = t;
-  }
-  cameraPosition();
+// Draws one frame of the map from the state, the camera and tickWorld()'s frame.
+function paintFrame(t, frame) {
+  mapFontSize = Math.round(Math.max(14, Math.min(25, (14 * camera.width) / Math.max(1, canvasBox().width))));
   resizeWorldCanvas();
   ctx.imageSmoothingEnabled = false;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -90,18 +216,19 @@ function paintFrame(t) {
   if (state.room) {
     paintMap(room());
     for (const p of spots()) if (p.portrait !== undefined) pushPerson(actors, p, sheet);
-    const follower = trackFollower();
+    const follower = frame.follower;
     if (follower)
       actors.push({
         y: follower.y,
         labelRect: actorLabelRect(follower.x, follower.y, true),
-        draw: () => drawFollower(t, follower),
+        draw: () => drawFollower(follower, frame.followerPose),
       });
     if (state.team.length)
       actors.push({
         y: state.y + 0.5,
         labelRect: actorLabelRect(state.x, state.y),
-        draw: () => drawActor(images['img/characters/hero-traveler.webp'], state.x, state.y),
+        draw: () =>
+          drawActor(images['img/characters/hero-traveler.webp'], state.x, state.y, null, frame.heroPose),
       });
     paintActors();
     spots().forEach(drawPointLabel);
@@ -138,17 +265,19 @@ function paintFrame(t) {
       ctx.restore();
       const [ox, oy] = worldOrigin(i);
       for (const p of regionPoints(i)) if (p.portrait !== undefined) pushPerson(actors, p, sheet, ox, oy);
+      for (const b of ROAD_ENDS)
+        if (b.region === i) actors.push({ y: oy + b.y, ox, oy, draw: () => drawRoadBlock(b) });
     }
     gangActors(actors, sheet);
     const [hx, hy] = worldOrigin();
-    const follower = trackFollower();
+    const follower = frame.follower;
     if (follower)
       actors.push({
         y: hy + follower.y,
         ox: hx,
         oy: hy,
         labelRect: actorLabelRect(follower.x, follower.y, true),
-        draw: () => drawFollower(t, follower),
+        draw: () => drawFollower(follower, frame.followerPose),
       });
     if (state.team.length)
       actors.push({
@@ -156,9 +285,11 @@ function paintFrame(t) {
         ox: hx,
         oy: hy,
         labelRect: actorLabelRect(state.x, state.y),
-        draw: () => drawActor(images['img/characters/hero-traveler.webp'], state.x, state.y),
+        draw: () =>
+          drawActor(images['img/characters/hero-traveler.webp'], state.x, state.y, null, frame.heroPose),
       });
     paintActors();
+    paintNight();
     for (const i of visible) {
       ctx.save();
       ctx.translate(...worldOrigin(i));
@@ -167,13 +298,18 @@ function paintFrame(t) {
           drawPointLabel({ ...p, name: 'JALUR TERKUNCI, lihat tujuan', color: '#edba86' });
         else drawPointLabel(p);
       });
+      // A closed road names itself to whoever walks up to it.
+      const [ox, oy] = worldOrigin(i),
+        hero = worldPosition();
+      for (const b of ROAD_ENDS)
+        if (b.region === i && Math.hypot(hero.x - ox - b.x, hero.y - oy - b.y) < 90)
+          drawLabelText(roadBlockPoint(b));
       ctx.restore();
     }
     paintGangLabels();
   }
   if (DEBUG && debugFlags.floor) paintDebugFloor();
   ctx.restore();
-  requestAnimationFrame(draw);
 }
 
 // A person, with the stall they keep: its back drawn behind them, its counter in front.
@@ -204,11 +340,72 @@ function pushPerson(actors, p, sheet, ox = 0, oy = 0) {
   const labelRect = p.worldSprite
     ? [p.x - 27, p.y + (p.worldSpriteOffsetY || 0) - p.worldSpriteHeight - 4, p.x + 27, p.y + 8]
     : actorLabelRect(p.x, p.y);
-  actors.push({ y: oy + p.y, ox, oy, labelRect, draw });
+  const top = p.worldSprite ? p.y + (p.worldSpriteOffsetY || 0) - p.worldSpriteHeight : p.y - personHeight(p);
+  actors.push({
+    y: oy + p.y,
+    ox,
+    oy,
+    labelRect,
+    draw:
+      p.key === 'trainer'
+        ? () => {
+            draw();
+            drawTrainerMark(p, top);
+          }
+        : draw,
+  });
   if (STALLS[p.stall]) {
     actors.push({ y: oy + p.y - 0.5, ox, oy, draw: () => STALLS[p.stall].back(p.x, p.y) });
     actors.push({ y: oy + p.y + 0.5, ox, oy, draw: () => STALLS[p.stall].front(p.x, p.y) });
   }
+}
+// Above a trainer's head: a small "!" while a battle is on offer, a faint tick once won.
+// Trainers who cannot be challenged yet show nothing. It sits clear of the face.
+function drawTrainerMark(p, top) {
+  const beaten = state.defeated.includes(p.id);
+  if (!beaten && !canChallenge(p.id)) return;
+  const x = Math.round(p.x),
+    y = Math.round(top) - 4;
+  ctx.save();
+  if (beaten) {
+    ctx.globalAlpha = 0.75;
+    ctx.fillStyle = '#112c2acc';
+    ctx.fillRect(x - 6, y - 9, 12, 9);
+    ctx.strokeStyle = '#8fe0a0';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x - 3, y - 5);
+    ctx.lineTo(x - 1, y - 3);
+    ctx.lineTo(x + 3, y - 7);
+    ctx.stroke();
+  } else {
+    ctx.fillStyle = '#112c2a';
+    ctx.fillRect(x - 5, y - 14, 10, 13);
+    ctx.fillRect(x - 1, y - 1, 2, 2);
+    ctx.fillStyle = '#f3dc9a';
+    ctx.fillRect(x - 4, y - 13, 8, 11);
+    ctx.fillStyle = '#112c2a';
+    ctx.fillRect(x - 1, y - 11, 2, 5);
+    ctx.fillRect(x - 1, y - 5, 2, 2);
+  }
+  ctx.restore();
+}
+// A door shows a faint mat with a chevron pointing in, so entrances read at a glance.
+function drawDoorMarker(p) {
+  const x = Math.round(p.x),
+    y = Math.round(p.y),
+    glow = 0.35 + 0.15 * Math.sin(Date.now() / 450);
+  ctx.save();
+  ctx.fillStyle = `rgba(17, 44, 42, ${glow})`;
+  ctx.fillRect(x - 12, y - 3, 24, 6);
+  ctx.strokeStyle = `rgba(243, 220, 154, ${glow + 0.2})`;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(x - 5, y - 4);
+  ctx.lineTo(x, y - 9);
+  ctx.lineTo(x + 5, y - 4);
+  ctx.stroke();
+  ctx.restore();
 }
 // Pixel-art stalls. (x, y) is where the keeper's feet are, behind the counter.
 function stallAwning(x, y, colours) {
@@ -242,47 +439,6 @@ function stallCounter(x, y, top, goods) {
   }
 }
 const STALLS = {
-  kiosk: {
-    back(x, y) {
-      stallAwning(x, y, ['#c8423a', '#f2e6cf']);
-      ctx.fillStyle = '#5a3e27';
-      ctx.fillRect(x - 28, y - 46, 56, 4);
-      for (const [dx, c] of [
-        [-26, '#e0a951'],
-        [-16, '#5fae6a'],
-        [-6, '#d9ece0'],
-        [4, '#e46f4c'],
-        [14, '#7fb7d9'],
-      ]) {
-        ctx.fillStyle = c;
-        ctx.fillRect(x + dx, y - 54, 8, 8);
-      }
-    },
-    front(x, y) {
-      stallCounter(x, y, '#d9b27a', [
-        [-26, 10, 7, '#e0a951'],
-        [-12, 8, 9, '#538878'],
-        [14, 12, 6, '#d9ece0'],
-      ]);
-    },
-  },
-  ticket: {
-    back(x, y) {
-      stallAwning(x, y, ['#2f6d9e', '#e6eef4']);
-      ctx.fillStyle = '#f3dc9a';
-      ctx.fillRect(x - 18, y - 48, 36, 9);
-      ctx.fillStyle = '#2f3b44';
-      ctx.font = 'bold 8px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText('LOKET', x, y - 41);
-    },
-    front(x, y) {
-      stallCounter(x, y, '#c9d6de', [
-        [-20, 14, 4, '#f7f2df'],
-        [10, 10, 6, '#e46f4c'],
-      ]);
-    },
-  },
   daycare: {
     back(x, y) {
       stallAwning(x, y, ['#4c9a6a', '#f2ecd5']);
@@ -378,8 +534,9 @@ function paintLegends(i, t) {
 // Tarsion waits in the observatory courtyard until it joins the team.
 function paintAmbient(i, t) {
   paintLegends(i, t);
-  if (i !== 13 || ownsTarsion()) return;
-  const p = PLACES[13].points.find(p => p.key === 'tarsion'),
+  paintFindSparkle(i, t);
+  if (i !== REGION.OBSERVATORIUM || ownsTarsion()) return;
+  const p = PLACES[REGION.OBSERVATORIUM].points.find(p => p.key === 'tarsion'),
     cell = followerCells.get('8:5:0');
   ctx.save();
   ctx.globalAlpha = 1;
@@ -406,9 +563,35 @@ function paintAmbient(i, t) {
 }
 
 // --- Actors. `portrait` selects a character; without one the image is the player or a follower.
-function drawActor(im, x, y, portrait = null) {
+// A resident without a sprite yet: a magenta-and-black checkered figure with a "?",
+// impossible to mistake for finished art (see docs/art-requests/resident-sprites-2026-10-13.md).
+function drawPlaceholderPerson(x, y) {
+  const h = state.room ? 47 : 36,
+    w = 18,
+    top = y - h;
+  ctx.save();
+  ctx.fillStyle = '#14282055';
+  ctx.beginPath();
+  ctx.ellipse(x, y + 1, 10, 3, 0, 0, Math.PI * 2);
+  ctx.fill();
+  for (let row = 0; row < h; row += 4)
+    for (let col = 0; col < w; col += 4) {
+      ctx.fillStyle = ((row + col) / 4) % 2 ? '#ff2bd6' : '#1a1a1a';
+      ctx.fillRect(x - w / 2 + col, top + row, Math.min(4, w - col), Math.min(4, h - row));
+    }
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(x - w / 2, top, w, h);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = `bold ${Math.round(h * 0.5)}px Arial`;
+  ctx.textAlign = 'center';
+  ctx.fillText('?', x, top + h * 0.62);
+  ctx.restore();
+}
+// The hero (portrait null) is drawn in the pose tickWorld() chose for this frame.
+function drawActor(im, x, y, portrait = null, pose = null) {
   if (portrait === null) {
-    drawPlayerSprite(im, x, y);
+    drawPlayerSprite(im, x, y, pose);
     return;
   }
   const shadow = (rx, end = 7) => {
@@ -417,6 +600,10 @@ function drawActor(im, x, y, portrait = null) {
     ctx.ellipse(x, y + 1, rx, 3, 0, 0, end);
     ctx.fill();
   };
+  if (isPlaceholderPortrait(portrait)) {
+    drawPlaceholderPerson(x, y);
+    return;
+  }
   if (portrait === 90 || portrait === 91) {
     const sprite =
       images[
@@ -476,15 +663,14 @@ function drawActor(im, x, y, portrait = null) {
   }
   ctx.restore();
 }
-function drawPlayerSprite(im, x, y) {
+function drawPlayerSprite(im, x, y, pose) {
   const scale = state.room ? 0.78 : 0.55;
   ctx.save();
   ctx.translate(x, y);
   ctx.scale(scale, scale);
   if (im === images['img/characters/hero-traveler.webp']) {
-    if (im?.complete && im.naturalWidth) {
-      const pose = heroPose(heroMotion.time),
-        [sx, sy, sw, sh] = HERO_FRAMES[pose.row][pose.column],
+    if (im?.complete && im.naturalWidth && pose) {
+      const [sx, sy, sw, sh] = HERO_FRAMES[pose.row][pose.column],
         height = 68,
         width = (height * sw) / sh;
       ctx.save();
@@ -512,7 +698,11 @@ function drawMapProp(p) {
   if (p === futsalPenalty) return;
   if (['tarsion', 'resonator', 'tutor', 'hall', 'league'].includes(p.key)) return;
 
-  if (p.portrait !== undefined || p.key === 'door' || p.key === 'wild' || p.stall === 'painted') return;
+  if (p.key === 'door' && p.portrait === undefined) {
+    drawDoorMarker(p);
+    return;
+  }
+  if (p.portrait !== undefined || p.key === 'wild' || p.stall === 'painted') return;
   const x = Math.round(p.x),
     y = Math.round(p.y);
   ctx.save();
@@ -566,7 +756,7 @@ function drawMapProp(p) {
     }
     ctx.fillStyle = '#2b353b';
     ctx.fillRect(x - 13, y - 6, 26, 3);
-  } else if (['news', 'board', 'quest', 'researchnote'].includes(p.key)) {
+  } else if (['news', 'board', 'quest', 'researchnote', 'tradecode'].includes(p.key)) {
     // A notice board on two legs with pinned papers.
     ctx.fillStyle = '#4a3423';
     ctx.fillRect(x - 20, y - 30, 4, 32);
@@ -615,343 +805,24 @@ function drawMapProp(p) {
   }
   ctx.restore();
 }
-// The object on the ground and, when the player is near or hovering, its name.
-function drawPointLabel(p) {
-  if (p.labelMode === 'passage') return;
-  if (p.key === 'wild' && !state.room) {
-    // Keep habitats discoverable without a permanent banner over nearby people.
-    const [x, y] = p.at || [p.x, p.y];
-    ctx.fillStyle = '#173d24f0';
-    ctx.beginPath();
-    ctx.arc(x, y - 10, 11, 0, Math.PI * 2);
-    ctx.fill();
-    drawPaw(x, y - 10);
-    if (showPlaceLabel(p)) drawLabelText(p);
-    return;
-  }
-  if (p.labelMode === 'scene-sign') return;
-  drawMapProp(p);
-  if (showPlaceLabel(p)) drawLabelText(p);
-}
-// Labels drawn this frame, in screen space, so a new label can step aside instead of
-// covering one that is already there. The shift is remembered for clicks.
-const frameLabels = [];
-const frameActorRects = [];
-const labelShift = new Map();
-const labelId = p => `${p.key}|${p.name}|${p.x}|${p.y}`;
-function actorLabelRect(x, y, follower = false) {
-  const half = follower ? 25 : 22;
-  return [x - half, y - (state.room ? 58 : 43), x + half, y + 9];
-}
-function screenLabelRect(r) {
-  const m = ctx.getTransform?.() || { a: 1, d: 1, e: 0, f: 0 };
-  return [m.a * r[0] + m.e, m.d * r[1] + m.f, m.a * r[2] + m.e, m.d * r[3] + m.f];
-}
-const labelRectsOverlap = (a, b) => a[0] < b[2] && a[2] > b[0] && a[1] < b[3] && a[3] > b[1];
-function placeLabel(p, b) {
-  const step = b.h + 8,
-    side = b.w / 2 + 38,
-    candidates = [
-      [0, 0],
-      [0, step],
-      [0, -step],
-      [-side, 0],
-      [side, 0],
-      [-side, -step],
-      [side, -step],
-      [-side, step],
-      [side, step],
-      ...[2, 3, 4, 5, 6].flatMap(n => [
-        [0, n * step],
-        [0, -n * step],
-      ]),
-    ];
-  for (const [dx, dy] of candidates) {
-    const r = screenLabelRect([
-      b.x + dx - b.w / 2,
-      b.y + dy - b.h / 2,
-      b.x + dx + b.w / 2,
-      b.y + dy + b.h / 2,
-    ]);
-    const visible =
-      !Number.isFinite(canvas.width) ||
-      (r[0] >= 4 && r[1] >= 4 && r[2] <= canvas.width - 4 && r[3] <= canvas.height - 4);
-    if (visible && ![...frameLabels, ...frameActorRects].some(o => labelRectsOverlap(r, o))) {
-      frameLabels.push(r);
-      return { dx, dy };
-    }
-  }
-  // The hint remains available when a very small viewport has no clear label space.
-  return null;
-}
-function drawLabelText(p) {
-  const b = labelBox(p, true),
-    shift = placeLabel(p, b);
-  labelShift.set(labelId(p), shift);
-  if (!shift) return;
-  b.x += shift.dx;
-  b.y += shift.dy;
-  const wild = p.key === 'wild';
-  ctx.fillStyle = wild ? '#173d24f0' : '#112c2af0';
-  ctx.fillRect(b.x - b.w / 2, b.y - b.h / 2, b.w, b.h);
-  ctx.strokeStyle = p.color;
-  ctx.lineWidth = 1;
-  ctx.strokeRect(b.x - b.w / 2, b.y - b.h / 2, b.w, b.h);
-  ctx.font = `bold ${b.font}px Arial`;
-  ctx.textAlign = 'center';
-  ctx.fillStyle = '#f7ffe3';
-  // A habitat shows its own name after a paw print, so it reads as a place to find Wargamon.
-  if (wild) drawPaw(b.x - b.w / 2 + 13, b.y);
-  ctx.fillText(tr(b.text), b.x + (wild ? 9 : 0), b.y + b.font * 0.34);
-}
-function drawPaw(x, y) {
-  ctx.fillStyle = '#b9e482';
-  ctx.beginPath();
-  ctx.ellipse(x, y + 3, 4.5, 3.5, 0, 0, Math.PI * 2);
-  ctx.fill();
-  for (const [dx, dy] of [
-    [-4.5, -2.5],
-    [0, -5],
-    [4.5, -2.5],
-  ]) {
-    ctx.beginPath();
-    ctx.arc(x + dx, y + dy, 1.8, 0, Math.PI * 2);
-    ctx.fill();
-  }
-}
-function labelBox(p, unshifted = false) {
-  const shift = (!unshifted && labelShift.get(labelId(p))) || { dx: 0, dy: 0 };
-  const [x, y] = p.key === 'wild' && p.at ? p.at : [p.x, p.y];
-  let text = shortPlaceName(p);
-  if (p.key === 'trainer' && state.defeated.includes(p.id)) text = '✓ ' + text;
-  ctx.font = 'bold 14px Arial';
-  const w = Math.min(285, ctx.measureText(text).width + (p.key === 'wild' ? 38 : 20));
-  while (ctx.measureText(text).width > w - 16 && text.length > 4) text = text.slice(0, -2) + '…';
-  return {
-    text,
-    w,
-    h: 27,
-    font: 14,
-    x: Math.max(w / 2 + 5, Math.min(955 - w / 2, x + (p.labelOffsetX || 0))) + shift.dx,
-    y: (p.portrait !== undefined ? y + 25 : y - 48) + (p.labelOffsetY || 0) + shift.dy,
-  };
-}
-function hitPointLabel(p, pos) {
-  if (!labelShift.get(labelId(p)) || !showPlaceLabel(p)) return false;
-  const b = labelBox(p);
-  return insideRect(pos.x, pos.y, [b.x - b.w / 2, b.y - b.h / 2, b.x + b.w / 2, b.y + b.h / 2]);
-}
-function findHitPoint(points, pos) {
-  // A shifted, visible label owns its click; array order must not select a neighbour.
-  return (
-    points.find(p => hitPointLabel(p, pos)) ||
-    points
-      .filter(p => hitPoint(p, pos))
-      .sort(
-        (a, b) =>
-          Math.hypot(pos.x - a.x, pos.y - a.y + (a.portrait !== undefined ? personHeight() / 2 : 0)) -
-          Math.hypot(pos.x - b.x, pos.y - b.y + (b.portrait !== undefined ? personHeight() / 2 : 0)),
-      )[0]
-  );
-}
-function hitPoint(p, pos) {
-  if (p.labelMode === 'passage') return false;
-  if (p.key === 'wild' && Math.hypot(p.x - pos.x, p.y - pos.y) <= 39) return true;
-  if (p.key === 'wild' && p.at && Math.hypot(p.at[0] - pos.x, p.at[1] - pos.y) <= 39) return true;
-  return objectHit(p, pos) || hitPointLabel(p, pos);
-}
-function shortPlaceName(p) {
-  let name;
-  if (p.key === 'trainer')
-    name = (p.labelName || p.name) + (p.optional ? ', ' + I18N.t('festival.optional') : '');
-  else if (p.key === 'wild') name = p.name.split(',')[0];
-  else
-    name = p.name
-      .split(', ')[0]
-      .replace(/[↵←→]/g, '')
-      .trim()
-      .replace(/\bWARGAMARET\b/, 'Wargamaret')
-      .replace(/\bMINIMARKET\b/, 'Minimarket')
-      .replace(/\bWARUNG TERMINAL\b/, 'Warung Terminal')
-      .replace(/\bPOS RT\b/, 'Pos RT')
-      .replace(/\bDAPUR MBG\b/, 'Dapur MBG')
-      .split(' ')
-      .map(w => (['RT', 'MBG', 'UKS'].includes(w) ? w : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()))
-      .join(' ');
-  return name.replace(/Uks Arena/gi, 'Klinik Beton');
-}
-let mapFontSize = 14;
-function terrainTileAt(x, y) {
-  let best = 0,
-    d = Infinity;
-  WORLD_ORIGINS.forEach(([ox, oy], i) => {
-    const dd = Math.hypot(Math.max(ox - x, 0, x - ox - 960), Math.max(oy - y, 0, y - oy - 640));
-    if (dd < d) {
-      d = dd;
-      best = i;
-    }
-  });
-  return best === 5 ? 3 : best === 6 ? 2 : best === 7 ? 1 : 0;
-}
-function paintTerrain() {
-  ctx.fillStyle = '#537346';
+// Ronda Malam: outdoors at night the world dims to blue, with warm light around the
+// player. Labels are drawn afterwards, so they stay readable.
+function paintNight() {
+  // Nyepi (calendar.js): the lights stay off, day and night.
+  if (!state.room && typeof nyepiShade === 'function' && nyepiShade(ctx, camera)) return;
+  if (state.room || typeof isNight !== 'function' || !isNight()) return;
+  ctx.save();
+  ctx.fillStyle = 'rgba(12, 20, 58, 0.42)';
   ctx.fillRect(camera.x, camera.y, camera.width, camera.height);
-  ctx.fillStyle = '#173f2b99';
-  ctx.fillRect(camera.x, camera.y, camera.width, camera.height);
-}
-function strokeLink(l) {
-  if (l.scene) return;
-  if (l.gap) {
-    // Both maps already paint their own paths. Blend only the short strip
-    // between their facing edges; never draw a cap or pavement over either map.
-    const [[ax, ay], [bx, by]] = l.gap,
-      length = Math.hypot(bx - ax, by - ay),
-      dx = (bx - ax) / length,
-      dy = (by - ay) / length,
-      vertical = ax === bx,
-      [from, to] = l.colors || [
-        [175, 166, 148],
-        [175, 166, 148],
-      ];
-    for (let n = 0; n < length; n += 2) {
-      const t = n / length,
-        color = from.map((v, i) => Math.round(v + (to[i] - v) * t));
-      ctx.fillStyle = `rgb(${color.join(',')})`;
-      ctx.fillRect(
-        Math.min(ax + dx * n, ax + dx * (n + 2)) - (vertical ? l.width / 2 : 0),
-        Math.min(ay + dy * n, ay + dy * (n + 2)) - (vertical ? 0 : l.width / 2),
-        vertical ? l.width : 2,
-        vertical ? 2 : l.width,
-      );
-    }
-    return;
-  }
-  ctx.save();
-  ctx.lineJoin = 'round';
-  ctx.lineCap = 'round';
-  // A packed-earth path with a soft shadowed edge, like the paths painted in the maps.
-  for (const [width, color] of [
-    [l.width ? l.width + 6 : 58, '#2b3a2455'],
-    [l.width || 52, '#8f7a57'],
-    [l.width ? l.width - 6 : 46, '#c2ab80'],
-    [l.width ? l.width - 22 : 30, '#cbb68d'],
-  ]) {
-    ctx.lineWidth = width;
-    ctx.strokeStyle = color;
-    ctx.beginPath();
-    l.points.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
-    ctx.stroke();
+  const p = worldPosition(),
+    glow = ctx.createRadialGradient?.(p.x, p.y - 20, 10, p.x, p.y - 20, 130);
+  if (glow) {
+    glow.addColorStop(0, 'rgba(255, 214, 150, 0.22)');
+    glow.addColorStop(1, 'rgba(255, 214, 150, 0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(p.x - 140, p.y - 160, 280, 280);
   }
   ctx.restore();
-}
-// Match the visible perimeter to localTerrain's 20..940 / 20..620 bounds.
-function borderLink(i, x, y) {
-  const [ox, oy] = worldOrigin(i);
-  return WORLD_LINKS.find(l => (l.from === i || l.to === i) && linkContains(l, x + ox, y + oy));
-}
-function paintBoundary(i) {
-  ctx.save();
-  // Each locked road has a physical striped barrier at its border opening.
-  for (const edge of ['top', 'bottom', 'left', 'right']) {
-    const vertical = edge === 'left' || edge === 'right',
-      limit = vertical ? 620 : 940;
-    for (let n = 20; n <= limit; n += 4) {
-      const x = vertical ? (edge === 'left' ? 20 : 940) : n,
-        y = vertical ? n : edge === 'top' ? 20 : 620,
-        l = borderLink(i, x, y),
-        blocked = l && !regionAvailable(l.to);
-      if (blocked) {
-        ctx.fillStyle = Math.floor(n / 8) % 2 ? '#e9ba59' : '#3b3930';
-        ctx.fillRect(x - 4, y - 4, 8, 8);
-      }
-    }
-  }
-  ctx.restore();
-}
-/* A habitat is drawn in the map's pixel style, in the ground it belongs to: tall grass,
-   rippling water beside a pier or shore, or warm rubble. `at` places the drawing when
-   the player stands on a path or pier next to it. */
-const GRASS_TUFT = [
-  '..l...l....l..',
-  '.lm..lm.l..lm.',
-  '.lml.lml.lmlml',
-  'lmmlmmmlmmmlmm',
-  'dmmmmmmmmmmmmd',
-  '.dddddddddddd.',
-];
-const RUBBLE = ['....hh....', '..hhmmh...', '.hmmmmmh.h', 'hmmmdmmmhm', 'dmmdddmmmd', '.dddddddd.'];
-const HABITAT_COLOURS = {
-  l: '#a9dc6b',
-  m: '#4c9a3e',
-  d: '#1f4d2c',
-  h: '#b9ad9c',
-};
-function paintPixels(rows, colours, ox, oy, size = 3) {
-  rows.forEach((row, r) => {
-    for (let c = 0; c < row.length; c++) {
-      if (row[c] === '.') continue;
-      ctx.fillStyle = colours[row[c]];
-      ctx.fillRect(ox + c * size, oy + r * size, size, size);
-    }
-  });
-}
-function drawWildGround(point) {
-  const [x, y] = point.at || [point.x, point.y],
-    t = Date.now() / 1000;
-  ctx.save();
-  ctx.translate(x, y);
-  if (point.habitat === 'water') {
-    // Fish stir the surface: expanding rings and a darker shadow under them.
-    ctx.fillStyle = '#0b3c5588';
-    ctx.beginPath();
-    ctx.ellipse(0, 2, 22, 7, 0, 0, Math.PI * 2);
-    ctx.fill();
-    for (let k = 0; k < 3; k++) {
-      const phase = (t * 0.6 + k / 3) % 1;
-      ctx.strokeStyle = `rgba(225, 250, 255, ${0.75 * (1 - phase)})`;
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.ellipse(0, 0, 8 + phase * 30, 3 + phase * 10, 0, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-    ctx.fillStyle = '#e8fbff';
-    for (const [dx, dy] of [
-      [-6, -4],
-      [5, -7],
-      [12, -2],
-    ])
-      if (Math.sin(t * 3 + dx) > 0.2) ctx.fillRect(dx, dy, 3, 3);
-  } else if (point.habitat === 'rock') {
-    ctx.fillStyle = '#14282066';
-    ctx.beginPath();
-    ctx.ellipse(0, 8, 32, 8, 0, 0, Math.PI * 2);
-    ctx.fill();
-    const colours = { ...HABITAT_COLOURS, m: '#6e6559', d: '#3b342d' };
-    paintPixels(RUBBLE, colours, -32, -8);
-    paintPixels(RUBBLE, colours, 2, -12);
-    // Warm air rises from the rubble.
-    ctx.fillStyle = 'rgba(240, 236, 226, 0.45)';
-    for (let k = 0; k < 3; k++) {
-      const rise = (t * 12 + k * 9) % 26;
-      ctx.fillRect(-10 + k * 9, -14 - rise, 3, 3);
-    }
-  } else {
-    ctx.fillStyle = '#14282066';
-    ctx.beginPath();
-    ctx.ellipse(0, 8, 36, 8, 0, 0, Math.PI * 2);
-    ctx.fill();
-    for (const [ox, oy] of [
-      [-40, -10],
-      [-2, -12],
-      [-21, -4],
-    ])
-      paintPixels(GRASS_TUFT, HABITAT_COLOURS, ox, oy);
-  }
-  ctx.restore();
-}
-function paintHabitats(place) {
-  for (const point of place.points)
-    if (point.key === 'wild' && point.renderGround !== false) drawWildGround(point);
 }
 function updateWildLocator() {
   const point = !state.room && followingMon() && region().wild.length && spots().find(p => p.key === 'wild');
