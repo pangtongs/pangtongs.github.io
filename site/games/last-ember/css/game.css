@@ -9,9 +9,9 @@ canvas{display:block;width:100vw;height:100vh}
 .hidden{display:none!important}
 
 /* ---------- Buttons ---------- */
-.button{font:inherit;font-weight:bold;color:#f7fcff;background:linear-gradient(180deg,#3c9bd0,#2474a9);border:1px solid #80bce0;border-radius:8px;padding:13px 20px;margin:8px;cursor:pointer;box-shadow:0 3px 0 #163e62,0 8px 20px #0005;transition:transform .14s,filter .14s}
+.button{font:inherit;font-weight:bold;color:#fff6ea;background:linear-gradient(180deg,#e2843a,#b4501c);border:1px solid #ffb27a;border-radius:8px;padding:13px 20px;margin:8px;cursor:pointer;box-shadow:inset 0 1px #ffd7a866,0 3px 0 #5d2409,0 8px 20px #0005;text-shadow:0 1px 1px #5d240999;transition:transform .14s,filter .14s}
 .button:hover{filter:brightness(1.08);transform:translateY(-2px)}
-.button.secondary{color:#f1f6fc;background:linear-gradient(180deg,#405b73,#2c435b);border-color:#708aa2;box-shadow:0 3px 0 #172a40,0 8px 20px #0005}
+.button.secondary{color:#efe6dc;background:linear-gradient(180deg,#3b3a45,#292833);border-color:#6d6672;box-shadow:inset 0 1px #ffffff1a,0 3px 0 #15141b,0 8px 20px #0005;text-shadow:none}
 .button:disabled,.button:disabled:hover{color:#aab9c5;background:#344452;border-color:#586b7a;box-shadow:none;filter:none;opacity:.62;cursor:not-allowed;transform:none}
 
 /* ---------- Icons ----------
@@ -64,7 +64,7 @@ canvas{display:block;width:100vw;height:100vh}
 .bossbar .hp{background:linear-gradient(90deg,#b52a55,#ff8d75)}
 .bossPortrait{display:inline-block;width:24px;height:24px;margin-right:4px;vertical-align:middle;object-fit:contain}
 
-.toast{position:fixed;top:116px;left:50%;z-index:3;transform:translateX(-50%);padding:12px 18px;font-size:12px;color:#f1f8ff;background:#122941;border:1px solid #83b6d2;border-radius:10px;box-shadow:0 8px 28px #0008;pointer-events:none;opacity:0;transition:opacity .2s}
+.toast{position:fixed;top:132px;left:50%;z-index:3;transform:translateX(-50%);width:max-content;max-width:min(560px,90vw);text-align:center;padding:12px 18px;font-size:12px;color:#f1f8ff;background:#122941;border:1px solid #83b6d2;border-radius:10px;box-shadow:0 8px 28px #0008;pointer-events:none;opacity:0;transition:opacity .2s}
 .toast.on{opacity:1}
 
 .spellTray{position:fixed;left:50%;bottom:10px;transform:translateX(-50%);display:flex;flex-wrap:wrap-reverse;justify-content:center;gap:7px;width:max-content;max-width:min(560px,90vw);opacity:.7;pointer-events:none}
@@ -74,7 +74,9 @@ canvas{display:block;width:100vw;height:100vh}
 .spellChip.bargain{border-color:#a45b70;background:#2a1724}
 .spellChip.evolved{border-color:#ffd77a;box-shadow:0 0 10px #ffc65c66}
 
-.joystick{position:fixed;bottom:18px;left:18px;width:140px;height:140px;display:none;touch-action:none}
+.joystick{position:fixed;bottom:18px;left:18px;width:140px;height:140px;display:none;touch-action:none;pointer-events:none;opacity:.55;transition:opacity .15s}
+.joystick.active{opacity:1;transition:none}
+.stickZone{position:fixed;left:0;bottom:0;width:62%;top:110px;z-index:1;display:none;touch-action:none}
 .stick{position:absolute;inset:0;border-radius:50%;background:#2b264a99;border:2px solid #756a9b}
 .nub{position:absolute;width:54px;height:54px;left:41px;top:41px;border-radius:50%;background:#b58affbb;border:2px solid #f0d4ff;box-shadow:0 3px 0 #4d3477}
 
@@ -84,36 +86,43 @@ canvas{display:block;width:100vw;height:100vh}
 .touchBtn{display:grid;place-items:center;width:56px;height:56px;padding:0;font:900 20px ui-monospace,monospace;color:#fff0ce;background:#173148e6;border:2px solid #62849d;border-radius:50%;box-shadow:0 4px 14px #0008;touch-action:manipulation}
 .touchBtn:active{transform:scale(.94);background:#24496a}
 .touchBtn .icon{width:32px;height:32px;border-radius:50%}
+.touchBtn.small{width:46px;height:46px;font-size:16px;align-self:flex-end}
+.touchBtn.small .icon{width:26px;height:26px}
+.touchBtn.dash{position:relative;width:78px;height:78px;overflow:hidden;font:900 13px ui-monospace,monospace;letter-spacing:1px;color:#fff3dc;background:#5a2a14e6;border-color:#ff9a4c;box-shadow:0 0 18px #ff7a2a55,0 4px 14px #0008}
+.touchBtn.dash span{position:relative;z-index:1}
+.dashFill{position:absolute;inset:0;background:#0009;transform-origin:bottom;transform:scaleY(0)}
 .perf{position:fixed;right:10px;bottom:10px;z-index:4;padding:4px 7px;font:11px ui-monospace,monospace;color:#9fe8c6;background:#07121ecc;border:1px solid #2d4a5f;border-radius:6px;pointer-events:none;white-space:pre}
 
 /* ---------- Overlays and modals ---------- */
-.overlay{position:fixed;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;padding:18px;background:radial-gradient(ellipse at center,#172a41bb,#050b14ed);backdrop-filter:blur(5px)}
-.modal{width:min(1160px,100%);padding:30px;text-align:center;background:linear-gradient(150deg,#172941 0%,#0c1727 80%);border:1px solid #6786a0;border-radius:18px;box-shadow:0 26px 90px #000b,inset 0 1px #ffffff20}
+.overlay{position:fixed;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;padding:18px;background:radial-gradient(ellipse at center,#2a1a14bb,#07060bed);backdrop-filter:blur(5px)}
+.modal{width:min(1160px,100%);padding:30px;text-align:center;background:linear-gradient(160deg,#1d1b26 0%,#121119 80%);border:1px solid #6a5548;border-radius:18px;box-shadow:0 26px 90px #000b,inset 0 1px #ffd2a51c}
 .modal h1{margin:0 0 6px;font-size:clamp(26px,4vw,40px);letter-spacing:2px}
-.modal h1,.modal h3,.menuTitle,.menuPanel h2{color:#e6f5ff;text-shadow:0 2px 18px #59a9d355}
+.modal h1,.modal h3,.menuTitle,.menuPanel h2{color:#fff1df;text-shadow:0 2px 22px #ff8a3d66}
 .modal h3{letter-spacing:2px}
-.modal p{color:#b7cadd;line-height:1.6}
+.modal p{color:#c9bfb6;line-height:1.6}
 .menuNote{margin:8px 0;font-size:12px;line-height:1.4;color:#a8c7dd}
 
 /* Choice cards: level ups, origins, chests */
 .choices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:22px}
 .choices[data-tier="PATH"],.choices[data-tier="ULTIMATE"]{grid-template-columns:repeat(3,minmax(0,1fr));max-width:980px;margin-left:auto;margin-right:auto}
 .choices[data-tier="PATH"] .choice,.choices[data-tier="ULTIMATE"] .choice{min-height:150px}
-.choice{position:relative;overflow:hidden;min-height:132px;padding:17px;font:inherit;color:#eff7ff;text-align:left;cursor:pointer;background:linear-gradient(150deg,#1b3048,#101c2c);border:1px solid #405c76;border-radius:12px;box-shadow:0 8px 0 #07111d,0 14px 30px #0003;transition:transform .16s,border-color .16s,box-shadow .16s}
-.choice:hover{border-color:#65bdeb;transform:translateY(-4px);box-shadow:0 10px 0 #07111d,0 20px 36px #0007}
+.choice{position:relative;overflow:hidden;display:grid;grid-template-columns:56px minmax(0,1fr);grid-template-rows:auto auto 1fr;column-gap:12px;align-content:start;min-height:132px;padding:16px;font:inherit;color:#eff7ff;text-align:left;cursor:pointer;background:linear-gradient(150deg,#232631,#15161e);border:1px solid #474a5a;border-radius:12px;box-shadow:0 8px 0 #0a0a10,0 14px 30px #0003;transition:transform .16s,border-color .16s,box-shadow .16s}
+.choice:hover,.choice:focus-visible{border-color:#ffb27a;transform:translateY(-4px);box-shadow:0 10px 0 #07111d,0 20px 36px #0007,0 0 22px #ff8a3d33;outline:none}
 /* Keyboard hint: each card shows the number key that picks it (mouse/keyboard devices only). */
 .choices{counter-reset:card}
 .choice{counter-increment:card}
 @media (hover:hover) and (pointer:fine){.choice::after{content:counter(card);position:absolute;right:10px;top:8px;width:20px;height:20px;display:grid;place-items:center;font:800 11px ui-monospace,monospace;color:#9fc8de;background:#0b1b2c;border:1px solid #3d5f78;border-radius:5px}}
-.choice em{display:inline-block;margin:0 0 9px;padding:3px 6px;font-size:8px;font-style:normal;letter-spacing:1.2px;color:#8fc6da;border:1px solid #385872;border-radius:5px}
-.choice b{display:block;margin-bottom:8px;padding-right:12px;font-size:13px;line-height:1.4;color:#cfeeff}
-.choice small{display:block;padding-top:4px;font-size:11px;line-height:1.55;color:#c3d3e3}
-.choiceIcon{position:relative;float:left;display:grid;place-items:center;width:56px;height:56px;margin:0 9px 6px 0;color:#8de5ef;background-color:#102137;border:1px solid #6490a5;border-radius:8px;box-shadow:0 0 14px #48cde344}
+.choice em{justify-self:start;display:inline-block;margin:0 0 7px;padding:3px 6px;font-size:8px;font-style:normal;letter-spacing:1.2px;color:#8fc6da;border:1px solid #385872;border-radius:5px}
+.choice b{display:block;margin-bottom:4px;padding-right:22px;font-size:13px;line-height:1.4;color:#cfeeff}
+.choice small{display:block;padding-top:2px;font-size:11px;line-height:1.55;color:#c3d3e3}
+.choiceIcon{position:relative;grid-row:1/4;display:grid;place-items:center;width:56px;height:56px;margin:0;color:#8de5ef;background-color:#102137;border:1px solid #6490a5;border-radius:8px;box-shadow:0 0 14px #48cde344}
 .choice[data-tone="BARGAIN"]{background:linear-gradient(150deg,#382333,#1d1828);border-color:#a45b70}
 .choice[data-tone="BARGAIN"] em{color:#ff9cb2;border-color:#a45b70}
 .choice[data-tone="BARGAIN"] .choiceIcon{color:#ff9cb2;background-color:#662c4d}
 .choice .gain,.choice .cost{display:block}.choice .gain{color:#93e3c9}.choice .cost{margin-top:3px;color:#ff9cb2}
 .choice[data-tone="PASSIVE"] .choiceIcon{background-color:#132439}
+.choice[data-tone="PASSIVE"]{background:linear-gradient(150deg,#1b2a3a,#13161f);border-color:#3f5a72}
+.choice[data-tone="PATH"],.choice[data-tone="ULTIMATE"]{background:linear-gradient(150deg,#33221d,#18141a);border-color:#8a5a40}
 .choice[data-tone="EVOLVE"]{background:linear-gradient(150deg,#3a2f17,#1c1a14);border-color:#c9a14a}
 .choice[data-tone="EVOLVE"] em{color:#ffd77a;border-color:#c9a14a}
 .choice[data-tone="EVOLVE"] .choiceIcon{border-color:#ffd77a;box-shadow:0 0 18px #ffc65c66}
@@ -122,7 +131,8 @@ canvas{display:block;width:100vw;height:100vh}
 .originModal{max-height:92dvh;overflow-y:auto}
 .originModal .choices{grid-template-columns:repeat(4,minmax(0,1fr))}
 .originModal .choice{min-height:175px}
-.originModal .choiceIcon{float:none;width:70px;height:70px;margin:0 0 10px}
+.originModal .choice{grid-template-columns:minmax(0,1fr);grid-template-rows:none}
+.originModal .choiceIcon{grid-row:auto;width:70px;height:70px;margin:0 0 10px}
 
 /* Balances shown while choosing a level up */
 .levelWallet{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin:4px 0 0;font-size:11px;font-weight:800}
@@ -178,8 +188,15 @@ canvas{display:block;width:100vw;height:100vh}
 .spellGuideCard small{font-size:11px;color:#b8cadd;overflow-wrap:anywhere}
 
 /* ---------- Main menu ---------- */
-#startOverlay{align-items:safe center;padding:24px 18px;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;background:radial-gradient(ellipse at 50% 18%,#3d243f99,transparent 48%),linear-gradient(180deg,#080e1bfa,#0b1422f7)}
-.menuModal{position:relative;width:min(740px,100%);max-height:calc(100dvh - 48px);padding:22px 25px 30px;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;background:linear-gradient(160deg,#17293bee,#111d2eee 68%,#151525f5);border-color:#9c755d;box-shadow:0 0 0 6px #08111bcc,0 26px 100px #000b}
+#startOverlay{align-items:safe center;padding:24px 18px;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;background:radial-gradient(ellipse at 50% 110%,#ff6a1a40,transparent 55%),radial-gradient(ellipse at 50% 10%,#3d243f88,transparent 50%),linear-gradient(180deg,#07060cfa,#0d0a10f7)}
+.menuModal{position:relative;width:min(740px,100%);max-height:calc(100dvh - 48px);padding:22px 25px 30px;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;background:linear-gradient(160deg,#1e1b25ee,#13111aee 68%,#1a1216f5);border-color:#8a5f45;box-shadow:0 0 0 6px #0a080dcc,0 0 80px #ff6a1a22,0 26px 100px #000b}
+/* Embers drifting up behind the menu. */
+.menuEmbers{position:fixed;inset:0;pointer-events:none;overflow:hidden}
+.menuEmbers i{position:absolute;bottom:-12px;width:4px;height:4px;border-radius:50%;background:#ffb05a;box-shadow:0 0 8px 2px #ff7a1a;opacity:0;animation:emberRise linear infinite}
+@keyframes emberRise{0%{transform:translate(0,0) scale(1);opacity:0}10%{opacity:.9}100%{transform:translate(var(--drift),-105vh) scale(.3);opacity:0}}
+@media (prefers-reduced-motion:reduce){.menuEmbers{display:none}}
+.startHeat{display:flex;align-items:center;justify-content:center;gap:10px;margin:4px 0 2px;font-size:11px;color:#d9b9a0}
+.heatBtn{padding:6px 12px;font:800 12px ui-monospace,monospace;letter-spacing:.08em;color:#ffe2c4;background:#4a1f12;border:1px solid #ff8a4c;border-radius:6px;cursor:pointer;box-shadow:0 0 12px #ff6a1a33}
 .menuTitle{margin:8px 0 5px!important;font:900 clamp(38px,9vw,70px)/1 Georgia,serif!important;letter-spacing:.09em!important}
 .menuSubtitle{margin:0 0 13px!important;font-size:11px;letter-spacing:.23em;text-transform:uppercase;color:#aec2d1!important}
 .menuBalance{display:inline-flex;align-items:center;gap:7px;margin:2px auto 15px;padding:8px 16px;font-size:13px;font-weight:800;color:#d7baff;background:#271d38;border:1px solid #735592;border-radius:10px}
@@ -190,21 +207,23 @@ canvas{display:block;width:100vw;height:100vh}
 .menuFigure img{max-width:100%;max-height:100%;object-fit:contain;filter:drop-shadow(0 5px 25px #4ae6e455)}
 .menuFigure.foe img{filter:drop-shadow(0 5px 25px #e26a6255)}
 .menuStack{position:relative;z-index:1;display:flex;flex-direction:column;gap:9px}
-.menuStack .button{display:block;width:100%;height:45px;margin:0;padding:0 12px;font-size:15px;letter-spacing:.13em;border-radius:6px;box-shadow:inset 0 1px #b4e7ff77,0 4px 0 #163e62,0 8px 20px #0007}
+.menuStack .button{display:block;width:100%;height:45px;margin:0;padding:0 12px;font-size:15px;letter-spacing:.13em;border-radius:6px}
+.menuStack .button:not(:first-child){color:#efe6dc;background:linear-gradient(180deg,#3b3a45,#292833);border-color:#6d6672;box-shadow:inset 0 1px #ffffff1a,0 4px 0 #15141b,0 8px 20px #0007;text-shadow:none}
 .menuStack .button:hover{filter:brightness(1.18)}
-.menuStack .button:focus-visible,.menuBack:focus-visible,.stagePick:focus-visible{outline:3px solid #78e8f5;outline-offset:3px}
+.menuStack .button:focus-visible,.menuBack:focus-visible,.stagePick:focus-visible{outline:3px solid #ffb27a;outline-offset:3px}
 .menuPanel{position:relative;z-index:1}
 .menuPanel h2{margin:5px 0 6px;font:900 27px Georgia,serif;letter-spacing:.12em}
 .menuPanel p{margin:7px 0 12px;font-size:12px;line-height:1.5}
 .menuBack{display:block;margin:18px auto 0!important;padding:9px 19px!important;font-size:12px!important}
 
 .stageSelect{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;max-height:min(36dvh,340px);margin:14px 0 10px;padding:4px;overflow:auto;scrollbar-color:#8f779d #12263a}
-.actHeader{grid-column:1/-1;margin:6px 2px 0;font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#9fc8de;border-bottom:1px solid #35546c;padding-bottom:5px}
-.stagePick{min-height:128px;padding:9px;font:inherit;color:#f6e8ce;text-align:left;cursor:pointer;background:#13263b;border:2px solid #506d85;border-radius:12px}
+.actHeader{grid-column:1/-1;margin:6px 2px 0;font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#e8b48e;border-bottom:1px solid #5a4236;padding-bottom:5px}
+.stagePick{min-height:128px;padding:9px;font:inherit;color:#f6e8ce;text-align:left;cursor:pointer;background:#1a1822;border:2px solid #4a4452;border-radius:12px;transition:border-color .15s,transform .15s}
+.stagePick:not(:disabled):hover{border-color:#a8775a;transform:translateY(-2px)}
 .stagePick img{display:block;width:100%;height:73px;object-fit:contain;filter:drop-shadow(0 0 12px #bb90ef55)}
 .stagePick strong{display:block;margin:8px 0 3px;font-size:12px}
 .stagePick small{font-size:10px;color:#a8bed1}
-.stagePick.selected{background:#2d3146;border-color:#64c9e9;box-shadow:0 0 17px #51a9d43d}
+.stagePick.selected{background:#2e1f1a;border-color:#ff9a4c;box-shadow:0 0 18px #ff7a2a44}
 .stagePick:disabled{opacity:.38;cursor:default}
 .menuActions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch;gap:12px;width:min(100%,640px);margin:14px auto 10px}
 .menuActions .button{width:100%;min-width:0;min-height:46px;margin:0;font-size:12px;line-height:1.25;white-space:normal}
@@ -227,35 +246,41 @@ canvas{display:block;width:100vw;height:100vh}
 .difficultyLegend div{display:flex;justify-content:space-between;gap:12px;padding:8px 10px;font-size:11px;line-height:1.3;color:#aebfce;background:#0e2032;border:1px solid #456178;border-radius:8px}
 .difficultyLegend b{min-width:84px;color:#d6e8f4}
 .difficultyLegend .active{color:#e6f7ff;background:#18364a;border-color:#63b9df}
-.difficultyLegend .active b{color:#8bdcff}
 .difficultyLegend .locked{opacity:.45}
 .difficultyLegend div.active{border-color:#ff8a4c;background:#3a1f16}
 .difficultyLegend div.active b{color:#ffb27a}
 
 /* ---------- Phones ---------- */
+/* ---------- Touch screens (any size: phones, tablets, landscape) ---------- */
+@media (pointer:coarse){
+  .joystick,.stickZone{display:block}
+  .touchActions{display:flex}
+  #marketBtn,#pauseBtn{display:none}
+}
+
+/* ---------- Phones ---------- */
 @media (max-width:700px){
-  .hud{inset:5px;grid-template-columns:minmax(100px,1fr) 70px 118px;gap:4px}
-  .hud .card{min-width:0;padding:5px 6px}
-  .hud .center{grid-column:2;grid-row:1;min-width:0;padding:5px 3px}
-  .hud .right{grid-column:3;grid-row:1}
+  .hud{inset:5px 5px auto;grid-template-columns:minmax(0,1fr) auto;gap:4px}
+  .hud .card{min-width:0;padding:5px 7px}
+  .hud .center{grid-column:1/-1;grid-row:2;justify-self:center;min-width:0;max-width:100%;padding:3px 10px;display:flex;flex-wrap:wrap;align-items:baseline;justify-content:center;column-gap:8px;border-radius:9px}
+  .hud .right{grid-column:2;grid-row:1}
+  .hud .right .spellbookBtn{display:none}
   .brand{font-size:8px;letter-spacing:0}
   .stats{font-size:8px}
   .bar{height:4px;margin:1px 0 3px}
   .timer{font-size:13px}
-  .wave{font-size:7px;letter-spacing:0}
-  .stageGoal{font-size:7px}
+  .wave{font-size:9px;letter-spacing:0}
+  .stageGoal{flex-basis:100%;font-size:9px}
   .currency{gap:2px}
   .currency span{font-size:9px;padding:2px 3px}
   .hudActions{flex-wrap:wrap}
   .hudActions button{font-size:9px;padding:3px}
   .hudActions .clearAction.ready{width:100%}
   .spellbookBtn{font-size:7px;padding:3px;margin-top:3px}
-  .bossbar{top:80px;left:10%;width:80%}
+  .bossbar{top:118px;left:6%;width:88%}
+  .toast{top:150px;max-width:90vw;text-align:center;font-size:11px;padding:9px 12px}
   .spellTray{display:none}
-  .joystick{display:block;bottom:14px;left:12px}
-  /* Pause and market move to big thumb buttons at the bottom right. */
-  .touchActions{display:flex}
-  #marketBtn,#pauseBtn{display:none}
+  .joystick{bottom:14px;left:12px}
   .autoBuyInfo{font-size:7px}
   .perf{bottom:150px}
 
@@ -317,5 +342,6 @@ canvas{display:block;width:100vw;height:100vh}
   .menuSubtitle{font-size:9px}
   .originModal .choices{grid-template-columns:1fr}
   .originModal .choice{min-height:0}
-  .originModal .choiceIcon{float:left;width:57px;height:57px;margin:0 10px 7px 0}
+  .originModal .choice{grid-template-columns:57px minmax(0,1fr);column-gap:10px}
+  .originModal .choiceIcon{grid-row:1/4;width:57px;height:57px;margin:0}
 }

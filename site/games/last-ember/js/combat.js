@@ -4,15 +4,19 @@
 mixin(Game, {
   burst(x, y, color, n) { if (this.settings.particles) this.fx.particles.burst(x, y, color, n); },
 
-  damage(n) {
+  // tick: damage over time (lingering pools). It ignores and does not grant the
+  // invulnerability window, so standing in a pool hurts at its full stated rate.
+  damage(n, tick = false) {
     const p = this.player;
-    if (p.invuln > 0) return;
-    p.invuln = .55;
-    if (p.shield > 0) { const s = Math.min(p.shield, n); p.shield -= s; n -= s; }
+    if (p.dashT > 0) return;
+    if (!tick) { if (p.invuln > 0) return; p.invuln = .55; }
+    const hadShield = p.shield > 0;
+    if (hadShield) { const s = Math.min(p.shield, n); p.shield -= s; n -= s; }
     if (n > 0) p.hp -= n;
-    Sound.play('hurt');
-    this.shake(4);
-    if (this.settings.damageNumbers) this.fx.texts.add(p.x, p.y - 18, `-${Math.ceil(n)}`, '#ff718b');
+    if (!tick) { Sound.play(n > 0 ? 'hurt' : 'block'); this.shake(n > 0 ? 4 : 2); }
+    if (hadShield && p.shield <= 0) { Sound.play('shieldBreak'); this.fx.shockwave(p.x, p.y, 60, .35, '#7fd8ff'); }
+    if (this.settings.damageNumbers && n >= .5) this.fx.texts.add(p.x, p.y - 18, `-${Math.ceil(n)}`, '#ff718b');
+    if (n > 0 && !tick) this.hurtFlash = .25;
     if (p.hp <= 0) this.endRun(false);
   },
 
@@ -30,6 +34,7 @@ mixin(Game, {
       p.hp += heal; p.lifeHealUsed += heal;
     }
     e.hit = .08;
+    if (p.path === 'frost' && !e.boss) e.slow = Math.max(e.slow, 1);
     if (this.settings.damageNumbers) this.fx.texts.add(e.x, e.y - e.r, crit ? Math.round(dealt) + '!' : String(Math.round(dealt)), crit ? '#ffd34d' : color, crit);
     Sound.play(crit ? 'crit' : 'hit');
     if (p.path === 'frost') e.slow = Math.max(e.slow, 1.5);
@@ -57,6 +62,8 @@ mixin(Game, {
       this.toast(`TIER ${e.tier} CHEST DROPPED · COLLECT IT`);
     } else if (e.mini) {
       this.minisDefeated++;
+      // Each mini boss slain brings the final boss 20 seconds closer.
+      if (!this.boss && !this.stageClearPending && this.bossCD > 25) this.bossCD = Math.max(25, this.bossCD - 20);
       Sound.play('boom'); this.shake(6); this.freeze(.06);
       drop(0, 0, 'xp', 32 + this.stage * 6);
       drop(-15, 0, 'soul', 3 + this.stage);
@@ -96,7 +103,7 @@ mixin(Game, {
   // Situational damage bonuses: Path of Frost, Static Field shock, Berserker's Oath, Close Quarters.
   damageMultiplier(e) {
     const p = this.player, b = p.bargains;
-    let m = p.path === 'frost' && e.slow > 0 ? 1.2 : 1;
+    let m = p.path === 'frost' && e.slow > 0 ? 1.25 : 1;
     if (e.shock > 0) m *= 1.3;
     if (b.berserker) m *= 1 + (1 - clamp(p.hp / p.maxHp, 0, 1)) * .8;
     if (b.closeQuarters) m *= dist2(p.x, p.y, e.x, e.y) < CLOSE_QUARTERS_RANGE * CLOSE_QUARTERS_RANGE ? 1.6 : .6;
@@ -172,11 +179,20 @@ mixin(Game, {
 
   openChestAgain() { this.setPaused(true); UI.showChest(this); },
 
+  // Toasts queue instead of overwriting each other; a backlog plays faster.
   toast(s) {
-    const t = $('toast');
+    const q = this.toasts || (this.toasts = []);
+    if (q.includes(s) || this.toastNow === s) return;
+    q.push(s);
+    if (q.length > 3) q.shift();
+    if (!this.toastTimer) this.nextToast();
+  },
+  nextToast() {
+    const t = $('toast'), s = this.toasts.shift();
+    this.toastNow = s;
+    if (!s) { t.classList.remove('on'); this.toastTimer = null; return; }
     t.textContent = s;
     t.classList.add('on');
-    clearTimeout(this.toastTimer);
-    this.toastTimer = setTimeout(() => t.classList.remove('on'), 2100);
+    this.toastTimer = setTimeout(() => this.nextToast(), this.toasts.length ? 1100 : 2000);
   },
 });

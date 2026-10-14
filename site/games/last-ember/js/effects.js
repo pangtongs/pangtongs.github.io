@@ -65,16 +65,18 @@ class FloatTextPool {
   update(dt) {
     for (const t of this.items) if (t.life > 0) { t.life -= dt; t.y -= 32 * dt; }
   }
-  draw(c, view) {
-    c.font = 'bold 12px monospace';
+  // scale: enlarges the text when the camera is zoomed out, so numbers stay legible.
+  draw(c, view, scale = 1) {
+    const small = `bold ${Math.round(12 * scale)}px monospace`, big = `bold ${Math.round(16 * scale)}px monospace`;
+    c.font = small;
     c.textAlign = 'center';
     for (const t of this.items) {
       if (t.life <= 0 || t.x < view.x0 || t.x > view.x1 || t.y < view.y0 || t.y > view.y1) continue;
       c.globalAlpha = clamp(t.life / .7, 0, 1);
-      if (t.big) c.font = 'bold 16px monospace';
+      if (t.big) c.font = big;
       c.fillStyle = '#17142b'; c.fillText(t.text, t.x + 1, t.y + 1);
       c.fillStyle = t.color; c.fillText(t.text, t.x, t.y);
-      if (t.big) c.font = 'bold 12px monospace';
+      if (t.big) c.font = small;
     }
     c.globalAlpha = 1;
   }

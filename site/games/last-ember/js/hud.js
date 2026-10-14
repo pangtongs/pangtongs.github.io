@@ -6,7 +6,7 @@ class Hud {
   constructor() {
     this.el = {};
     for (const id of ['hpText', 'hpBar', 'shieldText', 'shieldBar', 'xpText', 'xpBar', 'souls', 'gems', 'coins', 'finishBtn',
-      'stageGoal', 'wave', 'timer', 'spellTray', 'autoBuyInfo', 'bossUI', 'bossBar', 'bossName', 'bossPortrait', 'perf', 'pauseBtn', 'callBossBtn']) this.el[id] = $(id);
+      'stageGoal', 'wave', 'timer', 'spellTray', 'autoBuyInfo', 'bossUI', 'bossBar', 'bossName', 'bossPortrait', 'perf', 'pauseBtn', 'callBossBtn', 'dashFill']) this.el[id] = $(id);
     this.cache = new Map();
     this.nextAt = 0;
     this.fps = {frames: 0, since: performance.now(), text: ''};
@@ -54,8 +54,11 @@ class Hud {
     this.text('stageGoal', g.stageComplete ? 'STAGE CLEARED · FINISH WHEN READY'
       : g.boss ? 'DEFEAT THE BOSS'
       : g.stageClearPending ? 'CLAIM THE CHEST'
-      : g.eventStatus || `Mini bosses ${g.minisDefeated}/${g.miniGoal} · final boss in ${Math.max(0, Math.ceil(g.bossCD))}s`);
-    this.text('wave', `${g.stage > STAGE_COUNT ? `ENDLESS ${g.stage - STAGE_COUNT}` : `STAGE ${g.stage}/${STAGE_COUNT}`} · LV ${p.level} · FOE LV ${(g.stage - 1) * 3 + 1 + Math.floor(g.stageTime / 20)} · HEAT ${g.heat || 0}`);
+      : g.eventStatus || `Boss in ${Math.max(0, Math.ceil(g.bossCD))}s · mini bosses slain ${g.minisDefeated} (−20s each)`);
+    this.text('wave', `${g.stage > STAGE_COUNT ? `ENDLESS ${g.stage - STAGE_COUNT}` : `STAGE ${g.stage}/${STAGE_COUNT}`} · ${stageInfo(g.stage).name.toUpperCase()} · LV ${p.level}${g.heat ? ` · HEAT ${g.heat}` : ''}`);
+    const dash = p.dashCD / (DASH.cooldown / (1 + .08 * p.passiveRanks.fleet));
+    const dashKey = dash.toFixed(2);
+    if (this.cache.get('dash') !== dashKey) { this.cache.set('dash', dashKey); this.el.dashFill.style.transform = `scaleY(${dashKey})`; }
     this.text('timer', formatTime(g.time));
     this.updateBoss(g);
     this.updateTray(p);

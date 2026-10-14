@@ -56,7 +56,7 @@ class Game {
     this.nearby = [];
     this.fx.clear();
     this.spawnCD = 0; this.bossCD = stageInfo(1).seconds;
-    this.miniCD = 55; this.miniCount = 0; this.minisDefeated = 0; this.miniGoal = 3;
+    this.miniCD = 55 * this.heatDef.miniCD; this.miniCount = 0; this.minisDefeated = 0; this.miniGoal = 3;
     this.levelQueue = 0; this.boss = null; this.autoSaveCD = 20; this.earlySummon = false; this.pendingChest = null;
     $('bossUI').classList.add('hidden');
   }
@@ -67,11 +67,16 @@ class Game {
       const k = e.key.toLowerCase();
       this.keys[k] = true;
       if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' ', 'escape'].includes(k)) e.preventDefault();
+      if ((k === ' ' || k === 'shift') && !e.repeat) this.requestDash();
       // Number keys pick the matching card on any open choice screen.
       if (/^[1-9]$/.test(e.key) && !e.repeat) {
         const box = ['levelOverlay', 'chestOverlay', 'originOverlay'].filter(isOpen).map(id => $(id).querySelector('.choices'))[0];
         const card = box && box.querySelectorAll('.choice')[+e.key - 1];
         if (card && !card.disabled) { card.click(); return; }
+      }
+      if (k === 'escape' && !e.repeat) {
+        if (isOpen('marketOverlay')) { this.closeMarket(); return; }
+        if (isOpen('spellBookOverlay')) { this.closeSpellbook(); return; }
       }
       const blocking = ['levelOverlay', 'stageOverlay', 'marketOverlay', 'spellBookOverlay', 'chestOverlay', 'originOverlay'].some(isOpen);
       if ((k === 'escape' || k === 'p') && !e.repeat && this.running && !blocking) this.togglePause();
@@ -106,16 +111,19 @@ class Game {
       this.renderer.setQuality(this.settings.quality);
       this.saveSettings();
     });
-    on('difficultySetting', () => {
+    const cycleHeat = () => {
       this.settings.heat = ((this.settings.heat || 0) + 1) % ((this.meta.heatUnlocked || 0) + 1);
       this.saveSettings();
-    });
+    };
+    on('difficultySetting', cycleHeat);
+    on('startHeatBtn', cycleHeat);
     on('startBtn', () => this.startStage(this.selectedStage));
     on('loadBtn', () => this.loadRun());
     on('restartBtn', () => this.showMenu());
     on('pauseBtn', () => this.togglePause());
     on('touchPause', () => this.togglePause());
     on('touchMarket', () => this.openMarket());
+    $('touchDash').addEventListener('pointerdown', e => { e.preventDefault(); this.requestDash(); });
     on('resumeBtn', () => this.togglePause());
     on('saveBtn', () => this.saveRun());
     on('menuBtn', () => { this.saveRun(true); this.showMenu(); });
@@ -132,20 +140,31 @@ class Game {
   }
 
   bindStick() {
-    // Follows a single finger: other pointers on the stick are ignored.
-    const el = $('joystick'), nub = $('nub');
-    let active = null;
+    // A floating stick: touching anywhere in the left zone centres the stick under the
+    // thumb. It follows a single finger; other pointers are ignored.
+    const zone = $('stickZone'), el = $('joystick'), nub = $('nub');
+    let active = null, cx = 0, cy = 0;
     const move = e => {
       if (e.pointerId !== active) return;
-      const r = el.getBoundingClientRect(), x = e.clientX - r.left - r.width / 2, y = e.clientY - r.top - r.height / 2;
+      const x = e.clientX - cx, y = e.clientY - cy;
       const m = Math.hypot(x, y), d = Math.min(m, 44);
-      this.stick = {x: m ? x / m * d / 44 : 0, y: m ? y / m * d / 44 : 0};
+      this.stick = {x: m > 4 ? x / m * d / 44 : 0, y: m > 4 ? y / m * d / 44 : 0};
       nub.style.transform = `translate(${this.stick.x * 44}px,${this.stick.y * 44}px)`;
     };
-    const end = e => { if (e.pointerId !== active) return; active = null; this.stick = {x: 0, y: 0}; nub.style.transform = ''; };
-    el.addEventListener('pointerdown', e => { if (active !== null) return; active = e.pointerId; el.setPointerCapture(e.pointerId); move(e); });
-    el.addEventListener('pointermove', move);
-    for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) el.addEventListener(type, end);
+    const end = e => {
+      if (e.pointerId !== active) return;
+      active = null; this.stick = {x: 0, y: 0};
+      nub.style.transform = ''; el.style.left = el.style.top = el.style.bottom = ''; el.classList.remove('active');
+    };
+    zone.addEventListener('pointerdown', e => {
+      if (active !== null) return;
+      active = e.pointerId; zone.setPointerCapture(e.pointerId);
+      cx = e.clientX; cy = e.clientY;
+      el.style.left = cx - 70 + 'px'; el.style.top = cy - 70 + 'px'; el.style.bottom = 'auto'; el.classList.add('active');
+      move(e);
+    });
+    zone.addEventListener('pointermove', move);
+    for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) zone.addEventListener(type, end);
   }
 
   // ---------- Main loop ----------
@@ -166,6 +185,7 @@ class Game {
       if (elapsed < 200) this.renderer.trackFrame(elapsed);
     }
     this.shakeAmt = Math.max(0, this.shakeAmt - elapsed / 1000 * 40);
+    Sound.act = stageInfo(this.stage).act;
     Sound.updateMusic(this.boss ? .85 : Math.min(.55, this.enemies.length / 160), active);
     if (active || this.dirty) { this.renderer.draw(this); this.dirty = false; }
     if (this.running) this.hud.update(this, now);
@@ -186,6 +206,7 @@ class Game {
     this.time += dt; this.stageTime += dt; this.growthClock += dt; this.meta.stats.playTime += dt;
     this.spawnCD -= dt; this.bossCD -= dt; this.miniCD -= dt;
     p.invuln = Math.max(0, p.invuln - dt);
+    this.hurtFlash = Math.max(0, (this.hurtFlash || 0) - dt);
     p.slowTime = Math.max(0, p.slowTime - dt);
     p.lifeHealWindow += dt;
     if (p.lifeHealWindow >= 1) { p.lifeHealWindow %= 1; p.lifeHealUsed = 0; }
@@ -196,6 +217,8 @@ class Game {
     else if (p.shield < p.shieldCap) p.shield = Math.min(p.shieldCap, p.shield + regen * dt);
 
     this.stepEvents(dt);
+    if (this.stageTime > 6) this.tip('dash', matchMedia('(pointer:coarse)').matches
+      ? 'TIP · TAP DASH TO DART THROUGH FOES AND ATTACKS UNHARMED' : 'TIP · SPACE OR SHIFT DASHES THROUGH FOES AND ATTACKS UNHARMED');
     if (this.spawnCD <= 0 && !this.stageClearPending) {
       this.spawn();
       this.spawnCD = Math.max(.14, (.78 - this.stageTime * .003 - this.stage * .055) / (1 + (this.stage - 1) * .16)) / this.heatDef.spawns / (p.bargains.hunted ? 1.3 : 1) / (this.surgeT > 0 ? 2.2 : 1);
@@ -246,9 +269,12 @@ class Game {
     const p = this.player, r = p.passiveRanks;
     while (this.growthClock >= 60) {
       this.growthClock -= 60;
-      if (r.heartGrowth) { const gain = this.baseHp * .06 * r.heartGrowth; p.maxHp += gain; p.hp = Math.min(p.maxHp, p.hp + gain); }
-      if (r.emberGrowth) p.atk += this.baseAtk * .04 * r.emberGrowth;
-      if (r.aegisGrowth) { const gain = this.baseHp * .08 * r.aegisGrowth; p.shieldBonusCap += gain; p.shield += gain; }
+      // Growth follows the geometric mean of the stage baseline and your current stats,
+      // so it keeps mattering as a build snowballs without compounding out of control.
+      const hpRef = Math.sqrt(this.baseHp * Math.max(this.baseHp, p.maxHp)), atkRef = Math.sqrt(this.baseAtk * Math.max(this.baseAtk, p.atk));
+      if (r.heartGrowth) { const gain = hpRef * .06 * r.heartGrowth; p.maxHp += gain; p.hp = Math.min(p.maxHp, p.hp + gain); }
+      if (r.emberGrowth) p.atk += atkRef * .04 * r.emberGrowth;
+      if (r.aegisGrowth) { const gain = hpRef * .08 * r.aegisGrowth; p.shieldBonusCap += gain; p.shield += gain; }
       if (r.heartGrowth || r.emberGrowth || r.aegisGrowth) this.toast('PASSIVE GROWTH · POWER INCREASED');
     }
   }
@@ -258,6 +284,16 @@ class Game {
     const sx = (k.d || k.arrowright ? 1 : 0) - (k.a || k.arrowleft ? 1 : 0) + this.stick.x;
     const sy = (k.s || k.arrowdown ? 1 : 0) - (k.w || k.arrowup ? 1 : 0) + this.stick.y;
     const m = Math.hypot(sx, sy);
+    p.dashCD = Math.max(0, p.dashCD - dt);
+    if (this.dashQueued && p.dashCD <= 0) this.startDash(m ? sx / m : 0, m ? sy / m : 0);
+    this.dashQueued = false;
+    if (p.dashT > 0) {
+      p.dashT -= dt;
+      p.x = clamp(p.x + p.dashX * DASH.speed * dt, -ARENA_X, ARENA_X);
+      p.y = clamp(p.y + p.dashY * DASH.speed * dt, -ARENA_Y, ARENA_Y);
+      if (this.settings.particles) this.fx.particles.burst(p.x, p.y + 4, '#ffb064', 2);
+      return;
+    }
     if (m) {
       const speed = p.speed * (1 + .06 * p.passiveRanks.fleet) * (p.slowTime > 0 ? .6 : 1);
       p.x += sx / m * speed * dt; p.y += sy / m * speed * dt;
@@ -266,6 +302,25 @@ class Game {
     p.x = clamp(p.x, -ARENA_X, ARENA_X);
     p.y = clamp(p.y, -ARENA_Y, ARENA_Y);
   }
+
+  // One-time hints, remembered across runs.
+  tip(key, text) {
+    const tips = this.meta.tips || (this.meta.tips = {});
+    if (tips[key]) return;
+    tips[key] = true;
+    this.toast(text);
+  }
+
+  // Dash: a short burst that passes through enemies and attacks untouched.
+  startDash(dx, dy) {
+    const p = this.player;
+    if (!dx && !dy) { const f = [[0, 1], [-1, 0], [1, 0], [0, -1]][p.facing] || [0, 1]; dx = f[0]; dy = f[1]; }
+    p.dashX = dx; p.dashY = dy; p.dashT = DASH.time;
+    p.dashCD = DASH.cooldown / (1 + .08 * p.passiveRanks.fleet);
+    p.invuln = Math.max(p.invuln, DASH.time + .1);
+    Sound.play('dash');
+  }
+  requestDash() { if (this.running && !this.paused) this.dashQueued = true; }
 
   // Juice: camera shake (pixels, decays quickly) and a short freeze-frame.
   shake(amount) { if (this.settings.screenShake !== false) this.shakeAmt = Math.max(this.shakeAmt, amount); }
@@ -334,7 +389,10 @@ class Game {
 
   // Picks a regular enemy from the stage's roster weights.
   rollEnemyType() {
-    const roster = stageInfo(this.stage).roster;
+    let roster = stageInfo(this.stage).roster;
+    // The first stage opens with melee foes only, so new players learn to move before
+    // they learn to dodge.
+    if (this.stage === 1 && this.stageTime < 40) roster = {ghoul: 3, skeleton: 1};
     let roll = Math.random() * Object.values(roster).reduce((a, b) => a + b, 0);
     for (const [type, w] of Object.entries(roster)) if ((roll -= w) < 0) return type;
     return 'ghoul';
@@ -348,6 +406,8 @@ class Game {
     this.miniCount++;
     this.miniCD = 55 * this.heatDef.miniCD;
     this.toast('MINI BOSS · ' + e.name.toUpperCase());
+    this.tip('minis', 'TIP · EACH MINI BOSS SLAIN BRINGS THE FINAL BOSS 20s CLOSER');
+    this.tip('arrows', 'TIP · EDGE ARROWS POINT TO BOSSES, CHESTS AND EVENTS');
   }
 
   spawnBoss() {

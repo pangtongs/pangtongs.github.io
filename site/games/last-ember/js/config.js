@@ -4,9 +4,11 @@
 const ARENA_X = 1040, ARENA_Y = 790;   // movement limits for every entity center
 const FLOOR_MARGIN = 16;                 // drawn floor extends this far past the limits (body width)
 const MAX_ENEMIES = 180;
+const ENEMY_SPEED_CAP = 150;   // px/s for regular foes before Heat; the mage runs at 178
 const MAX_GEMS = 260;          // extra XP merges into existing gems beyond this
 const SIM_STEP = 1 / 60;       // fixed simulation timestep (seconds)
 const SAVE_VERSION = 2;
+const DASH = {time: .17, speed: 720, cooldown: 2.6}; // seconds, px/s, seconds
 
 // Heat: optional difficulty, 0-10. Each level adds its rule on top of all lower levels,
 // and every level adds 10% souls. Clearing a stage at your highest unlocked Heat
@@ -241,7 +243,7 @@ const PATHS = {
     apply: p => { p.maxHp *= .8; p.hp = Math.min(p.hp, p.maxHp); p.atk *= 1.5; }},
   storm: {ultimate: 'solar', name: 'Path of Storm', icon: 'lightning', book: 'Spells cast 20% faster.',
     apply: p => { p.castCooldown *= .8; }},
-  frost: {ultimate: 'aura', name: 'Path of Frost', icon: 'ice', book: 'Slow enemies and deal +20% damage on repeat hits.',
+  frost: {ultimate: 'aura', name: 'Path of Frost', icon: 'ice', book: 'Every hit chills (slows) the foe; chilled foes take +25% damage.',
     apply: () => {}},
   void:  {ultimate: 'void', name: 'Path of Void', icon: 'void', book: 'Attack +20%; gain shield equal to 25% max HP.',
     apply: p => { p.atk *= 1.2; p.shield += p.maxHp * .25; p.shieldBonusCap += p.maxHp * .25; }},
@@ -249,7 +251,7 @@ const PATHS = {
 
 // firstCooldown: delay before the first cast after awakening.
 const ULTIMATES = {
-  armageddon: {name: 'Armageddon', icon: 'starfall', art: 'armageddon', firstCooldown: 4, book: 'Seven heavy meteors every 15 seconds.', desc: 'Seven heavy meteors rain across the arena every 15 seconds.'},
+  armageddon: {name: 'Armageddon', icon: 'starfall', art: 'armageddon', firstCooldown: 4, book: 'Seven heavy meteors every 10 seconds, aimed at the nearest foes.', desc: 'Seven heavy meteors rain down every 10 seconds, most of them on the nearest foes.'},
   solar:      {name: 'Solar Lance', icon: 'solar', art: 'solar', firstCooldown: 2, book: 'Piercing beam every 6 seconds.', desc: 'Piercing beam cuts through the horde every 6 seconds.'},
   aura:       {name: 'Berserker Aura', icon: 'nova', art: 'aura', firstCooldown: .5, book: 'Rapid pulse around the mage.', desc: 'Rapid high damage pulses strike nearby foes.'},
   void:       {name: 'Void Scythes', icon: 'void', art: 'void', firstCooldown: 1, book: 'Twin sweeping blades every 3 seconds.', desc: 'Twin arc blades sweep a large radius every 3 seconds.'},

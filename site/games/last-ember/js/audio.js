@@ -91,7 +91,7 @@ const Sound = {
     }
   },
   musicStep(step, t, beat) {
-    const chords = [[57, 60, 64], [53, 57, 60], [55, 59, 62], [52, 55, 59]]; // Am F G Em
+    const chords = MUSIC_ACTS[this.act || 1] || MUSIC_ACTS[1];
     const chord = chords[Math.floor(step / 8) % chords.length], hz = n => 440 * Math.pow(2, (n - 69) / 12);
     const at = t - this.ctx.currentTime, k = this.music.intensity, dest = this.musicGain;
     if (step % 8 === 0) for (const n of chord) this.tone(hz(n - 12), beat * 8, {type: 'triangle', vol: .09, at, attack: .4, dest});
@@ -100,6 +100,13 @@ const Sound = {
     if (k > .15 || step % 2 === 0) this.tone(hz(chord[arp[step % 8]] + 12), beat * .9, {type: 'square', vol: .025 + k * .03, at, dest});
     if (k > .5 && step % 2 === 1) this.tone(hz(chord[(step >> 1) % 3] + 24), beat * .5, {type: 'triangle', vol: .03, at, dest});
   },
+};
+
+// Chord progressions per act, so each part of the journey has its own mood.
+const MUSIC_ACTS = {
+  1: [[57, 60, 64], [53, 57, 60], [55, 59, 62], [52, 55, 59]],   // Am F G Em
+  2: [[50, 53, 57], [46, 50, 53], [48, 52, 55], [45, 49, 52]],   // Dm Bb C A
+  3: [[52, 55, 59], [48, 52, 55], [50, 53, 57], [47, 51, 54]],   // Em C Dm B
 };
 
 // Sound recipes. Each runs on the Sound object when played.
@@ -121,6 +128,11 @@ const SOUNDS = {
   boss:    {gap: 1, fn: s => { s.tone(110, 1.2, {type: 'sawtooth', vol: .16, attack: .2, slide: .7}); s.tone(73, 1.4, {type: 'square', vol: .1, attack: .3}); }},
   chest:   {gap: .5, fn: s => [659, 784, 988, 1318].forEach((f, i) => s.tone(f, .25, {type: 'sine', vol: .14, at: i * .05}))},
   zap:     {gap: .08, fn: s => s.burst(.12, {vol: .1, freq: 3000, type: 'bandpass', q: 3, sweep: .5})},
+  block:   {gap: .1, fn: s => s.tone(1200, .07, {type: 'triangle', vol: .08, slide: .8})},
+  shieldBreak: {gap: .4, fn: s => { s.burst(.25, {vol: .18, freq: 2600, type: 'bandpass', q: 2, sweep: .4}); s.tone(500, .25, {type: 'triangle', vol: .12, slide: .4}); }},
+  dash:    {gap: .1, fn: s => s.burst(.16, {vol: .14, freq: 1400, type: 'bandpass', q: 1.5, sweep: 2.2})},
+  ult:     {gap: .25, fn: s => { s.burst(.4, {vol: .2, freq: 900, sweep: .3}); s.tone(220, .4, {type: 'sawtooth', vol: .08, slide: 2}); }},
+  escape:  {gap: .5, fn: s => [784, 659, 523].forEach((f, i) => s.tone(f, .15, {type: 'square', vol: .06, at: i * .08}))},
   ward:    {gap: .08, fn: s => s.tone(1400, .1, {type: 'triangle', vol: .07, slide: .7})},
   death:   {gap: 1, fn: s => [392, 330, 262, 196].forEach((f, i) => s.tone(f, .45, {type: 'triangle', vol: .18, at: i * .18}))},
   victory: {gap: 1, fn: s => [523, 659, 784, 1046, 784, 1046].forEach((f, i) => s.tone(f, .35, {type: 'triangle', vol: .17, at: i * .12}))},

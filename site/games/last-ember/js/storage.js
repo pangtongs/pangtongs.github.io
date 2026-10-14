@@ -19,7 +19,7 @@ const Store = {
   loadMeta() {
     const saved = this.read('meta', {});
     const stats = {runs: 0, wins: 0, deaths: 0, kills: 0, bosses: 0, bestStage: 0, endlessBest: 0, highestHeat: 0, playTime: 0, fastest: {}, origins: {}, ...saved.stats};
-    return {atk: 0, hp: 0, souls: 0, unlocked: 1, heatUnlocked: 0, ...saved, stats};
+    return {atk: 0, hp: 0, souls: 0, unlocked: 1, heatUnlocked: 0, tips: {}, ...saved, stats};
   },
   loadSettings() {
     return {damageNumbers: true, particles: true, showFps: false, sound: true, music: true, screenShake: true, quality: 'auto', ...this.read('settings', {})};

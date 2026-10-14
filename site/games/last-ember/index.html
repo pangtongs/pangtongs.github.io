@@ -6,7 +6,13 @@
 <title>Last Ember: Horde Survival</title>
 <meta name="description" content="Survive the horde, grow your magic, and see how long you last.">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2712%27 fill=%27%2317142b%27/%3E%3Cpath d=%27M32 7 39 25 56 32 39 39 32 57 25 39 8 32 25 25Z%27 fill=%27%23ffc65c%27/%3E%3C/svg%3E">
-<link rel="stylesheet" href="css/game.css?v=202610141356">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0d0a10">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="assets/icon-192.png">
+<link rel="stylesheet" href="css/game.css?v=20261014145255">
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -46,14 +52,16 @@
 <div id="toast" class="toast"></div>
 <div id="spellTray" class="spellTray"></div>
 <div class="touchActions">
-  <button id="touchMarket" class="touchBtn" aria-label="Market"><i class="icon icon-coin"></i></button>
-  <button id="touchPause" class="touchBtn" aria-label="Pause">Ⅱ</button>
+  <button id="touchPause" class="touchBtn small" aria-label="Pause">Ⅱ</button>
+  <button id="touchMarket" class="touchBtn small" aria-label="Market"><i class="icon icon-coin"></i></button>
+  <button id="touchDash" class="touchBtn dash" aria-label="Dash"><span>DASH</span><i id="dashFill" class="dashFill"></i></button>
 </div>
+<div id="stickZone" class="stickZone"></div>
 <div id="joystick" class="joystick"><div class="stick"></div><div id="nub" class="nub"></div></div>
 <div id="perf" class="perf hidden"></div>
 
 <!-- Main menu -->
-<div id="startOverlay" class="overlay"><div class="modal menuModal">
+<div id="startOverlay" class="overlay"><div id="menuEmbers" class="menuEmbers" aria-hidden="true"></div><div class="modal menuModal">
   <h1 class="menuTitle">LAST EMBER</h1><p class="menuSubtitle">A horde survival adventure</p>
   <section id="menuHome" class="menuPanel">
     <div class="menuHero">
@@ -72,6 +80,7 @@
     <h2>CHOOSE A STAGE</h2>
     <p>Defeat the final boss to unlock the next stage. Every stage selection starts a fresh run.</p>
     <div id="stageSelect" class="stageSelect"></div>
+    <div id="startHeat" class="startHeat hidden"><button id="startHeatBtn" class="heatBtn">HEAT 0</button><span id="startHeatRule"></span></div>
     <p id="menuSaveInfo" class="menuNote"></p>
     <div class="menuActions"><button class="button" id="startBtn">PLAY SELECTED STAGE</button><button class="button secondary" id="loadBtn">CONTINUE SAVED RUN</button></div>
     <button class="button secondary menuBack" data-menu="home">BACK</button>
@@ -102,7 +111,7 @@
     <div class="menuSetting"><span>Render quality</span><button id="qualitySetting" class="button secondary">AUTO</button></div>
     <div class="menuSetting"><span>Heat for new runs</span><button id="difficultySetting" class="button secondary">HEAT 0</button></div>
     <div id="difficultyLegend" class="difficultyLegend"></div>
-    <p>Move with WASD, arrow keys, or the touch stick. Spells cast automatically. Press P or Escape to pause.</p>
+    <p>Move with WASD, arrow keys, or by dragging a thumb anywhere on the left of the screen. Space or Shift dashes through enemies and attacks. Spells cast automatically. Press P or Escape to pause.</p>
     <button class="button secondary menuBack" data-menu="home">BACK</button>
   </section>
 </div></div>
@@ -179,23 +188,23 @@
 
 <!-- Classic scripts share one global scope, so the game runs from file:// with no build step. Order matters.
      ?v= is stamped by tools/stamp-version.sh so updates never mix cached old files with new ones. -->
-<script src="js/util.js?v=202610141356"></script>
-<script src="js/config.js?v=202610141356"></script>
-<script src="js/audio.js?v=202610141356"></script>
-<script src="js/assets.js?v=202610141356"></script>
-<script src="js/grid.js?v=202610141356"></script>
-<script src="js/effects.js?v=202610141356"></script>
-<script src="js/entities.js?v=202610141356"></script>
-<script src="js/spells.js?v=202610141356"></script>
-<script src="js/render.js?v=202610141356"></script>
-<script src="js/hud.js?v=202610141356"></script>
-<script src="js/storage.js?v=202610141356"></script>
-<script src="js/ui.js?v=202610141356"></script>
-<script src="js/game.js?v=202610141356"></script>
-<script src="js/combat.js?v=202610141356"></script>
-<script src="js/economy.js?v=202610141356"></script>
-<script src="js/flow.js?v=202610141356"></script>
-<script src="js/events.js?v=202610141356"></script>
-<script src="js/main.js?v=202610141356"></script>
+<script src="js/util.js?v=20261014145255"></script>
+<script src="js/config.js?v=20261014145255"></script>
+<script src="js/audio.js?v=20261014145255"></script>
+<script src="js/assets.js?v=20261014145255"></script>
+<script src="js/grid.js?v=20261014145255"></script>
+<script src="js/effects.js?v=20261014145255"></script>
+<script src="js/entities.js?v=20261014145255"></script>
+<script src="js/spells.js?v=20261014145255"></script>
+<script src="js/render.js?v=20261014145255"></script>
+<script src="js/hud.js?v=20261014145255"></script>
+<script src="js/storage.js?v=20261014145255"></script>
+<script src="js/ui.js?v=20261014145255"></script>
+<script src="js/game.js?v=20261014145255"></script>
+<script src="js/combat.js?v=20261014145255"></script>
+<script src="js/economy.js?v=20261014145255"></script>
+<script src="js/flow.js?v=20261014145255"></script>
+<script src="js/events.js?v=20261014145255"></script>
+<script src="js/main.js?v=20261014145255"></script>
 </body>
 </html>

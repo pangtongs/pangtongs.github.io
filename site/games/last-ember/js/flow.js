@@ -79,7 +79,7 @@ mixin(Game, {
     const found = this.drops.length;
     for (const d of this.drops) {
       if (d.type === 'xp') xp += d.value;
-      else if (d.type === 'soul') { this.souls += d.value; this.wallet += d.value; }
+      else if (d.type === 'soul') { const v = Math.round(d.value * this.heatDef.souls); this.souls += v; this.wallet += v; }
       else if (d.type === 'gems') this.gemsCount += d.value;
       else this.coins += d.value;
     }
@@ -124,10 +124,11 @@ mixin(Game, {
     $('stageSummary').textContent = `${stageInfo(this.stage).boss} defeated. ${this.stageLootCollected || 0} remaining drops collected · Level ${this.player.level} · ${this.souls} souls earned · ${this.gemsCount} gems · ${this.coins} gold. Artifact: ${this.lastArtifact}.`;
   },
 
-  // Clearing a stage at your highest unlocked Heat unlocks the next level.
+  // Clearing a stage at your highest unlocked Heat unlocks the next level, as long as the
+  // stage is at least as deep as that level, so Heat 10 cannot be farmed on stage 1.
   unlockHeat() {
     const heat = this.heat || 0;
-    if (heat < MAX_HEAT && heat >= (this.meta.heatUnlocked || 0)) {
+    if (heat < MAX_HEAT && heat >= (this.meta.heatUnlocked || 0) && this.stage >= heat + 1) {
       this.meta.heatUnlocked = heat + 1;
       this.toast(`HEAT ${heat + 1} UNLOCKED · ${HEAT_LEVELS[heat + 1].name.toUpperCase()}`);
     }
@@ -153,7 +154,9 @@ mixin(Game, {
 
   nextStageSnapshot() {
     const next = this.snapshot(), p = next.player;
-    Object.assign(next, {stage: this.stage + 1, stageTime: 0, bossCD: stageInfo(this.stage + 1).seconds, miniCD: 55, miniCount: 0, minisDefeated: 0,
+    if (this.surgeT > 0) { this.surgeT = 0; this.endSurge(); } // a surge cut short by the stage end still pays out
+    Object.assign(next, {stage: this.stage + 1, stageTime: 0, bossCD: stageInfo(this.stage + 1).seconds, miniCD: 55 * this.heatDef.miniCD, miniCount: 0, minisDefeated: 0,
+      eventIndex: 0, surgeT: 0,
       miniGoal: Math.max(3, Math.floor((stageInfo(this.stage + 1).seconds - 20) / 55)), stageClearPending: false, stageComplete: false,
       enemyShots: [], enemies: [], drops: [], chests: []});
     next.earlySummon = false;
@@ -193,7 +196,7 @@ mixin(Game, {
     return {
       version: SAVE_VERSION, savedAt: Date.now(),
       ...pick(this, ['stage', 'heat', 'time', 'stageTime', 'growthClock', 'bossCD', 'miniCD', 'miniCount', 'minisDefeated', 'miniGoal',
-        'spawnCD', 'stageClearPending', 'stageComplete', 'levelQueue', 'stageLootCollected', 'lastArtifact', 'souls', 'gemsCount', 'coins', 'earlySummon', 'pendingChest', 'eventIndex', 'lastEvent']),
+        'spawnCD', 'stageClearPending', 'stageComplete', 'levelQueue', 'stageLootCollected', 'lastArtifact', 'souls', 'gemsCount', 'coins', 'earlySummon', 'pendingChest', 'eventIndex', 'lastEvent', 'surgeT']),
       yields: {...this.yields}, dropRemainders: {...this.dropRemainders}, marketRanks: {...this.marketRanks}, autoBuy: {...this.autoBuy},
       player: JSON.parse(JSON.stringify(this.player)),
       enemies: this.enemies.filter(e => !e.dead).map(e => ({...e})),

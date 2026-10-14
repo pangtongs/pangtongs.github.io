@@ -33,6 +33,7 @@ const UI = {
     $('menuSouls').textContent = g.wallet;
 
     const box = $('stageSelect');
+    const keepScroll = box.scrollTop;
     box.innerHTML = '';
     STAGES.forEach((stage, i) => {
       if (i === 0 || STAGES[i - 1].act !== stage.act) {
@@ -44,10 +45,16 @@ const UI = {
       const n = i + 1, b = document.createElement('button');
       b.className = 'stagePick' + (g.selectedStage === n ? ' selected' : '');
       b.disabled = n > unlocked;
-      b.innerHTML = `<img src="assets/boss-${i}.webp" alt=""><strong>STAGE ${n} · ${stage.name}</strong><small>${n > unlocked ? 'Clear the previous stage' : 'Fresh stage run'}</small>`;
+      const best = g.meta.stats.fastest[n];
+      b.innerHTML = `<img src="assets/boss-${i}.webp" alt=""><strong>${n} · ${stage.name}</strong><small>${n > unlocked ? 'Locked · clear stage ' + (n - 1)
+        : best ? `${stage.boss} · best ${formatTime(best)}` : stage.boss}</small>`;
       b.onclick = () => { g.selectedStage = n; this.renderMenu(g); };
       box.appendChild(b);
     });
+    // Keep the list where the player left it; on first show, bring the selection into view.
+    const sel = box.querySelector('.selected');
+    if (keepScroll || !sel) box.scrollTop = keepScroll;
+    else requestAnimationFrame(() => { box.scrollTop += sel.getBoundingClientRect().top - box.getBoundingClientRect().top - 30; });
 
     const hasSave = !!Store.loadRun();
     $('loadBtn').disabled = !hasSave;
@@ -78,10 +85,13 @@ const UI = {
     $('qualitySetting').textContent = g.settings.quality.toUpperCase();
     const heat = g.settings.heat || 0, unlockedHeat = g.meta.heatUnlocked || 0;
     $('difficultySetting').textContent = heat ? `HEAT ${heat}` : 'HEAT 0';
-    $('difficultyLegend').innerHTML = `<div class="${heat === 0 ? 'active' : ''}"><b>HEAT 0</b><span>Baseline. Clear a stage to unlock Heat 1.</span></div>` +
+    $('startHeat').classList.toggle('hidden', !unlockedHeat);
+    $('startHeatBtn').textContent = `HEAT ${heat}`;
+    $('startHeatRule').textContent = heat ? `${HEAT_LEVELS[heat].name} · +${heat * 10}% souls · rules of Heat 1–${heat} apply` : `Baseline. Heat ${unlockedHeat} unlocked: raise it for more souls.`;
+    $('difficultyLegend').innerHTML = `<div class="active"><b>HEAT 0</b><span>Baseline. Clear a stage to unlock Heat 1.</span></div>` +
       HEAT_LEVELS.slice(1).map((h, i) => {
         const level = i + 1, cls = level > unlockedHeat ? 'locked' : level <= heat ? 'active' : '';
-        return `<div class="${cls}"><b>HEAT ${level} · ${h.name}</b><span>${level > unlockedHeat ? 'Locked: clear a stage at Heat ' + (level - 1) + '.' : h.rule}</span></div>`;
+        return `<div class="${cls}"><b>HEAT ${level} · ${h.name}</b><span>${level > unlockedHeat ? `Locked: clear stage ${level} or deeper at Heat ${level - 1}.` : h.rule}</span></div>`;
       }).join('') + `<p class="menuNote">Each Heat level adds 10% souls. Rules stack.</p>`;
   },
 
@@ -114,7 +124,7 @@ const UI = {
     const evolving = Object.keys(EVOLUTIONS).find(k => p.skills[k] >= SPELL_MAX_RANK && !p.evolved[k]);
     const tier = p.level >= 5 && !p.path ? 'PATH' : p.level >= 12 && !p.ultimate ? 'ULTIMATE' : evolving ? 'EVOLVE' : 'SPELL';
     $('levelTitle').textContent = `LEVEL ${p.level} · ${tier === 'PATH' ? 'CHOOSE YOUR PATH' : tier === 'ULTIMATE' ? 'AWAKEN AN ULTIMATE'
-      : tier === 'EVOLVE' ? `${SPELLS[evolving].name.toUpperCase()} EVOLVES` : 'EVOLVE A SPELL'}`;
+      : tier === 'EVOLVE' ? `${SPELLS[evolving].name.toUpperCase()} EVOLVES` : 'CHOOSE A POWER'}`;
 
     let options;
     if (tier === 'PATH') {
@@ -132,7 +142,7 @@ const UI = {
         take: () => { p.evolved[evolving] = form; Sound.play('evolve'); g.toast(`${f.name.toUpperCase()} AWAKENED`); },
       }));
     } else {
-      $('levelDesc').textContent = 'Evolve a spell, build a passive power, or strike a bargain. Growth triggers every minute while you survive.';
+      $('levelDesc').textContent = `Spells rank up to ${SPELL_MAX_RANK}, then evolve into a final form. Passives stack to 5. Bargains are powerful but cost you something.`;
       options = this.spellOptions(g);
     }
     $('levelWallet').innerHTML = `<span class="gems">GEMS <b>${g.gemsCount}</b></span><span class="coins">GOLD <b>${g.coins}</b></span>` +
@@ -167,7 +177,9 @@ const UI = {
     return [
       card('Power', 'attack +15%', () => { p.atk *= 1.15; }),
       card('Tempo', 'cast spells 10% faster', () => { p.castCooldown *= .9; }),
-      card('Guard', 'shield and capacity +30% max HP', () => { p.shield += p.maxHp * .3; p.shieldBonusCap += p.maxHp * .3; }),
+      // Glass Wick forbids shields, so its Guard becomes max HP instead.
+      p.bargains.glassWick ? card('Guard', 'max HP +20%', () => { const gain = p.maxHp * .2; p.maxHp += gain; p.hp += gain; })
+        : card('Guard', 'shield and capacity +30% max HP', () => { p.shield += p.maxHp * .3; p.shieldBonusCap += p.maxHp * .3; }),
     ];
   },
 
@@ -178,7 +190,8 @@ const UI = {
     return [
       card('Power', 'ultimate damage +30%', () => { p.ultimatePower *= 1.3; }),
       card('Tempo', 'ultimate cooldowns 20% shorter', () => { p.ultimateHaste *= .8; }),
-      card('Guard', 'shield and capacity +40% max HP', () => { p.shield += p.maxHp * .4; p.shieldBonusCap += p.maxHp * .4; }),
+      p.bargains.glassWick ? card('Guard', 'max HP +25%', () => { const gain = p.maxHp * .25; p.maxHp += gain; p.hp += gain; })
+        : card('Guard', 'shield and capacity +40% max HP', () => { p.shield += p.maxHp * .4; p.shieldBonusCap += p.maxHp * .4; }),
     ];
   },
 
@@ -191,10 +204,11 @@ const UI = {
       key, name: `${s.name} · ${p.skills[key] + 1}/${SPELL_MAX_RANK}`, icon: s.icon, tone: 'SPELL', desc: s.desc,
       take: () => { p.skills[key]++; if (p.cool[key] !== undefined) p.cool[key] = 0; },
     }));
-    const passives = shuffle(Object.entries(PASSIVES).filter(([key]) => p.passiveRanks[key] < 5).map(([key, s]) => ({
+    const passives = shuffle(Object.entries(PASSIVES).filter(([key]) => p.passiveRanks[key] < 5 && !(key === 'aegisGrowth' && p.bargains.glassWick)).map(([key, s]) => ({
       name: `${s.name} · ${p.passiveRanks[key] + 1}/5`, icon: key, tone: 'PASSIVE', desc: s.desc, take: () => { p.passiveRanks[key]++; },
     })));
-    const bargains = shuffle(Object.entries(BARGAINS).filter(([key]) => !p.bargains[key]).map(([key, b]) => ({
+    // Overcharge only helps once an ultimate is awake (level 12).
+    const bargains = shuffle(Object.entries(BARGAINS).filter(([key]) => !p.bargains[key] && (key !== 'overcharge' || p.ultimate)).map(([key, b]) => ({
       name: b.name, icon: b.icon, tone: 'BARGAIN', desc: `<span class="gain">${b.gain}</span><span class="cost">${b.cost}</span>`,
       take: () => { p.bargains[key] = true; b.apply(p, g); g.toast(`BARGAIN STRUCK · ${b.name.toUpperCase()}`); },
     })));

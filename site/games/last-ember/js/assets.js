@@ -206,6 +206,7 @@ const Sprites = {
     return this.get(`glow:${kind}:${color}`, () => makeSprite(128, 128, c => {
       const g = c.createRadialGradient(0, 0, 0, 0, 0, 64);
       if (kind === 'flash') { g.addColorStop(0, '#fff4c9aa'); g.addColorStop(.32, '#ffad5890'); g.addColorStop(1, '#ff6a1600'); }
+      else if (kind === 'warm') { g.addColorStop(0, color + 'ff'); g.addColorStop(.25, color + '88'); g.addColorStop(.6, color + '22'); g.addColorStop(1, color + '00'); }
       else if (kind === 'aura') { g.addColorStop(0, color + '00'); g.addColorStop(.3, color + '00'); g.addColorStop(.75, color + '44'); g.addColorStop(1, color + '00'); }
       else { g.addColorStop(0, color + '00'); g.addColorStop(.7, color + '20'); g.addColorStop(1, color + '00'); }
       c.fillStyle = g; c.beginPath(); c.arc(0, 0, 64, 0, TAU); c.fill();

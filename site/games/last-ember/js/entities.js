@@ -23,6 +23,7 @@ class Player {
     this.wardTime = 0; // seconds the Mirror Ward stays up
     this.invuln = 0;
     this.slowTime = 0; // slowed by frost hazards
+    this.dashT = 0; this.dashCD = 0; this.dashX = 0; this.dashY = 1; // dash: seconds left, cooldown, direction
   }
   get shieldCap() { return this.bargains.glassWick ? 0 : this.maxHp * .5 + this.shieldBonusCap; }
 }
@@ -46,7 +47,7 @@ class Enemy {
     // Act I curves are unchanged. Act II multiplies on top so enemies keep pace with a
     // build that has been growing for eight stages (tuned with tools/sim.js).
     const beyond = Math.max(0, g.stage - 8);
-    const actHp = Math.pow(1.22, beyond), actDamage = Math.pow(1.12, beyond);
+    const actHp = Math.pow(1.22, beyond), actDamage = Math.pow(1.16, beyond);
     const stagePressure = 1 + (g.stage - 1) * .28;
     const scale = (1 + (this.level - 1) * .15) * stagePressure * diff.hp;
     const bossAct = (beyond ? 3.5 * Math.pow(1.36, beyond - 1) : 1) * diff.bossHp;
@@ -57,6 +58,8 @@ class Enemy {
     this.hp = this.maxHp;
     this.speed = (this.boss ? 28 + Math.min(this.tier, 10) * 2 : this.mini ? mini.speed : def.speed)
       * (1 + (this.level - 1) * .055) * (1 + (Math.min(g.stage, 10) - 1) * .045) * diff.speed;
+    // Regular foes never outrun the mage, so kiting and Fleetfoot keep working deep in a run.
+    if (!this.boss && !this.mini && type !== 'goblin') this.speed = Math.min(this.speed, (ENEMY_SPEED_CAP + (beyond ? 12 : 0)) * diff.speed);
     this.r = this.boss ? 27 + Math.min(this.tier, 8) * 3 : this.mini ? 23 : def.r;
     this.damage = (this.boss ? 14 + this.tier * 4 : this.mini ? 13 + g.stage * 2 : def.damage)
       * (1 + (this.level - 1) * (this.boss ? .035 : .085)) * (1 + (g.stage - 1) * .1) * diff.damage * actDamage;
@@ -288,7 +291,7 @@ class Hazard {
       if (inside) { g.damage(this.damage); if (this.slow) p.slowTime = 2; }
     } else if (inside) {
       if (this.slow) p.slowTime = Math.max(p.slowTime, .35);
-      if (this.dps && (this.tick -= dt) <= 0) { this.tick = .5; g.damage(this.dps * .5); }
+      if (this.dps && (this.tick -= dt) <= 0) { this.tick = .5; g.damage(this.dps * .5, true); }
     }
     return this.t < this.delay + this.linger;
   }
@@ -329,7 +332,7 @@ class Projectile {
       g.fx.shockwave(this.x, this.y, radius, venom ? .38 : .32, venom ? '#81dc9a' : '#ff9c46');
       g.forEachEnemyNear(this.x, this.y, radius, e => {
         g.hit(e, this.damage, color);
-        if (venom) { e.poisonTime = 3; e.poisonDps = this.damage * .35; e.burning = false; }
+        if (venom) { e.poisonTime = 3; if (this.damage * .35 >= e.poisonDps) { e.poisonDps = this.damage * .35; e.burning = false; } }
       }, true);
       if (this.cloud) g.zones.push(new PoisonCloud(this.x, this.y, 80, 4, this.damage * .5));
       return false;

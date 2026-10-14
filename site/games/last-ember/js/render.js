@@ -3,6 +3,8 @@
 // the camera view, with no shadowBlur or per-frame gradients.
 
 const QUALITY_LEVELS = {high: 2, low: 1};
+const VIEW_MIN = 600, VIEW_MAX = 960; // world units across the screen's short side
+const PROJECTILE_GLOW = {arcane: '#6fb6ff', fire: '#ff8a2a', ice: '#8fe6ff', venom: '#66e08e', blade: '#d58cff'};
 
 class Renderer {
   constructor(canvas) {
@@ -24,11 +26,16 @@ class Renderer {
 
   setQuality(q) { this.quality = q; this.autoRatio = 2; this.frameTimes.length = 0; this.resize(); }
 
+  // Camera zoom keeps the visible arena similar on every screen: a phone zooms out so
+  // foes are seen before they arrive, and a big monitor zooms in so it is no easier.
+  // W and H are the view size in world units; px is canvas pixels per world unit.
   resize() {
-    this.W = innerWidth; this.H = innerHeight;
-    this.px = this.ratio;
-    this.canvas.width = Math.round(this.W * this.px);
-    this.canvas.height = Math.round(this.H * this.px);
+    const short = Math.min(innerWidth, innerHeight);
+    this.zoom = short < VIEW_MIN ? short / VIEW_MIN : short > VIEW_MAX ? short / VIEW_MAX : 1;
+    this.W = innerWidth / this.zoom; this.H = innerHeight / this.zoom;
+    this.px = this.ratio * this.zoom;
+    this.canvas.width = Math.round(innerWidth * this.ratio);
+    this.canvas.height = Math.round(innerHeight * this.ratio);
   }
 
   // Auto quality: if frames run long while playing, lower the render resolution a step.
@@ -82,7 +89,6 @@ class Renderer {
     this.drawShrines(g);
     for (const m of g.meteors) this.drawMeteor(m);
     for (const q of g.projectiles) if (this.visible(q.x, q.y, 40)) this.sprite(Sprites.projectile(q.kind), q.x, q.y, Math.atan2(q.vy, q.vx), q.scale || 1);
-    for (const q of g.enemyShots) if (this.visible(q.x, q.y, 30)) this.sprite(Sprites.enemyShot(q.kind), q.x, q.y, Math.atan2(q.vy, q.vx));
     for (const e of g.enemies) if (!e.dead && this.visible(e.x, e.y, e.boss ? 200 : 60)) this.drawEnemy(e);
 
     this.worldTransform();
@@ -94,8 +100,14 @@ class Renderer {
     this.drawNewSpells(g);
     this.drawAura(g);
     this.drawPlayer(g);
+    this.drawLighting(g);
+    // Enemy shots and telegraphs sit above the darkness so danger always reads clearly.
     this.worldTransform();
-    if (g.settings.damageNumbers) g.fx.texts.draw(c, v);
+    for (const e of g.enemies) if (!e.dead && e.tele && e.windup > 0 && this.visible(e.x, e.y, 400)) this.drawTelegraph(e);
+    for (const q of g.enemyShots) if (this.visible(q.x, q.y, 30)) this.sprite(Sprites.enemyShot(q.kind), q.x, q.y, Math.atan2(q.vy, q.vx));
+    this.worldTransform();
+    if (g.settings.damageNumbers) g.fx.texts.draw(c, v, 1 / Math.min(1, this.zoom));
+    this.drawPointers(g);
 
     if (g.time < 8 && g.running) {
       c.setTransform(this.px, 0, 0, this.px, 0, 0);
@@ -111,15 +123,8 @@ class Renderer {
     const fx = ARENA_X + FLOOR_MARGIN, fy = ARENA_Y + FLOOR_MARGIN;
     const x0 = Math.max(-fx, v.x0), x1 = Math.min(fx, v.x1), y0 = Math.max(-fy, v.y0), y1 = Math.min(fy, v.y1);
     if (x1 > x0 && y1 > y0) {
-      c.fillStyle = scene.floor;
+      c.fillStyle = this.floorPattern(scene);
       c.fillRect(x0, y0, x1 - x0, y1 - y0);
-
-      // Grid, clipped to the floor: one path, one stroke.
-      c.globalAlpha = .26; c.strokeStyle = scene.line; c.lineWidth = 1; c.beginPath();
-      for (let x = Math.ceil(x0 / 32) * 32; x <= x1; x += 32) { c.moveTo(x, y0); c.lineTo(x, y1); }
-      for (let y = Math.ceil(y0 / 32) * 32; y <= y1; y += 32) { c.moveTo(x0, y); c.lineTo(x1, y); }
-      c.stroke();
-      c.globalAlpha = 1;
     }
     // Wall sits just outside the floor.
     c.strokeStyle = scene.line; c.lineWidth = 12;
@@ -144,6 +149,154 @@ class Renderer {
       c.strokeStyle = scene.accent; c.fillStyle = scene.accent; c.globalAlpha = .25; c.beginPath();
       for (let k = 0; k < spots.length; k += 3) this.motif(scene.motif, spots[k], spots[k + 1], spots[k + 2]);
       c.stroke();
+    }
+    c.globalAlpha = 1;
+  }
+
+  // A stone floor texture per stage, painted once: worn flagstones with mottling, cracks
+  // and pebbles in the stage's colours. Tiles seamlessly; anchored to world coordinates.
+  floorPattern(scene) {
+    const cache = this.floors || (this.floors = new Map());
+    if (cache.has(scene.name)) return cache.get(scene.name);
+    const T = 256, R = 2, cv = document.createElement('canvas');
+    cv.width = cv.height = T * R;
+    const c = cv.getContext('2d');
+    c.scale(R, R);
+    let seed = 7;
+    for (const ch of scene.name) seed = (seed * 31 + ch.charCodeAt(0)) >>> 0;
+    const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
+    // Draws f at (x, y) and at its wrapped copies, so marks crossing an edge tile cleanly.
+    const wrap = (x, y, r, f) => { for (const ox of [-T, 0, T]) for (const oy of [-T, 0, T]) if (x + ox > -r && x + ox < T + r && y + oy > -r && y + oy < T + r) f(x + ox, y + oy); };
+    c.fillStyle = scene.floor; c.fillRect(0, 0, T, T);
+    for (let i = 0; i < 90; i++) { // mottling
+      const x = rnd() * T, y = rnd() * T, r = 10 + rnd() * 34;
+      c.globalAlpha = .05 + rnd() * .07; c.fillStyle = rnd() < .5 ? '#000' : scene.line;
+      wrap(x, y, r, (px, py) => { c.beginPath(); c.arc(px, py, r, 0, TAU); c.fill(); });
+    }
+    // Flagstones: rows of 64 with staggered joints, each stone slightly lighter or darker.
+    for (let row = 0; row < 4; row++) for (let col = 0; col < 4; col++) {
+      const x = col * 64 + (row % 2) * 32, y = row * 64;
+      c.globalAlpha = rnd() * .035; c.fillStyle = rnd() < .5 ? '#000' : '#fff';
+      wrap(x + 32, y + 32, 64, (px, py) => c.fillRect(px - 31, py - 31, 62, 62));
+    }
+    c.globalAlpha = .3; c.strokeStyle = '#0006'; c.lineWidth = 1.5;
+    for (let row = 0; row < 4; row++) {
+      c.beginPath(); c.moveTo(0, row * 64); c.lineTo(T, row * 64); c.stroke();
+      for (let col = 0; col <= 4; col++) { const x = (col * 64 + (row % 2) * 32) % T; c.beginPath(); c.moveTo(x, row * 64); c.lineTo(x, row * 64 + 64); c.stroke(); }
+    }
+    c.globalAlpha = .1; c.strokeStyle = scene.line; c.lineWidth = 1;
+    for (let row = 0; row < 4; row++) { c.beginPath(); c.moveTo(0, row * 64 + 1.5); c.lineTo(T, row * 64 + 1.5); c.stroke(); }
+    c.strokeStyle = '#000'; c.globalAlpha = .25; c.lineWidth = 1;
+    for (let i = 0; i < 9; i++) { // cracks
+      let x = rnd() * T, y = rnd() * T, a = rnd() * TAU;
+      c.beginPath(); c.moveTo(x, y);
+      for (let k = 0; k < 5; k++) { a += rnd() - .5; x += Math.cos(a) * 7; y += Math.sin(a) * 7; c.lineTo(x, y); }
+      c.stroke();
+    }
+    for (let i = 0; i < 40; i++) { // pebbles and grit
+      const x = rnd() * T, y = rnd() * T, r = .6 + rnd() * 1.8;
+      c.globalAlpha = .25 + rnd() * .25; c.fillStyle = rnd() < .7 ? scene.line : scene.accent;
+      c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill();
+    }
+    const pattern = this.ctx.createPattern(cv, 'repeat');
+    pattern.setTransform(new DOMMatrix().scale(1 / R));
+    cache.set(scene.name, pattern);
+    return pattern;
+  }
+
+  // Darkness and light, the game's signature look. A low-resolution darkness mask is
+  // cleared around every light source and stretched over the frame, then warm glows are
+  // added on top. Costs one small canvas and a few dozen blits per frame.
+  drawLighting(g) {
+    const p = g.player, S = 4; // CSS pixels per mask pixel
+    let L = this.light;
+    const w = Math.ceil(this.W / S) + 1, h = Math.ceil(this.H / S) + 1;
+    if (!L || L.w !== w || L.h !== h) {
+      const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+      L = this.light = {cv, c: cv.getContext('2d'), w, h, spot: this.lightSpot()};
+    }
+    const lc = L.c, ox = this.W / 2 - this.camX, oy = this.H / 2 - this.camY;
+    // The darkness turns red when hurt, and pulses red while HP is low.
+    const hpLow = p.hp / p.maxHp < .3 && g.running ? .5 + .5 * Math.sin(g.time * 7) : 0;
+    const red = Math.max(hpLow * .6, (g.hurtFlash || 0) * 4);
+    lc.globalCompositeOperation = 'copy';
+    lc.globalAlpha = 1;
+    lc.fillStyle = red ? `rgba(${3 + red * 110 | 0},4,10,${.7 + red * .08})` : 'rgba(3,5,12,.7)';
+    lc.fillRect(0, 0, w, h);
+    lc.globalCompositeOperation = 'destination-out';
+    const light = (x, y, r, a = 1) => {
+      const sx = (x + ox) / S, sy = (y + oy) / S, sr = r / S;
+      if (sx < -sr || sy < -sr || sx > w + sr || sy > h + sr) return;
+      lc.globalAlpha = a; lc.drawImage(L.spot, sx - sr, sy - sr, sr * 2, sr * 2);
+    };
+    const flicker = 1 + Math.sin(g.time * 9) * .015 + Math.sin(g.time * 23) * .01;
+    light(p.x, p.y - 10, Math.max(this.W, this.H) * .52 * flicker);
+    light(p.x, p.y - 10, 120, .6);
+    let n = 0;
+    for (const q of g.projectiles) if (n++ < 60) light(q.x, q.y, 70 * (q.scale || 1), .55);
+    for (const m of g.meteors) light(m.x, m.y, m.r * 1.6, m.struck ? 1 : .5);
+    for (const s of g.fx.shockwaves) light(s.x, s.y, s.r * 1.4, clamp(s.life / s.max, 0, 1));
+    for (const b of g.fx.beams) { light(b.x1, b.y1, 120, .8); light((b.x1 + b.x2) / 2, (b.y1 + b.y2) / 2, 200, .8); light(b.x2, b.y2, 120, .8); }
+    for (const h of g.hazards) light(h.x, h.y, h.r * 1.5, .7);
+    for (const ch of g.chests) light(ch.x, ch.y, 110 + Math.sin(ch.phase * 2) * 10, .9);
+    for (const s of g.shrines) light(s.x, s.y, s.r * 2.2, .8);
+    for (const d of g.discs) light(d.x, d.y, 80, .6);
+    for (const e of g.enemies) if ((e.boss || e.mini || e.elite) && !e.dead) light(e.x, e.y, e.boss ? 180 : 110, .45);
+    if (p.wardTime > 0) light(p.x, p.y, WARD_RADIUS * 2, .8);
+    this.worldTransform();
+    const c = this.ctx;
+    c.setTransform(1, 0, 0, 1, 0, 0);
+    c.imageSmoothingEnabled = true;
+    c.drawImage(L.cv, 0, 0, w * S * this.px, h * S * this.px);
+    // Warm additive glow: the ember on the staff and every fire in the air.
+    c.globalCompositeOperation = 'lighter';
+    this.worldTransform();
+    const ember = Sprites.glow('#ff9a3c', 'warm');
+    c.globalAlpha = .55 * flicker; this.sprite(ember, p.x - 14, p.y - 30, 0, 50 / 64);
+    c.globalAlpha = .18; this.sprite(ember, p.x, p.y - 6, 0, 150 / 64);
+    n = 0;
+    for (const q of g.projectiles) {
+      if (n++ >= 60 || !this.visible(q.x, q.y, 40)) continue;
+      c.globalAlpha = .35; this.sprite(Sprites.glow(PROJECTILE_GLOW[q.kind] || '#ffb070', 'warm'), q.x, q.y, 0, 34 * (q.scale || 1) / 64);
+    }
+    for (const d of g.drops) if (d.type === 'soul' && this.visible(d.x, d.y, 30)) { c.globalAlpha = .4; this.sprite(Sprites.glow('#c48bff', 'warm'), d.x, d.y, 0, 26 / 64); }
+    c.globalAlpha = 1;
+    c.globalCompositeOperation = 'source-over';
+  }
+
+  lightSpot() {
+    const cv = document.createElement('canvas'); cv.width = cv.height = 64;
+    const c = cv.getContext('2d'), gr = c.createRadialGradient(32, 32, 0, 32, 32, 32);
+    gr.addColorStop(0, '#000'); gr.addColorStop(.45, '#000d'); gr.addColorStop(.75, '#0005'); gr.addColorStop(1, '#0000');
+    c.fillStyle = gr; c.fillRect(0, 0, 64, 64);
+    return cv;
+  }
+
+  // Edge-of-screen arrows toward things worth finding: the boss, mini bosses, chests,
+  // shrines and treasure goblins.
+  drawPointers(g) {
+    const c = this.ctx, p = g.player, targets = [];
+    for (const e of g.enemies) {
+      if (e.dead) continue;
+      if (e.boss) targets.push([e, '#ff5a7a', 1.4]);
+      else if (e.mini) targets.push([e, '#ffb347', 1.1]);
+      else if (e.type === 'goblin') targets.push([e, '#ffd76b', 1]);
+    }
+    for (const ch of g.chests) targets.push([ch, '#7fe3ff', 1.1]);
+    for (const s of g.shrines) targets.push([s, '#c77dff', 1]);
+    if (!targets.length) return;
+    // Arrows keep clear of the HUD along the top edge.
+    const W = this.W, H = this.H, m = 26, top = (innerWidth <= 700 ? 125 : 95) / this.zoom;
+    c.setTransform(this.px, 0, 0, this.px, 0, 0);
+    for (const [t, color, size] of targets) {
+      const dx = t.x - p.x, dy = t.y - p.y;
+      if (Math.abs(dx) < W / 2 - 10 && Math.abs(dy) < H / 2 - 10) continue;
+      const k = Math.min((W / 2 - m) / Math.abs(dx || 1e-6), (H / 2 - m) / Math.abs(dy || 1e-6));
+      const x = W / 2 + dx * k, y = clamp(H / 2 + dy * k, top, H - m), a = Math.atan2(dy, dx), pulse = 1 + .12 * Math.sin(g.time * 6);
+      c.save(); c.translate(x, y); c.rotate(a); c.scale(size * pulse, size * pulse);
+      c.globalAlpha = .9; c.fillStyle = color; c.strokeStyle = '#0009'; c.lineWidth = 2;
+      c.beginPath(); c.moveTo(11, 0); c.lineTo(-7, -8); c.lineTo(-3, 0); c.lineTo(-7, 8); c.closePath(); c.stroke(); c.fill();
+      c.restore();
     }
     c.globalAlpha = 1;
   }
@@ -305,7 +458,6 @@ class Renderer {
 
   drawEnemy(e) {
     const c = this.ctx, x = Math.round(e.x), y = Math.round(e.y);
-    this.drawTelegraph(e);
     if (!e.boss && !e.mini) {
       if (e.fuseT > 0) { // bomber about to blow: blast radius and a flashing body
         const f = ENEMY_TYPES[e.type].fuse;
@@ -449,11 +601,23 @@ class Renderer {
   }
 
   drawPlayer(g) {
-    const c = this.ctx, p = g.player;
+    const c = this.ctx, p = g.player, mage = mageImages[p.facing];
+    if (p.dashT > 0 && imageReady(mage)) { // afterimages trailing the dash
+      for (let i = 1; i <= 3; i++) {
+        this.place(Math.round(p.x - p.dashX * i * 16), Math.round(p.y - p.dashY * i * 16));
+        c.globalAlpha = .28 / i; c.drawImage(mage, -32, -50, 64, 80);
+      }
+      c.globalAlpha = 1;
+    }
     this.place(Math.round(p.x), Math.round(p.y));
-    if (p.invuln > 0 && Math.floor(g.time * 20) % 2) c.globalAlpha = .45;
+    // Dash recharge: a thin arc at the feet that fills as the dash comes back.
+    if (p.dashCD > 0 && g.running) {
+      const k = 1 - p.dashCD / (DASH.cooldown / (1 + .08 * p.passiveRanks.fleet));
+      c.strokeStyle = '#ffb064'; c.globalAlpha = .7; c.lineWidth = 2.5;
+      c.beginPath(); c.ellipse(0, 15, 22, 8, 0, -Math.PI / 2, -Math.PI / 2 + TAU * k); c.stroke(); c.globalAlpha = 1;
+    }
+    if (p.invuln > 0 && p.dashT <= 0 && Math.floor(g.time * 20) % 2) c.globalAlpha = .45;
     c.fillStyle = '#0007'; c.beginPath(); c.ellipse(0, 15, 18, 6, 0, 0, TAU); c.fill();
-    const mage = mageImages[p.facing];
     if (imageReady(mage)) c.drawImage(mage, -32, -50, 64, 80);
     else { c.fillStyle = '#515087'; c.beginPath(); c.arc(0, 0, 14, 0, TAU); c.fill(); }
     c.globalAlpha = 1;

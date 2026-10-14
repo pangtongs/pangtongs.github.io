@@ -65,7 +65,7 @@ function castSpells(g, dt) {
     const count = ev.blades === 'storm' ? 6 : 3, reaper = ev.blades === 'reaper';
     for (let i = 0; i < count; i++) {
       g.projectiles.push(new Projectile(p.x + Math.cos(i * TAU / count) * 10, p.y + Math.sin(i * TAU / count) * 10, near[i % near.length],
-        (12 + s.blades * 8) * (reaper ? 1.5 : count > 3 ? .65 : 1), 'blade', reaper ? {pierce: 2} : {}));
+        (12 + s.blades * 8) * (reaper ? 1.5 : count > 3 ? .85 : 1), 'blade', reaper ? {pierce: 2} : count > 3 ? {pierce: 1} : {}));
     }
     cd.blades = Math.max(.9, 3.1 - s.blades * .3) * haste;
     bloodCost(p);
@@ -179,23 +179,23 @@ function castUltimate(g, p, target, near) {
   const power = p.ultimatePower, cooldown = seconds => seconds * p.castCooldown * p.ultimateHaste;
   switch (p.ultimate) {
     case 'aura':
-      g.forEachEnemyNear(p.x, p.y, 108, e => g.hit(e, 34 * power, '#ff76a8'));
+      g.forEachEnemyNear(p.x, p.y, 108, e => g.hit(e, 27 * power, '#ff76a8'));
       g.fx.shockwave(p.x, p.y, 108, .35, '#ff5299');
       g.burst(p.x, p.y, '#ff76a8', 14);
       p.cool.ult = cooldown(.6);
       bloodCost(p);
       break;
     case 'armageddon':
-      // The first three meteors hunt the nearest foes; the rest scatter across the screen.
+      // The first five meteors hunt the nearest foes (or the boss); the rest scatter.
       for (let i = 0; i < 7; i++) {
-        const focus = near[i % Math.max(1, near.length)];
-        const aimed = i < 3 && focus;
+        const focus = i < 2 && g.boss ? g.boss : near[i % Math.max(1, near.length)];
+        const aimed = i < 5 && focus;
         const x = aimed ? focus.x : p.x + rand(-g.viewW * .48, g.viewW * .48);
         const y = aimed ? focus.y : p.y + rand(-g.viewH * .48, g.viewH * .48);
         g.meteors.push(new Meteor(x, y, 110 * power, .65 + i * .18, 'armageddon'));
       }
-      g.toast('ARMAGEDDON');
-      p.cool.ult = cooldown(15);
+      Sound.play('ult');
+      p.cool.ult = cooldown(10);
       bloodCost(p);
       break;
     case 'solar': {
@@ -208,6 +208,7 @@ function castUltimate(g, p, target, near) {
         if (Math.hypot(e.x - (p.x + t * dx), e.y - (p.y + t * dy)) < e.r + 22) g.hit(e, 185 * power, '#fff1a4');
       }
       g.fx.beam(p.x, p.y, x2, y2);
+      Sound.play('ult'); g.shake(4);
       g.burst(p.x, p.y, '#fff0a0', 26);
       p.cool.ult = cooldown(6);
       bloodCost(p);
@@ -216,6 +217,7 @@ function castUltimate(g, p, target, near) {
     case 'void':
       g.forEachEnemyNear(p.x, p.y, 140, e => g.hit(e, 115 * power, '#d2a1ff'));
       g.fx.shockwave(p.x, p.y, 140, .5, '#ae7aff', 'scythe');
+      Sound.play('ult');
       g.burst(p.x, p.y, '#b684ff', 26);
       p.cool.ult = cooldown(3);
       bloodCost(p);
