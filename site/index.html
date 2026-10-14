@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Winston's Arcade</title>
-    <meta name="description" content="Browser games by Winston: full games Last Ember, Wargamon and Warga Tactics, plus quick games 2048, Snake, Flappy Bird, Minesweeper, Sudoku, Memory, Hangman and Slots.">
+    <meta name="description" content="Browser games by Winston: full games Last Ember, Wargamon (with its Wargadex) and Warga Tactics, plus quick games 2048, Snake, Flappy Bird, Minesweeper, Sudoku, Memory, Hangman and Slots.">
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="shell.css">
 </head>
@@ -60,6 +60,7 @@
         const A = Arcade;
         const GAMES = A.games;          // quick games, played inside the frame
         const FULL = A.fullGames;       // full games, opened full page in their own folder
+        const EXTRAS = A.extras || [];  // companion pages such as the Wargadex
         const $ = id => document.getElementById(id);
 
         const ICONS = {
@@ -120,6 +121,9 @@
                 `<div class="side-section"><span class="label">Full games</span></div>` +
                 FULL.map(f => `<a class="side-link full" href="${A.url(f.href)}" data-tip="${f.name}" style="--accent:${f.accent}">
                     <span class="ico">${f.icon}</span><span class="label nm">${f.name}</span><span class="label bd">↗</span></a>`).join('') +
+                (EXTRAS.length ? `<div class="side-section"><span class="label">Extras</span></div>` : '') +
+                EXTRAS.map(x => `<a class="side-link full" href="${A.url(x.href)}" data-tip="${x.name}" style="--accent:${x.accent}">
+                    <span class="ico">${x.icon}</span><span class="label nm">${x.name}</span><span class="label bd">↗</span></a>`).join('') +
                 groups.map(([label, list]) =>
                     `<div class="side-section"><span class="label">${label}</span></div>` + list.map(sideLink).join('')).join('');
 
@@ -248,6 +252,14 @@
         }
 
         function feature(f) {
+            // A game's companion pages sit on its card as their own links (no nested anchors).
+            const extras = EXTRAS.filter(x => (f.extras || []).includes(x.id));
+            const card = featureCard(f);
+            return extras.length ? `<div class="feature-wrap">${card}<div class="feature-extras">${extras.map(x =>
+                `<a class="btn" href="${A.url(x.href)}" title="${x.tagline}">${x.icon} ${x.name}</a>`).join('')}</div></div>` : card;
+        }
+
+        function featureCard(f) {
             return `<a class="feature" href="${A.url(f.href)}" style="--accent:${f.accent}">
                 <div class="feature-art ${f.coverFit}"><img src="${A.url(f.cover)}" alt="" loading="lazy"><span class="tag">${f.genre}</span></div>
                 <div class="feature-body">
@@ -368,7 +380,8 @@
             const q = $('palInput').value.trim().toLowerCase();
             const home = { id: '', name: 'All games', icon: '🏠', accent: '#a855f7', category: 'Catalog', tagline: 'Back to the library' };
             const fulls = FULL.map(f => ({ ...f, category: 'Full game' }));
-            palItems = [home, ...fulls, ...recentGames(), ...GAMES.filter(g => !A.lastPlayed(g.id))]
+            const extras = EXTRAS.map(x => ({ ...x, category: 'Extra' }));
+            palItems = [home, ...fulls, ...extras, ...recentGames(), ...GAMES.filter(g => !A.lastPlayed(g.id))]
                 .filter(g => !q || (g.name + ' ' + g.category + ' ' + g.tagline).toLowerCase().includes(q));
             palIndex = 0;
             paintPalette();

@@ -959,6 +959,25 @@ body {
     align-self: flex-start;
 }
 
+/* A feature card with companion links (the Wargadex on Wargamon): the links sit over the
+   card's bottom-right corner, beside its play button, as siblings of the card link. */
+.feature-wrap {
+    position: relative;
+    display: flex;
+}
+
+.feature-wrap .feature {
+    flex: 1;
+}
+
+.feature-extras {
+    position: absolute;
+    right: 20px;
+    bottom: 20px;
+    display: flex;
+    gap: 8px;
+}
+
 .side-link.full .bd {
     opacity: 0.6;
 }

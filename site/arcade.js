@@ -76,13 +76,23 @@
             id: 'wargamon', href: 'games/wargamon/index.html', name: 'Wargamon', icon: '🦀', accent: '#3fa7d6',
             genre: 'Creature RPG', cover: 'games/wargamon/img/creatures/005-galomang.webp', coverFit: 'contain',
             tagline: 'Catch, train and battle neighbourhood creatures in the Liga Sekampung.',
-            meta: ['Story campaign', 'Bahasa Indonesia · English', 'Plays offline']
+            meta: ['Story campaign', 'Bahasa Indonesia · English', 'Plays offline'],
+            extras: ['wargadex']
         },
         {
             id: 'warga-tactics', href: 'games/warga-tactics/index.html', name: 'Warga Tactics', icon: '🏮', accent: '#f2b544',
             genre: 'Tactical RPG', cover: 'games/warga-tactics/assets/warteg.webp', coverFit: 'cover',
             tagline: 'Gather a clan at Bu Ratih’s warteg and free Sagara on maps that flood, burn and fight back.',
             meta: ['10 chapters', '18 jobs', 'English · Bahasa Indonesia']
+        }
+    ];
+
+    // Companion pages: not games, but they belong to one (a full game's `extras` lists
+    // them). Shown in the sidebar, the search palette and on their game's feature card.
+    const EXTRAS = [
+        {
+            id: 'wargadex', href: 'wargadex/index.html', name: 'Wargadex', icon: '📖', accent: '#3fa7d6',
+            tagline: 'Every Wargamon creature: types, evolutions, habitats, the type chart, sticker sheets and 3D figures.'
         }
     ];
 
@@ -294,6 +304,7 @@
     window.Arcade = {
         games: GAMES,
         fullGames: FULL_GAMES,
+        extras: EXTRAS,
         categories: CATEGORIES,
         game,
         url,
