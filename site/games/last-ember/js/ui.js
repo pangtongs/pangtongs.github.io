@@ -204,7 +204,8 @@ const UI = {
     return options;
   },
 
-  showChest(g, tier, x, y) {
+  showChest(g) {
+    const {tier, x, y} = g.pendingChest;
     const p = g.player;
     const fx = {
       p,
@@ -215,23 +216,26 @@ const UI = {
       yields(f) { g.yields.gems *= f; g.yields.coins *= f; },
     };
     // A boss called early with a minute to spare lets you take two artifacts.
-    let picks = g.earlySummon ? 2 : 1;
-    const taken = [];
+    // pending.taken survives saves, so a reopened two-pick chest cannot give the same artifact twice.
+    const pending = g.pendingChest;
+    pending.taken = pending.taken || [];
     $('chestTitle').textContent = `TIER ${tier} ${CHEST_TIER_NAMES[tier]} CHEST`;
-    $('chestDesc').textContent = picks > 1 ? 'Called early: choose TWO artifacts. Their bonuses last for this run.' : 'Choose one stat artifact. Its bonus lasts for this run.';
+    $('chestDesc').textContent = pending.picks > 1 ? 'Called early: choose TWO artifacts. Their bonuses last for this run.'
+      : pending.taken.length ? 'Choose one more artifact.' : 'Choose one stat artifact. Its bonus lasts for this run.';
     const box = $('chestChoices');
     box.innerHTML = '';
     for (const [name, icon, desc, take] of ARTIFACTS[tier]) {
       const b = choiceButton({icon, tone: 'ARTIFACT', name, desc}, () => {
         take(fx);
         b.disabled = true;
-        taken.push(`${name} — ${desc}`);
+        pending.taken.push(`${name} — ${desc}`);
         g.fx.texts.add(x, y - 36, name, '#ffd878');
-        if (--picks > 0) { $('chestDesc').textContent = 'Choose one more artifact.'; return; }
-        g.lastArtifact = taken.join(' · ');
+        if (--pending.picks > 0) { $('chestDesc').textContent = 'Choose one more artifact.'; return; }
+        g.lastArtifact = pending.taken.join(' · ');
         hide('chestOverlay');
         g.clearStage();
       });
+      b.disabled = pending.taken.some(t => t.startsWith(name + ' — '));
       box.appendChild(b);
     }
     show('chestOverlay');

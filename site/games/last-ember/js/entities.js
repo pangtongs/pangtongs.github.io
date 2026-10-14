@@ -142,7 +142,7 @@ class Enemy {
 
   resolveMove(m, g, tele) {
     if (!m) return;
-    const p = g.player, scale = this.moveScale;
+    const p = g.player, scale = m.prescaled ? 1 : this.moveScale; // prescaled: damage already includes difficulty
     const shot = (kind, a, mult = .42) => g.enemyShots.push(new EnemyShot(this.x, this.y, a, kind, Math.max(8, this.damage * mult)));
     switch (m.type) {
       case 'blink':
@@ -240,7 +240,7 @@ class Enemy {
     const c = this.def.charge;
     this.actCD -= dt;
     if (this.windup > 0 || this.dashT > 0 || this.actCD > 0 || d > c.range) return;
-    this.startMove({type: 'charge', windup: c.windup, speed: c.speed, distance: c.speed * c.time, damage: this.damage * 1.5}, g);
+    this.startMove({type: 'charge', windup: c.windup, speed: c.speed, distance: c.speed * c.time, damage: this.damage * 1.5, prescaled: true}, g);
     this.actCD = c.cd;
   }
 

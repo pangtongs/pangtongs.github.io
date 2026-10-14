@@ -49,7 +49,7 @@ class Game {
     this.fx.clear();
     this.spawnCD = 0; this.bossCD = stageInfo(1).seconds;
     this.miniCD = 55; this.miniCount = 0; this.minisDefeated = 0; this.miniGoal = 3;
-    this.levelQueue = 0; this.boss = null; this.autoSaveCD = 20; this.earlySummon = false;
+    this.levelQueue = 0; this.boss = null; this.autoSaveCD = 20; this.earlySummon = false; this.pendingChest = null;
     $('bossUI').classList.add('hidden');
   }
 
@@ -112,20 +112,20 @@ class Game {
   }
 
   bindStick() {
+    // Follows a single finger: other pointers on the stick are ignored.
     const el = $('joystick'), nub = $('nub');
-    let active = false;
+    let active = null;
     const move = e => {
-      if (!active) return;
+      if (e.pointerId !== active) return;
       const r = el.getBoundingClientRect(), x = e.clientX - r.left - r.width / 2, y = e.clientY - r.top - r.height / 2;
       const m = Math.hypot(x, y), d = Math.min(m, 44);
       this.stick = {x: m ? x / m * d / 44 : 0, y: m ? y / m * d / 44 : 0};
       nub.style.transform = `translate(${this.stick.x * 44}px,${this.stick.y * 44}px)`;
     };
-    const end = () => { active = false; this.stick = {x: 0, y: 0}; nub.style.transform = ''; };
-    el.addEventListener('pointerdown', e => { active = true; el.setPointerCapture(e.pointerId); move(e); });
+    const end = e => { if (e.pointerId !== active) return; active = null; this.stick = {x: 0, y: 0}; nub.style.transform = ''; };
+    el.addEventListener('pointerdown', e => { if (active !== null) return; active = e.pointerId; el.setPointerCapture(e.pointerId); move(e); });
     el.addEventListener('pointermove', move);
-    el.addEventListener('pointerup', end);
-    el.addEventListener('pointercancel', end);
+    for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) el.addEventListener(type, end);
   }
 
   // ---------- Main loop ----------
@@ -472,7 +472,15 @@ class Game {
     else if (this.stageComplete) { this.saveRun(true); this.showStageClear(); }
   }
 
-  openChest(x, y, tier) { this.setPaused(true); UI.showChest(this, tier, x, y); }
+  // The open chest is part of the run state, so a save taken while choosing (tab hidden,
+  // page closed) reopens it on load instead of losing it.
+  openChest(x, y, tier) {
+    this.pendingChest = {tier, x, y, picks: this.earlySummon ? 2 : 1};
+    this.setPaused(true);
+    UI.showChest(this);
+  }
+
+  openChestAgain() { this.setPaused(true); UI.showChest(this); }
 
   toast(s) {
     const t = $('toast');
@@ -637,13 +645,11 @@ class Game {
   clearStage() {
     this.stageComplete = true;
     this.stageClearPending = true;
+    this.pendingChest = null;
     this.setPaused(true);
     this.stageLootCollected = this.collectStageLoot();
     if (this.stage < STAGE_COUNT) this.meta.unlocked = Math.max(this.meta.unlocked || 1, this.stage + 1);
     this.saveMeta();
-    $('stagePortrait').src = `assets/boss-${this.stage - 1}.webp`;
-    const actEnd = this.stage < STAGE_COUNT && stageInfo(this.stage + 1).act !== stageInfo(this.stage).act;
-    $('stageTitle').textContent = this.stage === STAGE_COUNT ? 'THE LAST PYRE FALLS' : actEnd ? `${ACT_NAMES[stageInfo(this.stage).act].split(' · ')[0].toUpperCase()} COMPLETE` : `STAGE ${this.stage} CLEAR`;
     this.saveRun(true);
     if (this.levelQueue) this.levelUp(); else this.showStageClear();
   }
@@ -653,6 +659,9 @@ class Game {
     this.setPaused(true);
     show('stageOverlay');
     const last = this.stage === STAGE_COUNT;
+    const actEnd = !last && stageInfo(this.stage + 1).act !== stageInfo(this.stage).act;
+    $('stagePortrait').src = `assets/boss-${this.stage - 1}.webp`;
+    $('stageTitle').textContent = last ? 'THE LAST PYRE FALLS' : actEnd ? `${ACT_NAMES[stageInfo(this.stage).act].split(' · ')[0].toUpperCase()} COMPLETE` : `STAGE ${this.stage} CLEAR`;
     $('continueStage').textContent = last ? 'FINISH THE RUN' : `CONTINUE TO STAGE ${this.stage + 1} · ${stageInfo(this.stage + 1).name.toUpperCase()}`;
     $('nextStage').classList.toggle('hidden', last);
     $('stageSummary').textContent = `${stageInfo(this.stage).boss} defeated. ${this.stageLootCollected || 0} remaining drops collected · Level ${this.player.level} · ${this.souls} souls earned · ${this.gemsCount} gems · ${this.coins} gold. Artifact: ${this.lastArtifact}.`;
@@ -714,7 +723,7 @@ class Game {
     return {
       version: SAVE_VERSION, savedAt: Date.now(),
       ...pick(this, ['stage', 'difficulty', 'time', 'stageTime', 'growthClock', 'bossCD', 'miniCD', 'miniCount', 'minisDefeated', 'miniGoal',
-        'spawnCD', 'stageClearPending', 'stageComplete', 'levelQueue', 'stageLootCollected', 'lastArtifact', 'souls', 'gemsCount', 'coins', 'earlySummon']),
+        'spawnCD', 'stageClearPending', 'stageComplete', 'levelQueue', 'stageLootCollected', 'lastArtifact', 'souls', 'gemsCount', 'coins', 'earlySummon', 'pendingChest']),
       yields: {...this.yields}, dropRemainders: {...this.dropRemainders}, marketRanks: {...this.marketRanks}, autoBuy: {...this.autoBuy},
       player: JSON.parse(JSON.stringify(this.player)),
       enemies: this.enemies.filter(e => !e.dead).map(e => ({...e})),
@@ -760,7 +769,12 @@ class Game {
     this.running = true;
     hideAllOverlays();
     this.setPaused(false);
+    // Reopen whatever choice was on screen when the run was saved.
     if (this.stageComplete) { this.setPaused(true); if (this.levelQueue) this.levelUp(); else this.showStageClear(); }
+    else if (this.pendingChest) this.openChestAgain();
+    else if (this.stageClearPending && !this.boss && !this.chests.length) this.chests.push(new Chest(this.player.x, this.player.y - 40, this.stage)); // older saves
+    else if (!this.player.origin) { this.setPaused(true); UI.showOrigins(this); }
+    else if (this.levelQueue) this.levelUp();
     return true;
   }
 }
