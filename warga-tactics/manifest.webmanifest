@@ -1,0 +1,19 @@
+{
+  "name": "Warga Tactics — Serikat Lentera",
+  "short_name": "Warga Tactics",
+  "description": "An Indonesian urban-fantasy tactics RPG on living city maps that flood, burn and fight back.",
+  "lang": "en",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
+  "orientation": "any",
+  "background_color": "#0c1120",
+  "theme_color": "#151d31",
+  "categories": ["games"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
