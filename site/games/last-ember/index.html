@@ -6,7 +6,7 @@
 <title>Last Ember: Horde Survival</title>
 <meta name="description" content="Survive the horde, grow your magic, and see how long you last.">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2712%27 fill=%27%2317142b%27/%3E%3Cpath d=%27M32 7 39 25 56 32 39 39 32 57 25 39 8 32 25 25Z%27 fill=%27%23ffc65c%27/%3E%3C/svg%3E">
-<link rel="stylesheet" href="css/game.css?v=202610141058">
+<link rel="stylesheet" href="css/game.css?v=202610141139">
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -38,6 +38,7 @@
       <button id="pauseBtn">Ⅱ PAUSE</button>
       <button id="finishBtn" class="clearAction">FINISH STAGE</button>
     </div>
+    <button id="callBossBtn" class="callBoss hidden" title="Summon the boss now. With 60s or more left on the timer, its chest lets you take two artifacts.">CALL BOSS NOW</button>
     <button class="spellbookBtn" id="openSpellbook">SPELLBOOK</button>
   </div>
 </div>
@@ -117,7 +118,7 @@
 </div></div>
 
 <div id="chestOverlay" class="overlay hidden"><div class="modal">
-  <h1 id="chestTitle">BOSS CHEST</h1><p>Choose one stat artifact. Its bonus lasts for this run.</p>
+  <h1 id="chestTitle">BOSS CHEST</h1><p id="chestDesc">Choose one stat artifact. Its bonus lasts for this run.</p>
   <div id="chestChoices" class="choices"></div>
 </div></div>
 
@@ -145,8 +146,9 @@
 <div id="stageOverlay" class="overlay hidden"><div class="modal">
   <img id="stagePortrait" class="stageArt" src="assets/boss-0.webp" alt="Defeated boss">
   <h1 id="stageTitle">STAGE CLEAR</h1><p id="stageSummary"></p>
-  <p>Remaining drops were collected. Continue from the next stage in the main menu.</p>
-  <button class="button" id="nextStage">RETURN TO MENU</button>
+  <p>Remaining drops were collected. Carry your build straight into the next stage, or save it and return to the menu.</p>
+  <button class="button" id="continueStage">CONTINUE</button>
+  <button class="button secondary" id="nextStage">SAVE &amp; RETURN TO MENU</button>
 </div></div>
 
 <div id="gameOver" class="overlay hidden"><div class="modal">
@@ -174,18 +176,18 @@
 
 <!-- Classic scripts share one global scope, so the game runs from file:// with no build step. Order matters.
      ?v= is stamped by tools/stamp-version.sh so updates never mix cached old files with new ones. -->
-<script src="js/util.js?v=202610141058"></script>
-<script src="js/config.js?v=202610141058"></script>
-<script src="js/assets.js?v=202610141058"></script>
-<script src="js/grid.js?v=202610141058"></script>
-<script src="js/effects.js?v=202610141058"></script>
-<script src="js/entities.js?v=202610141058"></script>
-<script src="js/spells.js?v=202610141058"></script>
-<script src="js/render.js?v=202610141058"></script>
-<script src="js/hud.js?v=202610141058"></script>
-<script src="js/storage.js?v=202610141058"></script>
-<script src="js/ui.js?v=202610141058"></script>
-<script src="js/game.js?v=202610141058"></script>
-<script src="js/main.js?v=202610141058"></script>
+<script src="js/util.js?v=202610141139"></script>
+<script src="js/config.js?v=202610141139"></script>
+<script src="js/assets.js?v=202610141139"></script>
+<script src="js/grid.js?v=202610141139"></script>
+<script src="js/effects.js?v=202610141139"></script>
+<script src="js/entities.js?v=202610141139"></script>
+<script src="js/spells.js?v=202610141139"></script>
+<script src="js/render.js?v=202610141139"></script>
+<script src="js/hud.js?v=202610141139"></script>
+<script src="js/storage.js?v=202610141139"></script>
+<script src="js/ui.js?v=202610141139"></script>
+<script src="js/game.js?v=202610141139"></script>
+<script src="js/main.js?v=202610141139"></script>
 </body>
 </html>

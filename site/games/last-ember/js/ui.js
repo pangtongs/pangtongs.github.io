@@ -99,8 +99,11 @@ const UI = {
 
   showLevelUp(g) {
     const p = g.player, origin = ORIGINS[p.origin] || ORIGINS.ember;
-    const tier = p.level >= 5 && !p.path ? 'PATH' : p.level >= 12 && !p.ultimate ? 'ULTIMATE' : 'SPELL';
-    $('levelTitle').textContent = `LEVEL ${p.level} · ${tier === 'PATH' ? 'CHOOSE YOUR PATH' : tier === 'ULTIMATE' ? 'AWAKEN AN ULTIMATE' : 'EVOLVE A SPELL'}`;
+    // A maxed spell that has not evolved yet gets its own evolution screen.
+    const evolving = Object.keys(EVOLUTIONS).find(k => p.skills[k] >= SPELL_MAX_RANK && !p.evolved[k]);
+    const tier = p.level >= 5 && !p.path ? 'PATH' : p.level >= 12 && !p.ultimate ? 'ULTIMATE' : evolving ? 'EVOLVE' : 'SPELL';
+    $('levelTitle').textContent = `LEVEL ${p.level} · ${tier === 'PATH' ? 'CHOOSE YOUR PATH' : tier === 'ULTIMATE' ? 'AWAKEN AN ULTIMATE'
+      : tier === 'EVOLVE' ? `${SPELLS[evolving].name.toUpperCase()} EVOLVES` : 'EVOLVE A SPELL'}`;
 
     let options;
     if (tier === 'PATH') {
@@ -111,6 +114,12 @@ const UI = {
       const ults = this.ultimateChoices(p, origin);
       $('levelDesc').textContent = `Awaken your signature ${ULTIMATES[ults[0]].name}, or ${ULTIMATES[ults[1]].name} from ${PATHS[p.path] && PATHS[p.path].ultimate === ults[1] ? 'your Path' : 'your other spells'}.`;
       options = ults.flatMap((key, i) => this.ultimateOptions(p, key, i ? 'CROSSOVER' : 'SIGNATURE'));
+    } else if (tier === 'EVOLVE') {
+      $('levelDesc').textContent = `${SPELLS[evolving].name} reached rank ${SPELL_MAX_RANK}. Choose its final form; it changes how the spell works for the rest of the run.`;
+      options = Object.entries(EVOLUTIONS[evolving]).map(([form, f]) => ({
+        name: f.name, icon: SPELLS[evolving].icon, tone: 'EVOLVE', label: `EVOLUTION · ${SPELLS[evolving].name}`, desc: f.desc,
+        take: () => { p.evolved[evolving] = form; g.toast(`${f.name.toUpperCase()} AWAKENED`); },
+      }));
     } else {
       $('levelDesc').textContent = 'Evolve a spell, build a passive power, or strike a bargain. Growth triggers every minute while you survive.';
       options = this.spellOptions(g);
@@ -205,17 +214,25 @@ const UI = {
       spell(key, n) { p.skills[key] = Math.min(SPELL_MAX_RANK, p.skills[key] + n); },
       yields(f) { g.yields.gems *= f; g.yields.coins *= f; },
     };
+    // A boss called early with a minute to spare lets you take two artifacts.
+    let picks = g.earlySummon ? 2 : 1;
+    const taken = [];
     $('chestTitle').textContent = `TIER ${tier} ${CHEST_TIER_NAMES[tier]} CHEST`;
+    $('chestDesc').textContent = picks > 1 ? 'Called early: choose TWO artifacts. Their bonuses last for this run.' : 'Choose one stat artifact. Its bonus lasts for this run.';
     const box = $('chestChoices');
     box.innerHTML = '';
     for (const [name, icon, desc, take] of ARTIFACTS[tier]) {
-      box.appendChild(choiceButton({icon, tone: 'ARTIFACT', name, desc}, () => {
+      const b = choiceButton({icon, tone: 'ARTIFACT', name, desc}, () => {
         take(fx);
-        g.lastArtifact = `${name} — ${desc}`;
+        b.disabled = true;
+        taken.push(`${name} — ${desc}`);
         g.fx.texts.add(x, y - 36, name, '#ffd878');
+        if (--picks > 0) { $('chestDesc').textContent = 'Choose one more artifact.'; return; }
+        g.lastArtifact = taken.join(' · ');
         hide('chestOverlay');
         g.clearStage();
-      }));
+      });
+      box.appendChild(b);
     }
     show('chestOverlay');
   },

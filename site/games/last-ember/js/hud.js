@@ -6,7 +6,7 @@ class Hud {
   constructor() {
     this.el = {};
     for (const id of ['hpText', 'hpBar', 'shieldText', 'shieldBar', 'xpText', 'xpBar', 'souls', 'gems', 'coins', 'finishBtn',
-      'stageGoal', 'wave', 'timer', 'spellTray', 'autoBuyInfo', 'bossUI', 'bossBar', 'bossName', 'bossPortrait', 'perf', 'pauseBtn']) this.el[id] = $(id);
+      'stageGoal', 'wave', 'timer', 'spellTray', 'autoBuyInfo', 'bossUI', 'bossBar', 'bossName', 'bossPortrait', 'perf', 'pauseBtn', 'callBossBtn']) this.el[id] = $(id);
     this.cache = new Map();
     this.nextAt = 0;
     this.fps = {frames: 0, since: performance.now(), text: ''};
@@ -48,6 +48,8 @@ class Hud {
     this.toggle('autoBuyInfo', 'hidden', !auto.length);
     if (auto.length) this.text('autoBuyInfo', 'AUTO ' + auto.join(' · '));
     this.toggle('finishBtn', 'ready', !!g.stageComplete);
+    this.toggle('callBossBtn', 'hidden', !g.canCallBoss);
+    if (g.canCallBoss) this.text('callBossBtn', g.bossCD >= 60 ? `CALL BOSS · 2 ARTIFACTS` : 'CALL BOSS NOW');
     this.text('pauseBtn', g.paused && g.running ? '▶ RESUME' : 'Ⅱ PAUSE');
     this.text('stageGoal', g.stageComplete ? 'STAGE CLEARED · FINISH WHEN READY'
       : g.boss ? 'DEFEAT THE BOSS'
@@ -70,8 +72,9 @@ class Hud {
   }
 
   updateTray(p) {
-    const chips = ['bolt'];
-    for (const key of Object.keys(SPELLS)) if (key !== 'bolt' && p.skills[key]) chips.push(SPELLS[key].icon);
+    const spell = key => (p.evolved[key] ? 'evo:' : '') + SPELLS[key].icon;
+    const chips = [spell('bolt')];
+    for (const key of Object.keys(SPELLS)) if (key !== 'bolt' && p.skills[key]) chips.push(spell(key));
     for (const key of Object.keys(PASSIVES)) if (p.passiveRanks[key]) chips.push(key);
     if (p.path) chips.push(PATHS[p.path].icon);
     if (p.ultimate) chips.push(ULTIMATES[p.ultimate].icon);
@@ -80,8 +83,9 @@ class Hud {
     if (this.cache.get('tray') === sig) return;
     this.cache.set('tray', sig);
     this.el.spellTray.innerHTML = chips.map(chip => {
-      const bargain = chip.startsWith('bargain:'), icon = bargain ? chip.slice(8) : chip;
-      return `<div class="spellChip${bargain ? ' bargain' : ''}"><i class="icon icon-${icon}">${iconMarkup(icon)}</i></div>`;
+      const [kind, icon] = chip.includes(':') ? chip.split(':') : ['', chip];
+      const cls = kind === 'bargain' ? ' bargain' : kind === 'evo' ? ' evolved' : '';
+      return `<div class="spellChip${cls}"><i class="icon icon-${icon}">${iconMarkup(icon)}</i></div>`;
     }).join('');
   }
 

@@ -44,12 +44,12 @@ class Game {
     this.dropRemainders = {gems: 0, coins: 0};
     this.marketRanks = Object.fromEntries(Object.keys(MARKET).map(k => [k, 0]));
     this.autoBuy = {gems: null, coins: null}; // market item bought automatically per currency
-    this.enemies = []; this.drops = []; this.projectiles = []; this.enemyShots = []; this.chests = []; this.meteors = []; this.hazards = [];
+    this.enemies = []; this.drops = []; this.projectiles = []; this.enemyShots = []; this.chests = []; this.meteors = []; this.hazards = []; this.zones = []; this.timers = [];
     this.nearby = [];
     this.fx.clear();
     this.spawnCD = 0; this.bossCD = stageInfo(1).seconds;
     this.miniCD = 55; this.miniCount = 0; this.minisDefeated = 0; this.miniGoal = 3;
-    this.levelQueue = 0; this.boss = null; this.autoSaveCD = 20;
+    this.levelQueue = 0; this.boss = null; this.autoSaveCD = 20; this.earlySummon = false;
     $('bossUI').classList.add('hidden');
   }
 
@@ -103,6 +103,8 @@ class Game {
     on('pauseMarketBtn', () => { hide('pauseOverlay'); this.openMarket(); });
     on('closeMarket', () => this.closeMarket());
     on('nextStage', () => this.nextStage());
+    on('continueStage', () => this.continueStage());
+    on('callBossBtn', () => this.callBoss());
     on('finishBtn', () => this.showStageClear());
     document.querySelectorAll('[data-open-spellbook]').forEach(b => { b.onclick = () => this.openSpellbook(); });
     on('openSpellbook', () => this.openSpellbook());
@@ -200,6 +202,8 @@ class Game {
     compact(this.meteors, m => m.update(dt, this));
     compact(this.hazards, h => h.update(dt, this));
     if (!this.running) return;
+    compact(this.zones, z => z.update(dt, this));
+    compact(this.timers, t => (t.t -= dt) > 0 || (t.fn(), false));
     this.fx.update(dt);
     castSpells(this, dt);
 
@@ -392,12 +396,21 @@ class Game {
     }
     this.burst(e.x, e.y, e.color, e.boss ? 24 : 8);
     if (this.player.bargains.volatile && !e.boss) this.explode(e);
+    // Contagion: a poisoned foe passes its poison to everything around it.
+    if (e.poisonTime > 0 && this.player.evolved.venom === 'contagion') {
+      this.fx.shockwave(e.x, e.y, 90, .35, '#81dc9a');
+      this.forEachEnemyNear(e.x, e.y, 90, o => { o.poisonTime = 3; o.poisonDps = Math.max(o.poisonDps, e.poisonDps); });
+    }
   }
 
-  // Situational damage bonuses: Path of Frost, Berserker's Oath, Close Quarters.
+  // Runs fn after `seconds` of game time (Tempest Ring's second pulse). Not saved.
+  after(seconds, fn) { this.timers.push({t: seconds, fn}); }
+
+  // Situational damage bonuses: Path of Frost, Static Field shock, Berserker's Oath, Close Quarters.
   damageMultiplier(e) {
     const p = this.player, b = p.bargains;
     let m = p.path === 'frost' && e.slow > 0 ? 1.2 : 1;
+    if (e.shock > 0) m *= 1.3;
     if (b.berserker) m *= 1 + (1 - clamp(p.hp / p.maxHp, 0, 1)) * .8;
     if (b.closeQuarters) m *= dist2(p.x, p.y, e.x, e.y) < CLOSE_QUARTERS_RANGE * CLOSE_QUARTERS_RANGE ? 1.6 : .6;
     return m;
@@ -639,21 +652,49 @@ class Game {
     if (!this.stageComplete) return;
     this.setPaused(true);
     show('stageOverlay');
+    const last = this.stage === STAGE_COUNT;
+    $('continueStage').textContent = last ? 'FINISH THE RUN' : `CONTINUE TO STAGE ${this.stage + 1} · ${stageInfo(this.stage + 1).name.toUpperCase()}`;
+    $('nextStage').classList.toggle('hidden', last);
     $('stageSummary').textContent = `${stageInfo(this.stage).boss} defeated. ${this.stageLootCollected || 0} remaining drops collected · Level ${this.player.level} · ${this.souls} souls earned · ${this.gemsCount} gems · ${this.coins} gold. Artifact: ${this.lastArtifact}.`;
   }
 
   // Saves the build as a run on the next stage, then returns to the menu to continue it.
+  // Continue: carry the build straight into the next stage.
+  continueStage() {
+    hide('stageOverlay');
+    if (this.stage === STAGE_COUNT) { this.endRun(true); return; }
+    const next = this.nextStageSnapshot();
+    this.saveRun(true, next);
+    this.restore(next);
+    this.toast(`STAGE ${this.stage} · ${stageInfo(this.stage).name.toUpperCase()}`);
+  }
+
+  // Save & menu: store the build on the next stage; Continue Saved Run resumes it.
   nextStage() {
     hide('stageOverlay');
     if (this.stage === STAGE_COUNT) { this.endRun(true); return; }
+    this.saveRun(true, this.nextStageSnapshot());
+    this.showMenu();
+  }
+
+  nextStageSnapshot() {
     const next = this.snapshot(), p = next.player;
     Object.assign(next, {stage: this.stage + 1, stageTime: 0, bossCD: stageInfo(this.stage + 1).seconds, miniCD: 55, miniCount: 0, minisDefeated: 0,
       miniGoal: Math.max(3, Math.floor((stageInfo(this.stage + 1).seconds - 20) / 55)), stageClearPending: false, stageComplete: false,
       enemyShots: [], enemies: [], drops: [], chests: []});
+    next.earlySummon = false;
     p.hp = Math.min(p.maxHp, p.hp + p.maxHp * .3);
     p.shield += 20;
-    this.saveRun(true, next);
-    this.showMenu();
+    return next;
+  }
+
+  // Call the boss before the timer. With 60s or more to spare, its chest grants two artifacts.
+  get canCallBoss() { return this.running && !this.boss && !this.stageClearPending && this.bossCD > 0 && this.stageTime >= 45; }
+  callBoss() {
+    if (!this.canCallBoss) return;
+    this.earlySummon = this.bossCD >= 60;
+    this.bossCD = 0;
+    this.toast(this.earlySummon ? 'BOSS CALLED EARLY · ITS CHEST GRANTS TWO ARTIFACTS' : 'BOSS CALLED');
   }
 
   endRun(won) {
@@ -673,7 +714,7 @@ class Game {
     return {
       version: SAVE_VERSION, savedAt: Date.now(),
       ...pick(this, ['stage', 'difficulty', 'time', 'stageTime', 'growthClock', 'bossCD', 'miniCD', 'miniCount', 'minisDefeated', 'miniGoal',
-        'spawnCD', 'stageClearPending', 'stageComplete', 'levelQueue', 'stageLootCollected', 'lastArtifact', 'souls', 'gemsCount', 'coins']),
+        'spawnCD', 'stageClearPending', 'stageComplete', 'levelQueue', 'stageLootCollected', 'lastArtifact', 'souls', 'gemsCount', 'coins', 'earlySummon']),
       yields: {...this.yields}, dropRemainders: {...this.dropRemainders}, marketRanks: {...this.marketRanks}, autoBuy: {...this.autoBuy},
       player: JSON.parse(JSON.stringify(this.player)),
       enemies: this.enemies.filter(e => !e.dead).map(e => ({...e})),
@@ -708,7 +749,7 @@ class Game {
     const base = new Player();
     this.player = Object.assign(base, player, {
       skills: {...base.skills, ...player.skills}, passiveRanks: {...base.passiveRanks, ...player.passiveRanks}, cool: {...base.cool, ...player.cool},
-      bargains: {...player.bargains},
+      bargains: {...player.bargains}, evolved: {...player.evolved},
     });
     this.enemies = (enemies || []).map(e => Enemy.restore(this, e));
     this.boss = this.enemies.find(e => e.boss) || null;

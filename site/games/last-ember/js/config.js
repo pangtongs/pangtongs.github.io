@@ -159,6 +159,30 @@ const SPELLS = {
 };
 const SPELL_MAX_RANK = 5;
 
+// Evolutions: when a spell reaches max rank, the next level up offers its two forms.
+// Each changes how the spell behaves; the behaviour lives in spells.js and entities.js.
+const EVOLUTIONS = {
+  bolt:      {barrage: {name: 'Arcane Barrage', desc: 'Fires a bolt at each of the three nearest foes, each at 60% damage.'},
+              lance: {name: 'Arcane Lance', desc: 'Bolts pierce through four foes and deal 40% more damage.'}},
+  orb:       {halo: {name: 'Twin Halo', desc: 'Two more orbs circle on a wide outer ring, turning the other way.'},
+              gravity: {name: 'Gravity Well', desc: 'Orbs strike 60% more often and slow what they touch.'}},
+  fire:      {meteor: {name: 'Meteor Core', desc: 'One huge fireball: 2.6× damage and double blast radius, cast less often.'},
+              cinder: {name: 'Cinder Spray', desc: 'Four smaller fireballs at once, each at 45% damage.'}},
+  lightning: {chain: {name: 'Storm Chain', desc: 'Lightning arcs through seven foes instead of three, at 70% damage.'},
+              thunderhead: {name: 'Thunderhead', desc: 'Each strike also blasts everything around its target.'}},
+  ice:       {spike: {name: 'Glacial Spike', desc: 'Shards pierce three foes and freeze them solid for a moment.'},
+              blizzard: {name: 'Blizzard', desc: 'Shards shatter on impact into three smaller seeking shards.'}},
+  venom:     {plague: {name: 'Plague Cloud', desc: 'The burst leaves a poison cloud that eats at foes for four seconds.'},
+              contagion: {name: 'Contagion', desc: 'Poisoned foes that die spread their poison to everything nearby.'}},
+  nova:      {tempest: {name: 'Tempest Ring', desc: 'A second ring, 45% wider at 70% damage, follows each nova.'},
+              static: {name: 'Static Field', desc: 'Foes hit are shocked: they take 30% more damage from everything for 3s.'}},
+  blades:    {storm: {name: 'Blade Storm', desc: 'Six blades per volley instead of three, each at 65% damage.'},
+              reaper: {name: 'Reaper’s Edge', desc: 'Blades pierce two more foes and deal 50% more damage.'}},
+  starfall:  {shower: {name: 'Meteor Shower', desc: 'Five stars fall per cast, each at 60% damage.'},
+              comet: {name: 'Comet', desc: 'One comet with 3.5× damage and a far wider impact.'}},
+};
+const evolvedAs = (p, spell, form) => p.evolved[spell] === form;
+
 const PATHS = {
   demon: {ultimate: 'armageddon', name: 'Path of Demon', icon: 'fire', book: 'Attack +50%; max HP −20%.',
     apply: p => { p.maxHp *= .8; p.hp = Math.min(p.hp, p.maxHp); p.atk *= 1.5; }},
@@ -299,6 +323,8 @@ const SPELLBOOK = [
   {title: 'ALL BASIC SPELLS · RANK 1–5', cards: [
     ...Object.values(SPELLS).map(s => ({icon: s.icon, name: s.name, text: s.book})),
     {icon: 'bolt', name: 'Arcane Echo', text: 'Extra damage on the homing bolt when the spell pool is exhausted.'}]},
+  {title: 'EVOLUTIONS · AT RANK 5, PICK ONE FORM', cards: Object.entries(EVOLUTIONS).flatMap(([spell, forms]) =>
+    Object.values(forms).map(f => ({icon: SPELLS[spell].icon, name: f.name, text: `${SPELLS[spell].name}: ${f.desc}`})))},
   {title: 'PATHS · LEVEL 5 · YOUR SIGNATURE OR A CROSSOVER', cards: Object.entries(ORIGINS).map(([, o]) => ({icon: PATHS[o.path].icon, name: PATHS[o.path].name, text: `${PATHS[o.path].book} ${o.name} signature.`}))},
   {title: 'ULTIMATES · LEVEL 12 · YOUR SIGNATURE OR YOUR PATH’S', cards: Object.entries(ORIGINS).map(([, o]) => ({icon: ULTIMATES[o.ultimate].art, name: ULTIMATES[o.ultimate].name, text: `${ULTIMATES[o.ultimate].book} ${o.name} signature.`}))},
   {title: 'BARGAINS · POWER AT A PRICE', cards: Object.values(BARGAINS).map(b => ({icon: b.icon, name: b.name, text: `${b.gain}. Cost: ${b.cost.charAt(0).toLowerCase()}${b.cost.slice(1)}.`}))},

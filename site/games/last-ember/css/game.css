@@ -52,6 +52,7 @@ canvas{display:block;width:100vw;height:100vh}
 .hudActions button{padding:5px 7px;font:700 10px ui-monospace,monospace;color:#fff0ce;background:#173148;border:1px solid #62849d}
 .hudActions .clearAction{display:none;color:#fff2d5;background:#5b4570}
 .hudActions .clearAction.ready{display:block}
+.callBoss{display:block;width:100%;margin-top:5px;padding:5px 7px;pointer-events:auto;cursor:pointer;font:800 10px ui-monospace,monospace;letter-spacing:.04em;color:#ffe1e6;background:#6a1f33;border:1px solid #d3647e;border-radius:6px;box-shadow:0 0 12px #ff5a7a44}
 .spellbookBtn{margin:5px 0 0;padding:3px 7px;font:inherit;font-size:9px;letter-spacing:.5px;color:#ffe0a1;background:#22384a;border:1px solid #658aa5}
 
 .bossbar{position:fixed;top:88px;left:25%;width:50%;padding:5px 9px;pointer-events:none;background:#0b1728dd;border:1px solid #9a5267;border-radius:9px;box-shadow:0 6px 20px #0007}
@@ -68,6 +69,7 @@ canvas{display:block;width:100vw;height:100vh}
 .spellChip i{display:grid;place-items:center;width:24px;height:24px;border-radius:5px;color:#ff9cb2}
 .spellChip .sigil{width:18px;height:18px}
 .spellChip.bargain{border-color:#a45b70;background:#2a1724}
+.spellChip.evolved{border-color:#ffd77a;box-shadow:0 0 10px #ffc65c66}
 
 .joystick{position:fixed;bottom:18px;left:18px;width:140px;height:140px;display:none;touch-action:none}
 .stick{position:absolute;inset:0;border-radius:50%;background:#2b264a99;border:2px solid #756a9b}
@@ -105,6 +107,10 @@ canvas{display:block;width:100vw;height:100vh}
 .choice[data-tone="BARGAIN"] .choiceIcon{color:#ff9cb2;background-color:#662c4d}
 .choice .gain,.choice .cost{display:block}.choice .gain{color:#93e3c9}.choice .cost{margin-top:3px;color:#ff9cb2}
 .choice[data-tone="PASSIVE"] .choiceIcon{background-color:#132439}
+.choice[data-tone="EVOLVE"]{background:linear-gradient(150deg,#3a2f17,#1c1a14);border-color:#c9a14a}
+.choice[data-tone="EVOLVE"] em{color:#ffd77a;border-color:#c9a14a}
+.choice[data-tone="EVOLVE"] .choiceIcon{border-color:#ffd77a;box-shadow:0 0 18px #ffc65c66}
+.choices[data-tier="EVOLVE"]{grid-template-columns:repeat(2,minmax(0,1fr));max-width:720px;margin-left:auto;margin-right:auto}
 
 .originModal{max-height:92dvh;overflow-y:auto}
 .originModal .choices{grid-template-columns:repeat(4,minmax(0,1fr))}
@@ -120,6 +126,7 @@ canvas{display:block;width:100vw;height:100vh}
 #chestOverlay .choice{min-height:160px}
 #chestOverlay .choice em{color:#ffd38b}
 #chestOverlay .choiceIcon{color:#ffd38b;background-color:#49354b}
+#chestOverlay .choice:disabled{opacity:.4;filter:grayscale(.6);cursor:default;transform:none}
 
 /* Pause, market, stage clear, game over */
 #pauseOverlay{z-index:9}
@@ -255,7 +262,7 @@ canvas{display:block;width:100vw;height:100vh}
 
   .modal{max-height:92vh;overflow:auto;padding:20px 16px;border-radius:14px}
   .modal h1{font-size:24px}
-  .choices,.choices[data-tier="PATH"],.choices[data-tier="ULTIMATE"]{grid-template-columns:1fr;gap:9px}
+  .choices,.choices[data-tier="PATH"],.choices[data-tier="ULTIMATE"],.choices[data-tier="EVOLVE"]{grid-template-columns:1fr;gap:9px}
   .choice{min-height:unset;padding:13px}
   .choiceIcon{width:48px;height:48px}
   .originModal .choices{grid-template-columns:repeat(2,minmax(0,1fr))}

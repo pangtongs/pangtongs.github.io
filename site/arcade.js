@@ -69,7 +69,7 @@
         {
             id: 'last-ember', href: 'games/last-ember/index.html', name: 'Last Ember', icon: '🔥', accent: '#ff8a4c',
             genre: 'Horde survival', cover: 'games/last-ember/assets/boss-3.webp', coverFit: 'contain',
-            tagline: 'Survive the horde, build your spells, strike bargains and topple sixteen bosses across two acts.',
+            tagline: 'Survive the horde, evolve your spells, strike bargains and topple sixteen bosses across two acts.',
             meta: ['16 stages · 2 acts', 'Auto-cast spells', 'Keyboard or touch']
         },
         {

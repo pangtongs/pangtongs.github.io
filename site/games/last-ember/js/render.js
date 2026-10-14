@@ -77,8 +77,9 @@ class Renderer {
     this.worldTransform();
     for (const ch of g.chests) this.drawChest(ch);
     this.drawHazards(g);
+    this.drawClouds(g);
     for (const m of g.meteors) this.drawMeteor(m);
-    for (const q of g.projectiles) if (this.visible(q.x, q.y, 40)) this.sprite(Sprites.projectile(q.kind), q.x, q.y, Math.atan2(q.vy, q.vx));
+    for (const q of g.projectiles) if (this.visible(q.x, q.y, 40)) this.sprite(Sprites.projectile(q.kind), q.x, q.y, Math.atan2(q.vy, q.vx), q.scale || 1);
     for (const q of g.enemyShots) if (this.visible(q.x, q.y, 30)) this.sprite(Sprites.enemyShot(q.kind), q.x, q.y, Math.atan2(q.vy, q.vx));
     for (const e of g.enemies) if (!e.dead && this.visible(e.x, e.y, e.boss ? 200 : 60)) this.drawEnemy(e);
 
@@ -204,6 +205,20 @@ class Renderer {
     c.globalAlpha = 1;
   }
 
+  // Plague Cloud patches.
+  drawClouds(g) {
+    const c = this.ctx;
+    for (const z of g.zones) {
+      if (!this.visible(z.x, z.y, z.r)) continue;
+      const k = Math.min(1, z.life / z.max * 2);
+      c.globalAlpha = .22 * k; c.fillStyle = '#5fd17a';
+      c.beginPath(); c.arc(z.x, z.y, z.r, 0, TAU); c.fill();
+      c.globalAlpha = .35 * k; c.fillStyle = '#9af0a8';
+      for (let i = 0; i < 5; i++) { const a = g.time * .7 + i * 1.26; c.beginPath(); c.arc(z.x + Math.cos(a) * z.r * .55, z.y + Math.sin(a * 1.3) * z.r * .45, z.r * .28, 0, TAU); c.fill(); }
+    }
+    c.globalAlpha = 1;
+  }
+
   drawChest(ch) {
     if (!this.visible(ch.x, ch.y, 30)) return;
     const c = this.ctx, scene = stageInfo(ch.tier);
@@ -227,8 +242,8 @@ class Renderer {
       c.strokeStyle = '#ffe6ac'; c.lineWidth = 1.5;
       c.beginPath(); c.arc(0, 0, m.r * (.68 - t * .15), -Math.PI * .4, Math.PI * .55); c.stroke();
       c.globalAlpha = 1;
-      const s = Sprites.meteor(m.kind === 'armageddon' ? 1.45 : 1);
-      this.sprite(s, m.x - 55 * (1 - t), m.y - 230 * (1 - t) - 30 * (m.kind === 'armageddon' ? 1.45 : 1));
+      const k = m.kind === 'comet' ? 1.9 : m.kind === 'armageddon' ? 1.45 : 1;
+      this.sprite(Sprites.meteor(k), m.x - 55 * (1 - t), m.y - 230 * (1 - t) - 30 * k);
     } else {
       c.globalAlpha = clamp(1 - (m.t - m.delay) / .52, 0, 1);
       this.sprite(Sprites.glow('#ff9e58', 'flash'), m.x, m.y, 0, m.r * .85 / 64);
@@ -262,6 +277,15 @@ class Renderer {
     c.globalAlpha = 1;
   }
 
+  // Frozen foes get an ice shell; shocked foes a crackling yellow ring. Assumes place(e).
+  drawStatus(e) {
+    if (!(e.frozen > 0) && !(e.shock > 0)) return;
+    const c = this.ctx, r = e.r + 4;
+    if (e.frozen > 0) { c.globalAlpha = .45; c.fillStyle = '#bfe9ff'; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.fill(); c.globalAlpha = .9; c.strokeStyle = '#e8f8ff'; c.lineWidth = 2; c.stroke(); }
+    if (e.shock > 0) { c.globalAlpha = .8; c.strokeStyle = '#ffe36b'; c.lineWidth = 1.5; c.setLineDash([3, 4]); c.beginPath(); c.arc(0, 0, r + 2, 0, TAU); c.stroke(); c.setLineDash([]); }
+    c.globalAlpha = 1;
+  }
+
   drawEnemy(e) {
     const c = this.ctx, x = Math.round(e.x), y = Math.round(e.y);
     this.drawTelegraph(e);
@@ -274,6 +298,7 @@ class Renderer {
       }
       const flash = e.hit > 0 || (e.fuseT > 0 && Math.floor(e.fuseT * 12) % 2 === 0);
       this.sprite(Sprites.enemy(e.type, flash), x, y);
+      this.drawStatus(e);
       if (e.hp < e.maxHp) {
         const w = e.r * 2;
         c.fillStyle = '#111a25'; c.fillRect(-w / 2, -e.r - 7, w, 3);
@@ -353,8 +378,7 @@ class Renderer {
     const p = g.player, n = p.skills.orb;
     if (!n) return;
     const c = this.ctx, orb = Sprites.orb();
-    for (let i = 0; i < n; i++) {
-      const a = g.time * 2 + i * TAU / n, x = p.x + Math.cos(a) * ORB_RADIUS, y = p.y + Math.sin(a) * ORB_RADIUS;
+    for (const {x, y} of orbPositions(g)) {
       this.sprite(orb, x, y);
       this.worldTransform();
       c.strokeStyle = '#e5c2ff'; c.lineWidth = 2;

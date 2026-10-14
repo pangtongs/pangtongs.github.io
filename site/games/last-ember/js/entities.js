@@ -14,6 +14,7 @@ class Player {
     this.skills = {bolt: 1, echo: 0, orb: 0, fire: 0, lightning: 0, ice: 0, venom: 0, nova: 0, blades: 0, starfall: 0};
     this.passiveRanks = {leech: 0, heartGrowth: 0, emberGrowth: 0, aegisGrowth: 0};
     this.bargains = {}; // keys of BARGAINS taken this run
+    this.evolved = {};  // spell -> chosen EVOLUTIONS form
     this.ultimatePower = 1; this.ultimateHaste = 1; this.castCooldown = 1;
     this.pickupRange = 100;
     this.origin = null; this.path = null; this.ultimate = null;
@@ -30,6 +31,7 @@ class Enemy {
   constructor(g, type, x, y) {
     this.type = type; this.x = x; this.y = y;
     this.hit = 0; this.slow = 0; this.poisonTime = 0; this.poisonDps = 0; this.poisonTick = 0;
+    this.frozen = 0; this.shock = 0; // Glacial Spike freeze, Static Field shock (seconds)
     this.boss = type === 'boss'; this.mini = type === 'mini';
     const stage = stageInfo(g.stage);
     this.miniKind = this.mini ? stage.minis[g.miniCount % stage.minis.length] : 0;
@@ -80,6 +82,8 @@ class Enemy {
     if (this.dead) return;
     const p = g.player;
     this.hit = Math.max(0, this.hit - dt);
+    if (this.shock > 0) this.shock -= dt;
+    if (this.frozen > 0) { this.frozen -= this.boss ? dt * 3 : dt; return; } // bosses thaw three times faster
     const a = Math.atan2(p.y - this.y, p.x - this.x);
 
     if (this.dashT > 0) this.dash(dt, g);
@@ -280,19 +284,26 @@ class Hazard {
   }
 }
 
+// Player projectiles. opts (from evolutions):
+//   pierce   keep flying through this many more foes      scale   draw size multiplier
+//   blast    explosion radius override                      freeze  seconds to freeze foes hit
+//   shatter  split into three seeking shards on impact      cloud   leave a poison cloud
 class Projectile {
-  constructor(x, y, target, damage, kind) {
+  constructor(x, y, target, damage, kind, opts = {}) {
     this.x = x; this.y = y; this.target = target; this.damage = damage; this.kind = kind;
     this.speed = kind === 'fire' ? 275 : kind === 'blade' ? 470 : 390;
-    this.r = kind === 'fire' || kind === 'arcane' ? 6 : 5;
+    this.r = (kind === 'fire' || kind === 'arcane' ? 6 : 5) * (opts.scale || 1);
     this.life = 3; this.vx = 1; this.vy = 0;
+    this.pierce = opts.pierce || 0; this.scale = opts.scale || 1; this.blast = opts.blast || 0;
+    this.freeze = opts.freeze || 0; this.shatter = !!opts.shatter; this.cloud = !!opts.cloud;
+    this.hitIds = this.pierce ? new Set() : null;
   }
   // Returns false when the projectile is spent.
   update(dt, g) {
     this.life -= dt;
     if (this.life <= 0) return false;
     if (this.target.dead) {
-      this.target = g.grid.nearest(this.x, this.y);
+      this.target = this.pierce ? this.nextTarget(g) : g.grid.nearest(this.x, this.y);
       if (!this.target) return false;
     }
     const t = this.target, a = Math.atan2(t.y - this.y, t.x - this.x);
@@ -302,18 +313,54 @@ class Projectile {
     if (dist2(this.x, this.y, t.x, t.y) >= rr * rr) return true;
 
     if (this.kind === 'fire' || this.kind === 'venom') {
-      const venom = this.kind === 'venom', radius = venom ? 72 : 54, color = venom ? '#8bea9b' : '#ffb15e';
+      const venom = this.kind === 'venom', radius = this.blast || (venom ? 72 : 54), color = venom ? '#8bea9b' : '#ffb15e';
       g.burst(this.x, this.y, venom ? '#8bea9b' : '#ff9860', 24);
       g.fx.shockwave(this.x, this.y, radius, venom ? .38 : .32, venom ? '#81dc9a' : '#ff9c46');
       g.forEachEnemyNear(this.x, this.y, radius, e => {
         g.hit(e, this.damage, color);
         if (venom) { e.poisonTime = 3; e.poisonDps = this.damage * .35; }
       }, true);
-    } else {
-      g.hit(t, this.damage, this.kind === 'ice' ? '#a6edff' : this.kind === 'blade' ? '#efb0ff' : '#93b9ff');
-      if (this.kind === 'ice') t.slow = Math.max(t.slow, 2);
+      if (this.cloud) g.zones.push(new PoisonCloud(this.x, this.y, 80, 4, this.damage * .5));
+      return false;
+    }
+    g.hit(t, this.damage, this.kind === 'ice' ? '#a6edff' : this.kind === 'blade' ? '#efb0ff' : '#93b9ff');
+    if (this.kind === 'ice') { t.slow = Math.max(t.slow, 2); if (this.freeze) t.frozen = Math.max(t.frozen, this.freeze); }
+    if (this.shatter) {
+      const others = [];
+      g.forEachEnemyNear(t.x, t.y, 240, e => { if (e !== t) others.push(e); });
+      others.sort((a, b) => dist2(a.x, a.y, t.x, t.y) - dist2(b.x, b.y, t.x, t.y));
+      for (let i = 0; i < Math.min(3, others.length); i++) g.projectiles.push(new Projectile(t.x, t.y, others[i], this.damage * .4, 'ice', {scale: .7}));
+    }
+    if (this.pierce > 0) {
+      this.pierce--;
+      this.hitIds.add(t.id);
+      this.target = this.nextTarget(g);
+      return !!this.target;
     }
     return false;
+  }
+  // Pierce: the closest foe ahead that this projectile has not hit yet.
+  nextTarget(g) {
+    let best = null, bd = Infinity;
+    g.forEachEnemyNear(this.x, this.y, 280, e => {
+      if (this.hitIds.has(e.id)) return;
+      const d = dist2(this.x, this.y, e.x, e.y);
+      if (d < bd) { bd = d; best = e; }
+    });
+    return best;
+  }
+}
+
+// Plague Cloud: a lingering patch that poisons every foe inside it.
+class PoisonCloud {
+  constructor(x, y, r, life, dps) { Object.assign(this, {x, y, r, life, max: life, dps, tick: 0}); }
+  update(dt, g) {
+    this.life -= dt;
+    if ((this.tick -= dt) <= 0) {
+      this.tick = .5;
+      g.forEachEnemyNear(this.x, this.y, this.r, e => g.hit(e, this.dps * .5, '#8bea9b'));
+    }
+    return this.life > 0;
   }
 }
 
@@ -371,7 +418,7 @@ class Chest {
 class Meteor {
   constructor(x, y, damage, delay, kind = 'starfall') {
     this.x = x; this.y = y; this.damage = damage; this.delay = delay; this.kind = kind;
-    this.t = 0; this.struck = false; this.r = kind === 'armageddon' ? 106 : 68;
+    this.t = 0; this.struck = false; this.r = kind === 'armageddon' ? 106 : kind === 'comet' ? 125 : 68;
   }
   update(dt, g) {
     this.t += dt;
