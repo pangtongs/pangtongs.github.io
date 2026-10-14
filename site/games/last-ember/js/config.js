@@ -4,6 +4,10 @@
 const ARENA_X = 1040, ARENA_Y = 790;   // movement limits for every entity center
 const FLOOR_MARGIN = 16;                 // drawn floor extends this far past the limits (body width)
 const MAX_ENEMIES = 180;
+const KNOCKBACK = 120, KNOCK_COOLDOWN = .45; // px/s shove for 0.09s on an 11px foe; at most once per cooldown,
+                                             // so a hail of hits jolts foes without pinning them in place
+const COMBO_WINDOW = 2.5, COMBO_MIN = 15; // seconds between kills; smallest combo that pays
+const ENEMY_DAMAGE_SCALE = 1.4; // from stage 3 on; stages 1-2 stay gentle for new players
 const ENEMY_SPEED_CAP = 150;   // px/s for regular foes before Heat; the mage runs at 178
 const MAX_GEMS = 260;          // extra XP merges into existing gems beyond this
 const SIM_STEP = 1 / 60;       // fixed simulation timestep (seconds)
@@ -139,6 +143,21 @@ const STAGES = [
     ], phase2: {cooldown: 2.1, speed: 1.3, extra: {type: 'ring', windup: .45, kind: 'warlock', count: 24, waves: 3}}},
 ];
 const STAGE_COUNT = STAGES.length;
+
+// Routes: after a stage, choose how to reach the next one. The Road is always offered,
+// plus two others picked per stage.
+const ROUTES = {
+  road:     {name: 'The Road', icon: 'bolt', desc: 'The next stage as it is.'},
+  elite:    {name: 'Elite Road', icon: 'heat', desc: 'Foes have +30% HP and damage. Souls +50%, and the boss chest grants one extra artifact.'},
+  merchant: {name: "Merchant's Road", icon: 'coin', desc: 'Market prices −35% for the stage, and you set out with 30 gems and 30 gold.'},
+  shrine:   {name: 'Shrine Road', icon: 'aegisGrowth', desc: 'Heal to full now. Both stage events are cursed shrines, and their boons are doubled.'},
+  swarm:    {name: 'Swarm Road', icon: 'hunted', desc: 'Foes arrive 40% faster. XP +40%.'},
+};
+// Boss arrival lines, by boss art index.
+const BOSS_LINES = ['WAKES BENEATH THE GRAVES', 'MARCHES WITH THE BONE LEGION', 'TEARS THROUGH THE RIFT', 'RISES FROM THE ASHES',
+  'HEAVES OUT OF THE MIRE', 'WINDS ITS DREADFUL CLOCK', 'SURGES FROM THE DEEP', 'DARKENS THE SKY',
+  'FREEZES THE HOLLOW', 'HUNGERS FOR GOLD', 'CREEPS FROM THE THORNS', 'STOKES THE FORGE',
+  'COMMANDS THE DEAD', 'SHATTERS INTO LIGHT', 'EMPTIES THE STARS', 'BURNS ALL THAT REMAINS'];
 const ACT_NAMES = {1: 'Act I · The Rift', 2: 'Act II · Beyond the Rift', 3: 'Endless · The Pyre Beyond'};
 // art: boss portrait index. artifactTier: which ARTIFACTS pool its chest uses.
 STAGES.forEach((s, i) => { s.art = i; s.artifactTier = i + 1; });
@@ -265,11 +284,21 @@ const ORIGINS = {
     description: 'Rank 2 Chain Lightning. Multi-target arcs → 20% faster casts → piercing beam.',
     book: 'Three target lightning at rank 2 → Path of Storm → Solar Lance. Fast casts and piercing damage.'},
   frost: {name: 'Frost', spell: 'orb', title: 'Frost Orb', path: 'frost', ultimate: 'aura',
-    description: 'Rank 2 Orbiting Orb. Close-range hits → slow and repeat-hit damage → rapid aura pulses.',
+    description: 'Rank 2 Orbiting Orb. Close-range hits → every hit chills, +25% vs chilled → rapid aura pulses.',
     book: 'Orbiting orb at rank 2 → Path of Frost → Berserker Aura. Close range control and pulses.'},
   void:  {name: 'Void', spell: 'blades', title: 'Void Blades', path: 'void', ultimate: 'void',
     description: 'Rank 2 Spirit Blades. Seeking missiles → attack and shield → sweeping scythes.',
     book: 'Three seeking blades at rank 2 → Path of Void → Void Scythes. Sweeping damage and shield.'},
+  // Characters unlocked in the Den of Magic (perk: the META_PERKS key that unlocks them).
+  hexblade: {name: 'Hexblade', spell: 'whip', title: 'Hexblade · Ember Whip', path: 'demon', ultimate: 'void', perk: 'hexblade',
+    description: 'Rank 2 Ember Whip. Your dash slices every foe it passes through and recharges 30% faster.',
+    book: 'Ember Whip at rank 2. A close-range duellist: the dash is a weapon. Path of Demon → Void Scythes.'},
+  warden: {name: 'Warden', spell: 'wolves', title: 'Warden · Spirit Wolves', path: 'void', ultimate: 'aura', perk: 'warden', extra: {ward: 1},
+    description: 'Rank 2 Spirit Wolves and Mirror Ward. One extra wolf, wolves bite 50% harder, max HP +20%.',
+    book: 'Spirit Wolves at rank 2 plus Mirror Ward. A pack leader who lets the wolves fight. Path of Void → Berserker Aura.'},
+  starcaller: {name: 'Starcaller', spell: 'starfall', title: 'Starcaller · Starfall', path: 'storm', ultimate: 'armageddon', perk: 'starcaller',
+    description: 'Rank 2 Starfall. Critical chance +15% and critical damage +40%.',
+    book: 'Starfall at rank 2. Every hit can be a big one. Path of Storm → Armageddon.'},
 };
 
 // Bargains: one appears at each spell level up until all are taken. Each grants a strong
@@ -383,6 +412,9 @@ const META_PERKS = {
   origin:   {name: 'Deep Roots', icon: 'fire', costs: [120], stage: 3, desc: () => 'Your first spell starts at rank 3'},
   revive:   {name: 'Second Wind', icon: 'aegisGrowth', costs: [200], stage: 4, desc: () => 'Once per run, a lethal hit leaves you at 40% HP'},
   souls:    {name: 'Soul Harvest', icon: 'soul', costs: [80, 160, 260], stage: 6, desc: n => `Souls +${n * 10}%`},
+  hexblade:   {name: 'Hexblade', icon: 'whip', costs: [150], stage: 2, character: true, desc: () => 'Unlocks the Hexblade: the dash slices foes'},
+  warden:     {name: 'Warden', icon: 'wolves', costs: [150], stage: 3, character: true, desc: () => 'Unlocks the Warden: a stronger wolf pack'},
+  starcaller: {name: 'Starcaller', icon: 'starfall', costs: [220], stage: 5, character: true, desc: () => 'Unlocks the Starcaller: frequent, brutal crits'},
   treasure: {name: 'Treasure Sense', icon: 'gems', costs: [260], stage: 8, desc: () => 'Every boss chest grants one extra artifact'},
 };
 // Pre-Den saves could buy attack and HP without limit; ranks above the cap are refunded.

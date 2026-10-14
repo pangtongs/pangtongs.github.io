@@ -48,7 +48,7 @@ class Enemy {
     // Act I curves are unchanged. Act II multiplies on top so enemies keep pace with a
     // build that has been growing for eight stages (tuned with tools/sim.js).
     const beyond = Math.max(0, g.stage - 8);
-    const actHp = Math.pow(1.22, beyond), actDamage = Math.pow(1.16, beyond);
+    const actHp = Math.pow(1.22, beyond), actDamage = (g.stage >= 3 ? ENEMY_DAMAGE_SCALE : 1) * (beyond ? 1.8 * Math.pow(1.18, beyond) : 1); // tuned with tools/sim.js
     const stagePressure = 1 + (g.stage - 1) * .28;
     const scale = (1 + (this.level - 1) * .15) * stagePressure * diff.hp;
     const bossAct = (beyond ? 3.5 * Math.pow(1.36, beyond - 1) : 1) * diff.bossHp;
@@ -56,14 +56,17 @@ class Enemy {
       : this.mini ? 210 * (1 + g.stage * .4) * actHp * diff.hp * diff.miniHp * (1 + g.stageTime / 300)
       : def.hp * scale * actHp;
     if (g.player.bargains.cursedHoard) this.maxHp *= 1.3;
+    if (g.route === 'elite') this.maxHp *= 1.3;
+    if (g.mut('giants') && !this.boss) this.maxHp *= 1.4;
     this.hp = this.maxHp;
     this.speed = (this.boss ? 28 + Math.min(this.tier, 10) * 2 : this.mini ? mini.speed : def.speed)
       * (1 + (this.level - 1) * .055) * (1 + (Math.min(g.stage, 10) - 1) * .045) * diff.speed;
     // Regular foes never outrun the mage, so kiting and Fleetfoot keep working deep in a run.
     if (!this.boss && !this.mini && type !== 'goblin') this.speed = Math.min(this.speed, (ENEMY_SPEED_CAP + (beyond ? 12 : 0)) * diff.speed);
-    this.r = this.boss ? 27 + Math.min(this.tier, 8) * 3 : this.mini ? 23 : def.r;
+    if (g.mut('haste')) this.speed *= 1.2;
+    this.r = (this.boss ? 27 + Math.min(this.tier, 8) * 3 : this.mini ? 23 : def.r) * (g.mut('giants') && !this.boss && !this.mini ? 1.2 : 1);
     this.damage = (this.boss ? 14 + this.tier * 4 : this.mini ? 13 + g.stage * 2 : def.damage)
-      * (1 + (this.level - 1) * (this.boss ? .035 : .085)) * (1 + (g.stage - 1) * .1) * diff.damage * actDamage;
+      * (1 + (this.level - 1) * (this.boss ? .035 : .085)) * (1 + (g.stage - 1) * .1) * diff.damage * actDamage * (g.route === 'elite' ? 1.3 : 1);
     // Damage multiplier for Act II boss moves (Act I moves use their original fixed numbers).
     this.moveScale = this.boss && beyond ? 1.15 * Math.pow(1.14, beyond) * diff.damage : diff.damage;
     this.color = this.boss ? stage.accent : this.mini ? mini.color : def.color;
@@ -72,6 +75,7 @@ class Enemy {
     this.dashT = 0; this.dvx = 0; this.dvy = 0; this.dashHit = false; this.dashDamage = 0;
     this.moveIndex = 0; this.waves = null; this.fuseT = 0; this.actCD = rand(.5, 2);
     this.shotCD = rand(1, 3);
+    this.kb = 0; this.kbx = 0; this.kby = 0;
     this.dead = false;
     this.id = Enemy.nextId++;
   }
@@ -93,9 +97,16 @@ class Enemy {
     const def0 = !this.boss && !this.mini && this.def;
     // Treasure goblins run away from the player and escape after a while.
     if (def0 && def0.flee && (this.fleeT = (this.fleeT || 0) + dt) > def0.flee) { g.kill(this, true); g.toast('THE GOBLIN ESCAPED'); return; }
-    const a = Math.atan2(p.y - this.y, p.x - this.x) + (def0 && def0.flee ? Math.PI : 0);
+    // The Hearth lures nearby regular melee foes away from the mage.
+    const h = g.hearth, lured = h && def0 && !def0.flee && !def0.shot && !def0.fuse
+      && dist2(this.x, this.y, h.x, h.y) < Math.min(HEARTH.lure * HEARTH.lure, dist2(this.x, this.y, p.x, p.y));
+    const tx = lured ? h.x : p.x, ty = lured ? h.y : p.y;
+    const a = Math.atan2(ty - this.y, tx - this.x) + (def0 && def0.flee ? Math.PI : 0);
 
-    if (this.dashT > 0) this.dash(dt, g);
+    if (this.kb > 0) { // knocked back by a hit
+      this.kb -= dt;
+      this.x = clamp(this.x + this.kbx * dt, -ARENA_X, ARENA_X); this.y = clamp(this.y + this.kby * dt, -ARENA_Y, ARENA_Y);
+    } else if (this.dashT > 0) this.dash(dt, g);
     else {
       // Rooted while winding up a charge, blink or fuse; slowed during other windups.
       const rooted = this.fuseT > 0 || (this.windup > 0 && this.move && (this.move.type === 'charge' || this.move.type === 'blink'));
@@ -118,6 +129,9 @@ class Enemy {
 
     this.attackCD -= dt;
     if (this.damage > 0 && d < this.r + p.r && this.attackCD <= 0) { g.damage(this.damage); this.attackCD = this.boss ? .75 : .85; }
+    else if (lured && this.attackCD <= 0 && dist2(this.x, this.y, h.x, h.y) < (this.r + 20) * (this.r + 20)) {
+      h.hp -= this.damage * HEARTH.armor; this.attackCD = .85; g.burst(h.x, h.y, '#ffb064', 3);
+    }
 
     if (this.windup > 0) {
       this.windup -= dt;
@@ -226,10 +240,7 @@ class Enemy {
   bossThink(dt, g) {
     const st = stageInfo(this.tier), ph = st.phase2;
     if (ph && !this.enraged && this.hp < this.maxHp * g.heatDef.phase2At) {
-      this.enraged = true;
-      g.toast(`${this.name.toUpperCase()} ENRAGES!`);
-      Sound.play('boss'); g.shake(8); g.freeze(.15);
-      g.fx.shockwave(this.x, this.y, 120, .6, this.color);
+      this.enraged = true; // the phase-two card is shown by stepBossSignature
     }
     if (this.windup > 0 || this.dashT > 0 || this.waves) return;
     this.skillCD -= dt;
@@ -368,7 +379,7 @@ class Projectile {
 
 // Plague Cloud: a lingering patch that poisons every foe inside it.
 class PoisonCloud {
-  constructor(x, y, r, life, dps) { Object.assign(this, {x, y, r, life, max: life, dps, tick: 0}); }
+  constructor(x, y, r, life, dps, color) { Object.assign(this, {x, y, r, life, max: life, dps, tick: 0, color}); }
   update(dt, g) {
     this.life -= dt;
     if ((this.tick -= dt) <= 0) {
@@ -436,6 +447,11 @@ class EnemyShot {
   update(dt, g) {
     if (this.dead) return false; // destroyed by Mirror Ward
     this.x += this.vx * dt; this.y += this.vy * dt; this.life -= dt;
+    if (insideObstacle(g.obstacles, this.x, this.y)) { g.burst(this.x, this.y, '#d8cbb8', 4); return false; } // cover
+    if (!this.bounced && g.bossSignature === 'mirror' && (Math.abs(this.x) > ARENA_X || Math.abs(this.y) > ARENA_Y)) { // Mirror Walls
+      this.bounced = true; this.life = Math.max(this.life, 2.5);
+      if (Math.abs(this.x) > ARENA_X) this.vx = -this.vx; else this.vy = -this.vy;
+    }
     const p = g.player, rr = this.r + p.r;
     if (dist2(this.x, this.y, p.x, p.y) < rr * rr) {
       g.damage(this.damage);
@@ -456,11 +472,14 @@ class Drop {
     this.life -= dt; this.phase += dt * 5;
     const p = g.player, dx = p.x - this.x, dy = p.y - this.y;
     const range = g.pickupRange;
-    if (Math.abs(dx) > range || Math.abs(dy) > range) return this.life > 0; // cheap reject
+    if (!this.caught && (Math.abs(dx) > range || Math.abs(dy) > range)) return this.life > 0; // cheap reject
     const d = Math.hypot(dx, dy);
-    if (d < range) {
-      const v = (1 - d / (range + 10)) * 340 * dt / (d || 1);
-      this.x += dx * v; this.y += dy * v;
+    // Once in range a drop is caught: it hops away a little, then flies in, accelerating.
+    if (!this.caught && d < range) { this.caught = true; this.speed = -120; }
+    if (this.caught) {
+      this.speed = Math.min(1400, this.speed + 1500 * dt);
+      const step = Math.min(d, this.speed * dt) / (d || 1);
+      this.x += dx * step; this.y += dy * step;
     }
     if (d < p.r + 10) { g.collect(this); return false; }
     return this.life > 0;
@@ -471,6 +490,7 @@ class Chest {
   constructor(x, y, tier) { this.x = clamp(x, -ARENA_X, ARENA_X); this.y = clamp(y, -ARENA_Y, ARENA_Y); this.tier = tier; this.phase = 0; this.r = 14; }
   update(dt, g) {
     this.phase += dt * 3;
+    pushOutOfObstacles(g.obstacles, this, 30);
     if (dist(this, g.player) < this.r + g.player.r + 8) {
       g.burst(this.x, this.y, this.tier >= 3 ? '#c78cff' : '#ffd578', 28);
       g.openChest(this.x, this.y, this.tier);

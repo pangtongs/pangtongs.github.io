@@ -41,7 +41,13 @@ mixin(Game, {
       p.hp += heal; p.lifeHealUsed += heal;
     }
     e.hit = .08;
+    if (e.boss && e.signature === 'gold') this.bossGoldSpill(e);
     if (p.path === 'frost' && !e.boss) e.slow = Math.max(e.slow, 1);
+    // Knockback: regular foes are shoved away from the mage; heavier ones less.
+    if (!e.boss && !e.mini && e.dashT <= 0 && !(e.fuseT > 0) && this.time >= (e.kbNext || 0)) {
+      const a = Math.atan2(e.y - p.y, e.x - p.x), push = KNOCKBACK / Math.max(1, e.r / 11);
+      e.kb = .09; e.kbx = Math.cos(a) * push; e.kby = Math.sin(a) * push; e.kbNext = this.time + KNOCK_COOLDOWN;
+    }
     if (this.settings.damageNumbers) this.fx.texts.add(e.x, e.y - e.r, crit ? Math.round(dealt) + '!' : String(Math.round(dealt)), crit ? '#ffd34d' : color, crit);
     Sound.play(crit ? 'crit' : 'hit');
     if (p.path === 'frost') e.slow = Math.max(e.slow, 1.5);
@@ -54,7 +60,7 @@ mixin(Game, {
     if (e.dead) return;
     e.dead = true;
     if (noLoot) return;
-    this.meta.stats.kills++;
+    this.meta.stats.kills++; this.runKills++;
     if (e.boss) this.meta.stats.bosses++;
     const drop = (dx, dy, type, value) => this.addDrop(e.x + dx, e.y + dy, type, value);
     if (e.boss) {
@@ -91,6 +97,11 @@ mixin(Game, {
       if (e.type === 'skeleton' && Math.random() < .12) drop(-8, 0, 'coins', this.dropValue('coins', 1));
     }
     this.burst(e.x, e.y, e.color, e.boss ? 24 : 8);
+    if (!e.boss && !e.mini) this.fx.corpse(e);
+    // Kill combo: chains of kills within 2.5s; the chain pays out XP when it breaks.
+    this.combo = (this.comboT > 0 ? this.combo || 0 : 0) + 1; this.comboT = COMBO_WINDOW;
+    if (this.combo % 50 === 0) { Sound.play('chest'); this.fx.shockwave(this.player.x, this.player.y, 90, .4, '#ffd36b'); }
+    this.meta.stats.bestCombo = Math.max(this.meta.stats.bestCombo || 0, this.combo);
     if (this.player.bargains.volatile && !e.boss) this.explode(e);
     // Contagion: a poisoned foe passes its poison to everything around it.
     if (e.poisonTime > 0 && this.player.evolved.venom === 'contagion') {
@@ -112,6 +123,7 @@ mixin(Game, {
     const p = this.player, b = p.bargains;
     let m = p.path === 'frost' && e.slow > 0 ? 1.25 : 1;
     if (e.shock > 0) m *= 1.3;
+    if (this.hearthBonus) m *= HEARTH.damage;
     if (b.berserker) m *= 1 + (1 - clamp(p.hp / p.maxHp, 0, 1)) * .8;
     if (b.closeQuarters) m *= dist2(p.x, p.y, e.x, e.y) < CLOSE_QUARTERS_RANGE * CLOSE_QUARTERS_RANGE ? 1.6 : .6;
     return m;
@@ -152,6 +164,7 @@ mixin(Game, {
     else if (d.type === 'gems') this.gemsCount += d.value;
     else this.coins += d.value;
     if (d.type === 'gems' || d.type === 'coins') this.runAutoBuy(d.type);
+    if (d.type === 'xp') this.tip('gems', 'TIP · GEMS GIVE XP · EACH LEVEL LETS YOU CHOOSE A NEW POWER');
     if (d.type === 'xp') { this.pickupCombo = this.time - (this.lastPickup || 0) < .4 ? (this.pickupCombo || 0) + 1 : 0; this.lastPickup = this.time; Sound.play('pickup', {combo: this.pickupCombo}); }
     else Sound.play(d.type === 'soul' ? 'soul' : 'coin');
     this.burst(d.x, d.y, DROP_COLORS[d.type], 5);
@@ -166,11 +179,30 @@ mixin(Game, {
 
   levelUp() { this.setPaused(true); Sound.play('levelup'); UI.showLevelUp(this); },
 
+  // A combo that lapses pays out XP that grows faster than the kill count.
+  endCombo() {
+    const n = this.combo || 0;
+    this.combo = 0;
+    if (n < COMBO_MIN) return;
+    const xp = Math.round(Math.pow(n, 1.2) * .25 * (1 + (this.stage - 1) * .35));
+    this.gainXP(xp * this.xpMultiplier);
+    this.fx.texts.add(this.player.x, this.player.y - 46, `COMBO ${n} · +${xp} XP`, '#ffd36b', true);
+  },
+
+  // The level-up burst: a golden ring that shoves nearby foes back for breathing room.
+  levelBurst() {
+    const p = this.player;
+    this.fx.shockwave(p.x, p.y, 150, .45, '#ffd36b');
+    this.burst(p.x, p.y, '#ffe39a', 24);
+    this.forEachEnemyNear(p.x, p.y, 150, e => { if (!e.boss && !e.mini) { const a = Math.atan2(e.y - p.y, e.x - p.x); e.kb = .2; e.kbx = Math.cos(a) * 420; e.kby = Math.sin(a) * 420; } });
+  },
+
   takeLevelChoice(o) {
     o.take();
     this.levelQueue = Math.max(0, this.levelQueue - 1);
     hide('levelOverlay');
     this.setPaused(false);
+    if (!this.levelQueue) this.levelBurst();
     if (this.levelQueue) this.levelUp();
     else if (this.stageComplete) { this.saveRun(true); this.showStageClear(); }
   },
@@ -179,7 +211,7 @@ mixin(Game, {
   // page closed) reopens it on load instead of losing it.
   openChest(x, y, tier) {
     Sound.play('chest');
-    this.pendingChest = {tier, x, y, picks: (this.earlySummon ? 2 : 1) + (this.perk('treasure') ? 1 : 0)};
+    this.pendingChest = {tier, x, y, picks: (this.earlySummon ? 2 : 1) + (this.perk('treasure') ? 1 : 0) + (this.route === 'elite' ? 1 : 0)};
     this.setPaused(true);
     UI.showChest(this);
   },
@@ -198,7 +230,7 @@ mixin(Game, {
     const t = $('toast'), s = this.toasts.shift();
     this.toastNow = s;
     if (!s) { t.classList.remove('on'); this.toastTimer = null; return; }
-    t.textContent = s;
+    t.textContent = tr(s);
     t.classList.add('on');
     this.toastTimer = setTimeout(() => this.nextToast(), this.toasts.length ? 1100 : 2000);
   },

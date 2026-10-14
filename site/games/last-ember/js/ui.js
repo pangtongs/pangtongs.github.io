@@ -3,7 +3,7 @@
 // state and wire buttons back to Game methods; they hold no state of their own.
 
 const OVERLAYS = ['startOverlay', 'originOverlay', 'levelOverlay', 'chestOverlay', 'pauseOverlay', 'marketOverlay', 'stageOverlay', 'gameOver', 'spellBookOverlay'];
-const show = id => $(id).classList.remove('hidden');
+const show = id => { $(id).classList.remove('hidden'); I18N.localize($(id)); };
 const hide = id => $(id).classList.add('hidden');
 const isOpen = id => !$(id).classList.contains('hidden');
 const hideAllOverlays = () => OVERLAYS.forEach(hide);
@@ -20,8 +20,12 @@ function choiceButton({icon, tone, label, name, desc}, onPick) {
 }
 
 const UI = {
-  renderSpellbook() {
-    $('spellBookSections').innerHTML = SPELLBOOK.map(section => `
+  renderSpellbook(g) {
+    const known = (g && g.meta.fusions) || {};
+    const fusions = {title: `FUSIONS · ${Object.keys(known).length}/${Object.keys(FUSIONS).length} DISCOVERED · RANK BOTH SPELLS TO ${FUSION_RANK}`,
+      cards: Object.entries(FUSIONS).map(([k, f]) => ({icon: f.icon, name: known[k] ? f.name : '???',
+        text: `${f.needs.map(s => SPELLS[s].name).join(' + ')}. ${known[k] ? f.desc : 'Not yet discovered.'}`}))};
+    $('spellBookSections').innerHTML = [...SPELLBOOK, fusions].map(section => `
       <section class="bookSection"><h2>${section.title}</h2><div class="spellGuide">
         ${section.cards.map(c => `<div class="spellGuideCard"><div class="spellArt icon icon-${c.icon}">${iconMarkup(c.icon)}</div><strong>${c.name}</strong><small>${c.text}</small></div>`).join('')}
       </div></section>`).join('');
@@ -56,6 +60,12 @@ const UI = {
     if (keepScroll || !sel) box.scrollTop = keepScroll;
     else requestAnimationFrame(() => { box.scrollTop += sel.getBoundingClientRect().top - box.getBoundingClientRect().top - 30; });
 
+    const d = dailySetup(), best = g.meta.daily && g.meta.daily.date === d.date ? g.meta.daily : null;
+    $('dailyCard').innerHTML = `<div><b>DAILY EMBER · ${d.date}</b><small>${ORIGINS[d.origin].name} · Heat ${DAILY_HEAT} · ${d.mutators.map(m => `<span title="${DAILY_MUTATORS[m].desc}">${DAILY_MUTATORS[m].name}</span>`).join(' · ')}</small>
+      <small class="dim">${d.mutators.map(m => DAILY_MUTATORS[m].desc).join(' ')}</small>
+      <small class="best">${best ? `Today's best: stage ${best.stage} in ${formatTime(best.time)} · ${best.kills} kills` : 'Not played today. Same seed for everyone, all day.'}</small></div><button id="dailyBtn" class="button">PLAY DAILY</button>`;
+    $('dailyBtn').onclick = () => g.startDaily();
+    requestAnimationFrame(() => I18N.localize($('startOverlay')));
     const hasSave = !!Store.loadRun();
     $('loadBtn').disabled = !hasSave;
     $('menuSaveInfo').textContent = hasSave
@@ -81,6 +91,7 @@ const UI = {
       b.setAttribute('aria-pressed', String(on));
     });
     $('qualitySetting').textContent = g.settings.quality.toUpperCase();
+    $('langSetting').textContent = g.settings.lang === 'id' ? 'BAHASA INDONESIA' : 'ENGLISH';
     const heat = g.settings.heat || 0, unlockedHeat = g.meta.heatUnlocked || 0;
     $('difficultySetting').textContent = heat ? `HEAT ${heat}` : 'HEAT 0';
     $('startHeat').classList.toggle('hidden', !unlockedHeat);
@@ -114,14 +125,18 @@ const UI = {
     $('endPerks').textContent = affordable.length;
     $('endNext').textContent = affordable.length ? 'Spend them in the Den of Magic before your next run.'
       : `Cheapest perk you can't afford yet: ${Math.min(...Object.keys(META_PERKS).filter(k => !g.perkLocked(k) && g.perkCost(k) !== null).map(k => g.perkCost(k)))} souls.`;
+    I18N.localize($('perkList')); I18N.localize($('gameOver'));
   },
 
   showOrigins(g) {
     const box = $('originChoices');
     box.innerHTML = '';
     for (const [key, o] of Object.entries(ORIGINS)) {
-      box.appendChild(choiceButton({icon: SPELLS[o.spell].icon, tone: `LEVEL 1 · ${o.name.toUpperCase()}`, name: o.title, desc: o.description},
-        () => g.pickOrigin(key)));
+      const locked = o.perk && !g.perk(o.perk);
+      const b = choiceButton({icon: SPELLS[o.spell].icon, tone: locked ? 'LOCKED' : `LEVEL 1 · ${o.name.toUpperCase()}`, name: o.title,
+        desc: locked ? `Unlock in the Den of Magic (clear stage ${META_PERKS[o.perk].stage}).` : o.description}, () => g.pickOrigin(key));
+      b.disabled = locked;
+      box.appendChild(b);
     }
     show('originOverlay');
   },
@@ -211,7 +226,9 @@ const UI = {
   spellOptions(g) {
     const p = g.player;
     const spells = Object.entries(SPELLS).filter(([key]) => p.skills[key] < SPELL_MAX_RANK).map(([key, s]) => ({
-      key, name: `${s.name} · ${p.skills[key] + 1}/${SPELL_MAX_RANK}`, icon: s.icon, tone: 'SPELL', desc: s.desc,
+      key, name: `${s.name} · ${p.skills[key] + 1}/${SPELL_MAX_RANK}`, icon: s.icon, tone: 'SPELL',
+      label: fusionCompletedBy(p, key) ? `SPELL · AWAKENS ${FUSIONS[fusionCompletedBy(p, key)].name.toUpperCase()}` : 'SPELL',
+      desc: s.desc,
       take: () => { p.skills[key]++; if (p.cool[key] !== undefined) p.cool[key] = 0; },
     }));
     const passives = shuffle(Object.entries(PASSIVES).filter(([key]) => p.passiveRanks[key] < 5 && !(key === 'aegisGrowth' && p.bargains.glassWick)).map(([key, s]) => ({
@@ -316,5 +333,6 @@ const UI = {
         b.innerHTML = `${cost} ${cur} · ${item.label}<small>${item.note} · bought ${rank} · next cost ×${item.growth}</small>`;
       }
     }
+    I18N.localize($('marketOverlay'));
   },
 };

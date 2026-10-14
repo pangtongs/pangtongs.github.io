@@ -3,7 +3,7 @@
 
 mixin(Game, {
   balance(currency) { return currency === 'gems' ? this.gemsCount : this.coins; },
-  marketCost(kind) { const item = MARKET[kind]; return Math.ceil(item.base * Math.pow(item.growth, this.marketRanks[kind])); },
+  marketCost(kind) { const item = MARKET[kind]; return Math.ceil(item.base * Math.pow(item.growth, this.marketRanks[kind]) * (this.route === 'merchant' ? .65 : 1)); },
 
   openMarket() {
     if (!this.running) return;

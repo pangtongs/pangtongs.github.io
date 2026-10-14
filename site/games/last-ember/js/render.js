@@ -3,6 +3,7 @@
 // the camera view, with no shadowBlur or per-frame gradients.
 
 const QUALITY_LEVELS = {high: 2, low: 1};
+const CB_DANGER = '#ffe600'; // colour-blind mode: one bright yellow for every danger
 const VIEW_MIN = 600, VIEW_MAX = 960; // world units across the screen's short side
 const ENEMY_ART_SCALE = 3.3; // painted enemy size as a multiple of its collision radius
 const PROJECTILE_GLOW = {arcane: '#6fb6ff', fire: '#ff8a2a', ice: '#8fe6ff', venom: '#66e08e', blade: '#d58cff'};
@@ -71,7 +72,7 @@ class Renderer {
 
   draw(g) {
     const c = this.ctx, p = g.player;
-    this.t = g.time; this.faceX = p.x;
+    this.t = g.time; this.faceX = p.x; this.cb = !!g.settings.colorblind; this.calm = !!g.settings.reducedMotion;
     const shake = g.shakeAmt || 0;
     this.camX = p.x + (shake ? rand(-shake, shake) : 0); this.camY = p.y + (shake ? rand(-shake, shake) : 0);
     const v = this.view;
@@ -91,6 +92,9 @@ class Renderer {
     this.drawShrines(g);
     for (const m of g.meteors) this.drawMeteor(m);
     for (const q of g.projectiles) if (this.visible(q.x, q.y, 40)) this.sprite(Sprites.projectile(q.kind), q.x, q.y, Math.atan2(q.vy, q.vx), q.scale || 1);
+    this.drawObstacles(g);
+    this.drawHearth(g);
+    this.drawCorpses(g);
     for (const e of g.enemies) if (!e.dead && this.visible(e.x, e.y, e.boss ? 200 : 60)) this.drawEnemy(e);
 
     this.worldTransform();
@@ -108,13 +112,18 @@ class Renderer {
     for (const e of g.enemies) if (!e.dead && e.tele && e.windup > 0 && this.visible(e.x, e.y, 400)) this.drawTelegraph(e);
     for (const q of g.enemyShots) if (this.visible(q.x, q.y, 30)) this.sprite(Sprites.enemyShot(q.kind), q.x, q.y, Math.atan2(q.vy, q.vx));
     this.worldTransform();
+    if (this.cb) { // colour-blind mode: every enemy shot gets a bright ring
+      c.strokeStyle = CB_DANGER; c.lineWidth = 2; c.beginPath();
+      for (const q of g.enemyShots) if (this.visible(q.x, q.y, 30)) { c.moveTo(q.x + q.r + 4, q.y); c.arc(q.x, q.y, q.r + 4, 0, TAU); }
+      c.stroke();
+    }
     if (g.settings.damageNumbers) g.fx.texts.draw(c, v, 1 / Math.min(1, this.zoom));
     this.drawPointers(g);
 
     if (g.time < 8 && g.running) {
       c.setTransform(this.px, 0, 0, this.px, 0, 0);
       c.textAlign = 'center'; c.fillStyle = '#b9d4e699'; c.font = '11px monospace';
-      c.fillText('MOVE · COLLECT GEMS · BUILD YOUR SPELLS', this.W / 2, this.H - 18);
+      c.fillText(tr('MOVE · COLLECT GEMS · BUILD YOUR SPELLS'), this.W / 2, this.H - 18);
     }
   }
 
@@ -231,8 +240,8 @@ class Renderer {
       if (sx < -sr || sy < -sr || sx > w + sr || sy > h + sr) return;
       lc.globalAlpha = a; lc.drawImage(L.spot, sx - sr, sy - sr, sr * 2, sr * 2);
     };
-    const flicker = 1 + Math.sin(g.time * 9) * .015 + Math.sin(g.time * 23) * .01;
-    light(p.x, p.y - 10, Math.max(this.W, this.H) * .52 * flicker);
+    const flicker = g.settings.reducedMotion ? 1 : 1 + Math.sin(g.time * 9) * .015 + Math.sin(g.time * 23) * .01;
+    light(p.x, p.y - 10, Math.max(this.W, this.H) * .52 * flicker * (g.darkness ?? 1));
     light(p.x, p.y - 10, 120, .6);
     let n = 0;
     for (const q of g.projectiles) if (n++ < 60) light(q.x, q.y, 70 * (q.scale || 1), .55);
@@ -242,6 +251,8 @@ class Renderer {
     for (const h of g.hazards) light(h.x, h.y, h.r * 1.5, .7);
     for (const ch of g.chests) light(ch.x, ch.y, 110 + Math.sin(ch.phase * 2) * 10, .9);
     for (const s of g.shrines) light(s.x, s.y, s.r * 2.2, .8);
+    if (g.hearth) { light(g.hearth.x, g.hearth.y, HEARTH.r * 2.3 * flicker); light(g.hearth.x, g.hearth.y, 60, .8); }
+    for (const z of g.zones) if (z.color) light(z.x, z.y, z.r * 1.8, .6);
     for (const d of g.discs) light(d.x, d.y, 80, .6);
     for (const e of g.enemies) if ((e.boss || e.mini || e.elite) && !e.dead) light(e.x, e.y, e.boss ? 180 : 110, .45);
     if (p.wardTime > 0) light(p.x, p.y, WARD_RADIUS * 2, .8);
@@ -286,6 +297,7 @@ class Renderer {
     }
     for (const ch of g.chests) targets.push([ch, '#7fe3ff', 1.1]);
     for (const s of g.shrines) targets.push([s, '#c77dff', 1]);
+    if (g.hearth) targets.push([g.hearth, '#ffb064', .9]);
     if (!targets.length) return;
     // Arrows keep clear of the HUD along the top edge.
     const W = this.W, H = this.H, m = 26, top = (innerWidth <= 700 ? 125 : 95) / this.zoom;
@@ -348,7 +360,7 @@ class Renderer {
     const c = this.ctx;
     for (const h of g.hazards) {
       if (!this.visible(h.x, h.y, h.r)) continue;
-      c.fillStyle = h.color; c.strokeStyle = h.color;
+      c.fillStyle = c.strokeStyle = this.cb ? CB_DANGER : h.color;
       if (!h.erupted) {
         const k = h.t / h.delay;
         c.globalAlpha = .1 + k * .15; c.beginPath(); c.arc(h.x, h.y, h.r, 0, TAU); c.fill();
@@ -383,9 +395,9 @@ class Renderer {
     for (const z of g.zones) {
       if (!this.visible(z.x, z.y, z.r)) continue;
       const k = Math.min(1, z.life / z.max * 2);
-      c.globalAlpha = .22 * k; c.fillStyle = '#5fd17a';
+      c.globalAlpha = .22 * k; c.fillStyle = z.color || '#5fd17a';
       c.beginPath(); c.arc(z.x, z.y, z.r, 0, TAU); c.fill();
-      c.globalAlpha = .35 * k; c.fillStyle = '#9af0a8';
+      c.globalAlpha = .35 * k; c.fillStyle = z.color ? '#ffd08a' : '#9af0a8';
       for (let i = 0; i < 5; i++) { const a = g.time * .7 + i * 1.26; c.beginPath(); c.arc(z.x + Math.cos(a) * z.r * .55, z.y + Math.sin(a * 1.3) * z.r * .45, z.r * .28, 0, TAU); c.fill(); }
     }
     c.globalAlpha = 1;
@@ -428,7 +440,7 @@ class Renderer {
   drawTelegraph(e) {
     const t = e.tele, c = this.ctx;
     if (!t || e.windup <= 0) return;
-    const k = 1 - e.windup / e.windupMax, color = e.boss || e.mini ? e.color : '#ff7a4d';
+    const k = 1 - e.windup / e.windupMax, color = this.cb ? CB_DANGER : e.boss || e.mini ? e.color : '#ff7a4d';
     this.worldTransform();
     c.fillStyle = color; c.strokeStyle = color;
     if (t.type === 'circle') {
@@ -476,9 +488,13 @@ class Renderer {
       const art = Sprites.enemyArt(e.type, flash), k = e.elite ? 1.25 : 1;
       if (art) {
         // Painted art: a soft shadow, a little walking bob, and facing toward the mage.
-        const size = e.r * ENEMY_ART_SCALE * k, bob = ENEMY_TYPES[e.type].speed ? Math.sin(this.t * 9 + e.id) * .05 : 0;
+        // Walk cycle: a waddle (sway about the feet) and a bob; knockback tilts the body.
+        const moving = ENEMY_TYPES[e.type].speed && !(e.frozen > 0) && !this.calm, ph = this.t * 9 + e.id * 1.7;
+        const size = e.r * ENEMY_ART_SCALE * k, bob = moving ? Math.abs(Math.sin(ph)) * .07 : 0;
+        const sway = (moving ? Math.sin(ph) * .09 : 0) + (e.kb > 0 ? Math.sign(e.kbx || 1) * .25 : 0);
         this.place(x, y);
         c.fillStyle = '#0007'; c.beginPath(); c.ellipse(0, e.r * .8, e.r * .95 * k, e.r * .32 * k, 0, 0, TAU); c.fill();
+        c.translate(0, e.r * .8); c.rotate(sway); c.translate(0, -e.r * .8);
         c.scale(this.faceX > x ? -1 : 1, 1 + bob);
         c.drawImage(art.img, -size / 2, -size * .62, size, size);
         this.place(x, y);
@@ -512,6 +528,49 @@ class Renderer {
     c.fillStyle = '#ff698d'; c.fillRect(-w / 2, -54, w * Math.max(0, e.hp) / e.maxHp, 5);
     c.font = 'bold 10px sans-serif'; c.textAlign = 'center'; c.fillStyle = '#fff';
     c.fillText(e.mini ? `${e.name} · Lv ${e.level}` : `Lv ${e.level}`, 0, -59);
+  }
+
+  // The Hearth: its pool of light, a brazier, and its health while foes attack it.
+  drawHearth(g) {
+    const h = g.hearth, c = this.ctx;
+    if (!h || !this.visible(h.x, h.y, HEARTH.r)) return;
+    const k = Math.min(h.t, HEARTH.maxCharge) / HEARTH.maxCharge;
+    c.globalAlpha = .1 + .04 * Math.sin(g.time * 5); c.fillStyle = '#ff9a3c';
+    c.beginPath(); c.arc(h.x, h.y, HEARTH.r, 0, TAU); c.fill();
+    c.globalAlpha = .55; c.strokeStyle = '#ffb064'; c.lineWidth = 2; c.setLineDash([10, 8]); c.lineDashOffset = -g.time * 20;
+    c.stroke(); c.setLineDash([]);
+    // Charge arc: how strong the recall nova has grown.
+    c.globalAlpha = .9; c.strokeStyle = k >= 1 ? '#fff1a8' : '#ff8a3d'; c.lineWidth = 4;
+    c.beginPath(); c.arc(h.x, h.y, HEARTH.r + 6, -Math.PI / 2, -Math.PI / 2 + TAU * k); c.stroke();
+    c.globalAlpha = 1;
+    this.sprite(Sprites.hearth(), h.x, h.y, 0, 1 + .04 * Math.sin(g.time * 9));
+    this.worldTransform();
+    if (h.hp < h.maxHp) {
+      c.fillStyle = '#111a25'; c.fillRect(h.x - 20, h.y - 34, 40, 4);
+      c.fillStyle = '#ffb064'; c.fillRect(h.x - 20, h.y - 34, 40 * Math.max(0, h.hp) / h.maxHp, 4);
+    }
+  }
+
+  drawObstacles(g) {
+    const scene = stageInfo(g.stage);
+    for (const o of g.obstacles) if (this.visible(o.x, o.y, o.r * 2)) this.sprite(obstacleSprite(o.kind, o.r, o.v, scene), o.x, o.y);
+    this.worldTransform();
+  }
+
+  // Dying foes flash white, swell and flatten as they fade.
+  drawCorpses(g) {
+    const c = this.ctx;
+    for (const d of g.fx.corpses) {
+      if (!this.visible(d.x, d.y, 40)) continue;
+      const k = clamp(d.life / d.max, 0, 1), art = Sprites.enemyArt(d.type, k > .7);
+      this.place(d.x, d.y);
+      c.globalAlpha = k;
+      c.scale(1 + (1 - k) * .45, .25 + k * .75);
+      if (art) { const size = d.r * ENEMY_ART_SCALE; c.drawImage(art.img, -size / 2, -size * .62, size, size); }
+      else { c.fillStyle = k > .7 ? '#fff' : d.color; c.beginPath(); c.arc(0, 0, d.r, 0, TAU); c.fill(); }
+    }
+    c.globalAlpha = 1;
+    this.worldTransform();
   }
 
   drawArcs(g) {

@@ -91,8 +91,14 @@ class Effects {
     this.arcs = [];
     this.beams = [];
     this.swings = [];
+    this.corpses = []; // dying regular foes: a short squash-and-fade
+  }
+  corpse(e) {
+    if (this.corpses.length >= 70) this.corpses.shift();
+    this.corpses.push({type: e.type, x: e.x, y: e.y, r: e.r * (e.elite ? 1.25 : 1), color: e.color, life: .28, max: .28, face: e.face || 1});
   }
   clear() {
+    this.corpses.length = 0;
     this.particles.clear(); this.texts.clear();
     this.shockwaves.length = 0; this.arcs.length = 0; this.beams.length = 0; this.swings.length = 0;
   }
@@ -105,7 +111,7 @@ class Effects {
   update(dt) {
     this.particles.update(dt);
     this.texts.update(dt);
-    for (const list of [this.shockwaves, this.arcs, this.beams, this.swings]) {
+    for (const list of [this.shockwaves, this.arcs, this.beams, this.swings, this.corpses]) {
       for (const s of list) s.life -= dt;
       compact(list, s => s.life > 0);
     }

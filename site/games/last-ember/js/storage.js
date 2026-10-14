@@ -27,7 +27,8 @@ const Store = {
     return meta;
   },
   loadSettings() {
-    return {damageNumbers: true, particles: true, showFps: false, sound: true, music: true, screenShake: true, quality: 'auto', ...this.read('settings', {})};
+    return {damageNumbers: true, particles: true, showFps: false, sound: true, music: true, screenShake: true, quality: 'auto', lang: (navigator.language || '').toLowerCase().startsWith('id') ? 'id' : 'en',
+      colorblind: false, reducedMotion: false, ...this.read('settings', {})};
   },
   loadRun() {
     const run = this.read('run', null);

@@ -6,7 +6,7 @@ class Hud {
   constructor() {
     this.el = {};
     for (const id of ['hpText', 'hpBar', 'shieldText', 'shieldBar', 'xpText', 'xpBar', 'souls', 'gems', 'coins', 'finishBtn',
-      'stageGoal', 'wave', 'timer', 'spellTray', 'autoBuyInfo', 'bossUI', 'bossBar', 'bossName', 'bossPortrait', 'perf', 'pauseBtn', 'callBossBtn', 'dashFill']) this.el[id] = $(id);
+      'stageGoal', 'wave', 'timer', 'spellTray', 'autoBuyInfo', 'bossUI', 'bossBar', 'bossName', 'bossPortrait', 'perf', 'pauseBtn', 'callBossBtn', 'dashFill', 'combo', 'comboCount', 'comboBar', 'hearthFill', 'touchHearth']) this.el[id] = $(id);
     this.cache = new Map();
     this.nextAt = 0;
     this.fps = {frames: 0, since: performance.now(), text: ''};
@@ -15,7 +15,7 @@ class Hud {
   text(id, value) {
     if (this.cache.get(id) === value) return;
     this.cache.set(id, value);
-    this.el[id].textContent = value;
+    this.el[id].textContent = tr(value);
   }
   bar(id, ratio) {
     const v = Math.round(clamp(ratio, 0, 1) * 200) / 200;
@@ -57,9 +57,20 @@ class Hud {
       : g.eventStatus || `Boss in ${Math.max(0, Math.ceil(g.bossCD))}s · mini bosses slain ${g.minisDefeated} (−20s each)`);
     this.text('wave', `${g.stage > STAGE_COUNT ? `ENDLESS ${g.stage - STAGE_COUNT}` : `STAGE ${g.stage}/${STAGE_COUNT}`} · ${stageInfo(g.stage).name.toUpperCase()} · LV ${p.level}${g.heat ? ` · HEAT ${g.heat}` : ''}`);
     const dash = p.dashCD / g.dashCooldown;
+    const hearthK = g.hearth ? 0 : clamp(g.hearthCD / HEARTH.snuffedCD, 0, 1).toFixed(2);
+    if (this.cache.get('hearthK') !== hearthK) { this.cache.set('hearthK', hearthK); this.el.hearthFill.style.transform = `scaleY(${hearthK})`; }
+    const hs = g.hearth ? 'RECALL' : 'HEARTH';
+    if (this.cache.get('hearthLabel') !== hs) { this.cache.set('hearthLabel', hs); this.el.touchHearth.querySelector('span').textContent = hs; this.el.touchHearth.classList.toggle('lit', !!g.hearth); }
     const dashKey = dash.toFixed(2);
     if (this.cache.get('dash') !== dashKey) { this.cache.set('dash', dashKey); this.el.dashFill.style.transform = `scaleY(${dashKey})`; }
     this.text('timer', formatTime(g.time));
+    const combo = g.comboT > 0 && g.combo >= 5;
+    this.toggle('combo', 'hidden', !combo);
+    if (combo) {
+      if (this.cache.get('comboCount') !== String(g.combo)) { this.el.combo.classList.remove('pop'); void this.el.combo.offsetWidth; this.el.combo.classList.add('pop'); }
+      this.text('comboCount', String(g.combo));
+      this.el.comboBar.style.transform = `scaleX(${(g.comboT / COMBO_WINDOW).toFixed(2)})`;
+    }
     this.updateBoss(g);
     this.updateTray(p);
   }
@@ -79,6 +90,7 @@ class Hud {
     const chips = [spell('bolt')];
     for (const key of Object.keys(SPELLS)) if (key !== 'bolt' && p.skills[key]) chips.push(spell(key));
     for (const key of Object.keys(PASSIVES)) if (p.passiveRanks[key]) chips.push(key);
+    for (const k of activeFusions(p)) chips.push('fusion:' + FUSIONS[k].icon);
     if (p.path) chips.push(PATHS[p.path].icon);
     if (p.ultimate) chips.push(ULTIMATES[p.ultimate].icon);
     for (const key of Object.keys(BARGAINS)) if (p.bargains[key]) chips.push('bargain:' + BARGAINS[key].icon);
@@ -87,7 +99,7 @@ class Hud {
     this.cache.set('tray', sig);
     this.el.spellTray.innerHTML = chips.map(chip => {
       const [kind, icon] = chip.includes(':') ? chip.split(':') : ['', chip];
-      const cls = kind === 'bargain' ? ' bargain' : kind === 'evo' ? ' evolved' : '';
+      const cls = kind === 'bargain' ? ' bargain' : kind === 'evo' ? ' evolved' : kind === 'fusion' ? ' fusion' : '';
       return `<div class="spellChip${cls}"><i class="icon icon-${icon}">${iconMarkup(icon)}</i></div>`;
     }).join('');
   }

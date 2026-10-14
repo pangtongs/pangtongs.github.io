@@ -13,6 +13,7 @@ class Game {
     this.renderer = new Renderer($('game'));
     this.renderer.setQuality(this.settings.quality);
     Sound.init(this.settings);
+    I18N.lang = LANGS[this.settings.lang] ? this.settings.lang : 'en';
     this.shakeAmt = 0; this.hitStop = 0;
     this.hud = new Hud();
     this.grid = new SpatialGrid();
@@ -29,16 +30,18 @@ class Game {
     UI.renderSpellbook();
     UI.buildMarket(this);
     UI.renderMenu(this);
+    I18N.set(I18N.lang);
+    document.body.classList.toggle('reducedMotion', !!this.settings.reducedMotion);
   }
 
   get wallet() { return this.meta.souls || 0; }
   set wallet(v) { this.meta.souls = v; }
   get viewW() { return this.renderer.W; }
   get viewH() { return this.renderer.H; }
-  get xpMultiplier() { return this.player.bargains.hunted ? 1.5 : 1; }
+  get xpMultiplier() { return (this.player.bargains.hunted ? 1.5 : 1) * (this.route === 'swarm' ? 1.4 : 1) * (this.mut('swarm') ? 1.4 : 1) * (this.mut('giants') ? 1.3 : 1); }
   get heatDef() { return heatDef(this.heat || 0); }
-  get soulMult() { return this.heatDef.souls * (1 + .1 * this.perk('souls')); }
-  get dashCooldown() { return DASH.cooldown / (1 + .08 * this.player.passiveRanks.fleet) / (1 + .15 * this.perk('dash')); }
+  get soulMult() { return this.heatDef.souls * (1 + .1 * this.perk('souls')) * (this.route === 'elite' ? 1.5 : 1); }
+  get dashCooldown() { return DASH.cooldown / (1 + .08 * this.player.passiveRanks.fleet) / (1 + .15 * this.perk('dash')) * (this.player.origin === 'hexblade' ? .7 : 1); }
 
   reset() {
     const p = this.player = new Player();
@@ -55,8 +58,10 @@ class Game {
     this.marketRanks = Object.fromEntries(Object.keys(MARKET).map(k => [k, 0]));
     this.autoBuy = {gems: null, coins: null}; // market item bought automatically per currency
     this.enemies = []; this.drops = []; this.projectiles = []; this.enemyShots = []; this.chests = []; this.meteors = []; this.hazards = []; this.zones = []; this.timers = []; this.discs = []; this.allies = []; this.shrines = [];
-    this.surgeT = 0; this.eventIndex = 0; this.lastEvent = null;
+    this.surgeT = 0; this.eventIndex = 0; this.lastEvent = null; this.combo = 0; this.comboT = 0;
     this.nearby = [];
+    this.obstacles = []; this.obstaclesFor = 0;
+    this.hearth = null; this.hearthCD = 0; this.route = 'road'; this.daily = null; this.runKills = 0;
     this.fx.clear();
     this.spawnCD = 0; this.bossCD = stageInfo(1).seconds;
     this.miniCD = 55 * this.heatDef.miniCD; this.miniCount = 0; this.minisDefeated = 0; this.miniGoal = 3;
@@ -72,6 +77,7 @@ class Game {
       if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' ', 'escape'].includes(k)) e.preventDefault();
       if ((k === ' ' || k === 'shift') && !e.repeat) this.requestDash();
       if (k === 'r' && !e.repeat) this.reroll();
+      if (k === 'e' && !e.repeat) this.useHearth();
       // Number keys pick the matching card on any open choice screen.
       if (/^[1-9]$/.test(e.key) && !e.repeat) {
         const box = ['levelOverlay', 'chestOverlay', 'originOverlay'].filter(isOpen).map(id => $(id).querySelector('.choices'))[0];
@@ -110,6 +116,11 @@ class Game {
         this.saveSettings();
       };
     });
+    on('langSetting', () => {
+      this.settings.lang = this.settings.lang === 'id' ? 'en' : 'id';
+      I18N.set(this.settings.lang);
+      this.saveSettings();
+    });
     on('qualitySetting', () => {
       const levels = ['auto', 'high', 'low'];
       this.settings.quality = levels[(levels.indexOf(this.settings.quality) + 1) % levels.length];
@@ -129,6 +140,7 @@ class Game {
     on('touchPause', () => this.togglePause());
     on('touchMarket', () => this.openMarket());
     $('touchDash').addEventListener('pointerdown', e => { e.preventDefault(); this.requestDash(); });
+    $('touchHearth').addEventListener('pointerdown', e => { e.preventDefault(); this.useHearth(); });
     on('resumeBtn', () => this.togglePause());
     on('saveBtn', () => this.saveRun());
     on('menuBtn', () => { this.saveRun(true); this.showMenu(); });
@@ -208,10 +220,12 @@ class Game {
   // One fixed simulation step.
   step(dt) {
     const p = this.player;
+    if (this.obstaclesFor !== this.stage) { this.obstacles = makeObstacles(this.stage); this.obstaclesFor = this.stage; }
     this.time += dt; this.stageTime += dt; this.growthClock += dt; this.meta.stats.playTime += dt;
     this.spawnCD -= dt; this.bossCD -= dt; this.miniCD -= dt;
     p.invuln = Math.max(0, p.invuln - dt);
     this.hurtFlash = Math.max(0, (this.hurtFlash || 0) - dt);
+    if (this.comboT > 0 && (this.comboT -= dt) <= 0) this.endCombo();
     p.slowTime = Math.max(0, p.slowTime - dt);
     p.lifeHealWindow += dt;
     if (p.lifeHealWindow >= 1) { p.lifeHealWindow %= 1; p.lifeHealUsed = 0; }
@@ -222,11 +236,16 @@ class Game {
     else if (p.shield < p.shieldCap) p.shield = Math.min(p.shieldCap, p.shield + regen * dt);
 
     this.stepEvents(dt);
+    this.stepHearth(dt);
+    if (this.stageTime > .5) this.tip('move', matchMedia('(pointer:coarse)').matches
+      ? 'TIP · DRAG ON THE LEFT TO MOVE · YOUR SPELLS CAST THEMSELVES' : 'TIP · MOVE WITH WASD · YOUR SPELLS CAST THEMSELVES');
+    if (this.stageTime > 20) this.tip('hearth', matchMedia('(pointer:coarse)').matches
+      ? 'TIP · TAP HEARTH TO PLANT YOUR EMBER: MORE DAMAGE AND HEALING INSIDE ITS LIGHT' : 'TIP · PRESS E TO PLANT YOUR HEARTH: MORE DAMAGE AND HEALING INSIDE ITS LIGHT');
     if (this.stageTime > 6) this.tip('dash', matchMedia('(pointer:coarse)').matches
       ? 'TIP · TAP DASH TO DART THROUGH FOES AND ATTACKS UNHARMED' : 'TIP · SPACE OR SHIFT DASHES THROUGH FOES AND ATTACKS UNHARMED');
     if (this.spawnCD <= 0 && !this.stageClearPending) {
       this.spawn();
-      this.spawnCD = Math.max(.14, (.78 - this.stageTime * .003 - this.stage * .055) / (1 + (this.stage - 1) * .16)) / this.heatDef.spawns / (p.bargains.hunted ? 1.3 : 1) / (this.surgeT > 0 ? 2.2 : 1);
+      this.spawnCD = Math.max(.14, (.78 - this.stageTime * .003 - this.stage * .055) / (1 + (this.stage - 1) * .16)) / this.heatDef.spawns / (p.bargains.hunted ? 1.3 : 1) / (this.surgeT > 0 ? 2.2 : 1) / (this.route === 'swarm' ? 1.4 : 1) / (this.mut('swarm') ? 1.4 : 1);
     }
     if (this.miniCD <= 0 && this.miniCount < this.miniGoal && !this.boss && !this.stageClearPending) this.spawnMiniBoss();
     if (this.bossCD <= 0 && !this.boss && !this.stageClearPending) { this.spawnBoss(); this.bossCD = 9999; }
@@ -240,6 +259,14 @@ class Game {
       if (!e.dead) e.update(dt, this);
       if (!this.running) return;
     }
+    // Obstacles: foes slide around them, and a charging foe that hits one stops dead.
+    for (const e of this.enemies) {
+      if (e.dead || !pushOutOfObstacles(this.obstacles, e, e.r * .8) || !(e.dashT > 0)) continue;
+      e.dashT = 0; e.dvx = e.dvy = 0;
+      this.burst(e.x, e.y, '#d8cbb8', 10); this.shake(3);
+    }
+    this.stepBossSignature(dt);
+    if (this.obstacles.some(o => o.life)) compact(this.obstacles, o => !o.life || (o.life -= dt) > 0); // thorn cages wither
     this.grid.rebuild(this.enemies);
     this.separateCrowd();
     this.findNearby();
@@ -296,7 +323,12 @@ class Game {
       p.dashT -= dt;
       p.x = clamp(p.x + p.dashX * DASH.speed * dt, -ARENA_X, ARENA_X);
       p.y = clamp(p.y + p.dashY * DASH.speed * dt, -ARENA_Y, ARENA_Y);
+      pushOutOfObstacles(this.obstacles, p, p.r);
       if (this.settings.particles) this.fx.particles.burst(p.x, p.y + 4, '#ffb064', 2);
+      if (p.origin === 'hexblade') { // the Hexblade's dash cuts every foe it passes once
+        const cut = this.dashCut || (this.dashCut = new Set());
+        this.forEachEnemyNear(p.x, p.y, 34, e => { if (cut.has(e.id)) return; cut.add(e.id); this.hit(e, 30 + p.level * 6, '#ff9a4c'); });
+      }
       return;
     }
     if (m) {
@@ -306,6 +338,7 @@ class Game {
     }
     p.x = clamp(p.x, -ARENA_X, ARENA_X);
     p.y = clamp(p.y, -ARENA_Y, ARENA_Y);
+    pushOutOfObstacles(this.obstacles, p, p.r);
   }
 
   // Second Thoughts: redraw the current level-up cards.
@@ -328,7 +361,7 @@ class Game {
   startDash(dx, dy) {
     const p = this.player;
     if (!dx && !dy) { const f = [[0, 1], [-1, 0], [1, 0], [0, -1]][p.facing] || [0, 1]; dx = f[0]; dy = f[1]; }
-    p.dashX = dx; p.dashY = dy; p.dashT = DASH.time;
+    p.dashX = dx; p.dashY = dy; p.dashT = DASH.time; this.dashCut = null;
     p.dashCD = this.dashCooldown;
     p.invuln = Math.max(p.invuln, DASH.time + .1);
     Sound.play('dash');
@@ -336,8 +369,8 @@ class Game {
   requestDash() { if (this.running && !this.paused) this.dashQueued = true; }
 
   // Juice: camera shake (pixels, decays quickly) and a short freeze-frame.
-  shake(amount) { if (this.settings.screenShake !== false) this.shakeAmt = Math.max(this.shakeAmt, amount); }
-  freeze(seconds) { this.hitStop = Math.max(this.hitStop, seconds); }
+  shake(amount) { if (this.settings.screenShake !== false && !this.settings.reducedMotion) this.shakeAmt = Math.max(this.shakeAmt, amount); }
+  freeze(seconds) { if (!this.settings.reducedMotion) this.hitStop = Math.max(this.hitStop, seconds); }
 
   // Keeps the horde from collapsing into one stacked blob. Overlap up to 25% is allowed so
   // crowds stay dense; heavier bodies (bosses) shove lighter ones.
@@ -428,7 +461,8 @@ class Game {
     const e = new Enemy(this, 'boss', clamp(p.x + rand(-this.viewW * .35, this.viewW * .35), -ARENA_X + 65, ARENA_X - 65), clamp(p.y - this.viewH / 2 - 48, -ARENA_Y + 65, ARENA_Y - 65));
     this.enemies.push(e);
     this.boss = e;
-    Sound.play('boss'); this.shake(6);
-    this.toast(`${e.name.toUpperCase()} APPROACHES!`);
+    Sound.play('boss'); this.shake(8); this.freeze(.25);
+    this.bossCard(e);
+    this.tip('boss', 'TIP · COLOURED ZONES ARE ATTACKS · DASH OUT OF THEM');
   }
 }

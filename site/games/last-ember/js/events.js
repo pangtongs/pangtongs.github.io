@@ -20,6 +20,7 @@ class Shrine {
   constructor(x, y) { this.x = clamp(x, -ARENA_X + 80, ARENA_X - 80); this.y = clamp(y, -ARENA_Y + 80, ARENA_Y - 80); this.r = 60; this.charge = 0; this.life = 40; }
   update(dt, g) {
     this.life -= dt;
+    pushOutOfObstacles(g.obstacles, this, 34);
     if (dist(this, g.player) < this.r) this.charge += dt;
     if (this.charge >= 2.5) { g.startSurge(this); return false; }
     return this.life > 0;
@@ -34,7 +35,7 @@ mixin(Game, {
     if (at === undefined || this.stageTime < at) return;
     this.eventIndex++;
     if (this.boss || this.stageClearPending || this.bossCD < 30) return;
-    const kinds = EVENT_KINDS.filter(k => k !== this.lastEvent);
+    const kinds = this.route === 'shrine' ? ['shrine'] : EVENT_KINDS.filter(k => k !== this.lastEvent);
     this.startEvent(kinds[Math.floor(Math.random() * kinds.length)]);
   },
 
@@ -70,6 +71,7 @@ mixin(Game, {
   endSurge() {
     const boon = SHRINE_BOONS[Math.floor(Math.random() * SHRINE_BOONS.length)];
     boon.take(this);
+    if (this.route === 'shrine') boon.take(this);
     Sound.play('chest');
     this.toast(`SURGE SURVIVED · ${boon.text}`);
   },

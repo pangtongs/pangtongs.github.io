@@ -12,7 +12,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="apple-touch-icon" href="assets/icon-192.png">
-<link rel="stylesheet" href="css/game.css?v=20261014152745">
+<link rel="stylesheet" href="css/game.css?v=20261014173005">
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -50,10 +50,13 @@
 </div>
 <div id="bossUI" class="bossbar hidden"><img id="bossPortrait" class="bossPortrait" src="assets/boss-0.webp" alt=""><span id="bossName">GRAVE WARDEN</span><div class="bar"><div id="bossBar" class="fill hp"></div></div></div>
 <div id="toast" class="toast"></div>
+<div id="combo" class="combo hidden"><b id="comboCount">0</b><span>COMBO</span><i><i id="comboBar"></i></i></div>
+<div id="bossCard" class="bossCard hidden"><small id="bossCardAct"></small><strong id="bossCardName"></strong><span id="bossCardLine"></span></div>
 <div id="spellTray" class="spellTray"></div>
 <div class="touchActions">
   <button id="touchPause" class="touchBtn small" aria-label="Pause">Ⅱ</button>
   <button id="touchMarket" class="touchBtn small" aria-label="Market"><i class="icon icon-coin"></i></button>
+  <button id="touchHearth" class="touchBtn hearthBtn" aria-label="Hearth"><span>HEARTH</span><i id="hearthFill" class="dashFill"></i></button>
   <button id="touchDash" class="touchBtn dash" aria-label="Dash"><span>DASH</span><i id="dashFill" class="dashFill"></i></button>
 </div>
 <div id="stickZone" class="stickZone"></div>
@@ -70,6 +73,7 @@
         <button class="button" data-menu="start">START</button>
         <button class="button" data-menu="upgrades">UPGRADES</button>
         <button class="button" data-menu="stats">STATS</button>
+        <button class="button" data-menu="help">HOW TO PLAY</button>
         <button class="button" data-open-spellbook>VIEW SPELLS</button>
         <button class="button" data-menu="settings">SETTINGS</button>
       </nav>
@@ -77,6 +81,7 @@
     </div>
   </section>
   <section id="menuStart" class="menuPanel hidden">
+    <div id="dailyCard" class="dailyCard"></div>
     <h2>CHOOSE A STAGE</h2>
     <p>Defeat the final boss to unlock the next stage. Every stage selection starts a fresh run.</p>
     <div id="stageSelect" class="stageSelect"></div>
@@ -92,6 +97,18 @@
     <div id="perkList" class="perkList"></div>
     <button class="button secondary menuBack" data-menu="home">BACK</button>
   </section>
+  <section id="menuHelp" class="menuPanel hidden">
+    <h2>HOW TO PLAY</h2>
+    <div class="helpGrid">
+      <div><b>MOVE AND SURVIVE</b><p>Move with WASD or the arrow keys, or drag a thumb on the left of the screen. Your spells cast themselves. Collect gems for XP.</p></div>
+      <div><b>DASH</b><p>Space, Shift or the DASH button darts you through foes and attacks without taking damage. Red and yellow zones are attacks: dash out of them.</p></div>
+      <div><b>THE HEARTH</b><p>Press E or HEARTH to plant your ember. Inside its light you deal 30% more damage and heal. Foes attack it; press again to recall it with a fire nova that grows the longer it burned.</p></div>
+      <div><b>BUILD YOUR MAGIC</b><p>Level ups offer spells, passives and bargains. Spells rank up to 5, then evolve. Rank two related spells to 4 to awaken a fusion. Your Path comes at level 5 and your Ultimate at level 12.</p></div>
+      <div><b>STAGES</b><p>Each mini boss slain brings the final boss 20 seconds closer. Bosses gain a signature attack at half HP. Their chest grants an artifact, then you choose a road to the next stage.</p></div>
+      <div><b>BETWEEN RUNS</b><p>Souls buy perks and new characters in the Den of Magic. Raise Heat for more souls, and play the Daily Ember: one seeded run per day.</p></div>
+    </div>
+    <button class="button secondary menuBack" data-menu="home">BACK</button>
+  </section>
   <section id="menuStats" class="menuPanel hidden">
     <h2>STATS</h2>
     <div id="menuStatsGrid" class="menuStats"></div>
@@ -104,11 +121,14 @@
     <div class="menuSetting"><span>Sound effects</span><button class="button secondary" data-setting="sound">ON</button></div>
     <div class="menuSetting"><span>Music</span><button class="button secondary" data-setting="music">ON</button></div>
     <div class="menuSetting"><span>Screen shake</span><button class="button secondary" data-setting="screenShake">ON</button></div>
+    <div class="menuSetting"><span>Language · Bahasa</span><button id="langSetting" class="button secondary">ENGLISH</button></div>
+    <div class="menuSetting"><span>Colour-blind friendly danger colours</span><button class="button secondary" data-setting="colorblind">OFF</button></div>
+    <div class="menuSetting"><span>Reduced motion</span><button class="button secondary" data-setting="reducedMotion">OFF</button></div>
     <div class="menuSetting"><span>Show FPS counter</span><button class="button secondary" data-setting="showFps">OFF</button></div>
     <div class="menuSetting"><span>Render quality</span><button id="qualitySetting" class="button secondary">AUTO</button></div>
     <div class="menuSetting"><span>Heat for new runs</span><button id="difficultySetting" class="button secondary">HEAT 0</button></div>
     <div id="difficultyLegend" class="difficultyLegend"></div>
-    <p>Move with WASD, arrow keys, or by dragging a thumb anywhere on the left of the screen. Space or Shift dashes through enemies and attacks. R rerolls level-up cards when you own Second Thoughts. Spells cast automatically. Press P or Escape to pause.</p>
+    <p>Move with WASD, arrow keys, or by dragging a thumb anywhere on the left of the screen. Space or Shift dashes through enemies and attacks. E plants your Hearth (more damage and healing inside it) and recalls it with a fire nova. R rerolls level-up cards when you own Second Thoughts. Spells cast automatically. Press P or Escape to pause.</p>
     <button class="button secondary menuBack" data-menu="home">BACK</button>
   </section>
 </div></div>
@@ -156,8 +176,9 @@
 <div id="stageOverlay" class="overlay hidden"><div class="modal">
   <img id="stagePortrait" class="stageArt" src="assets/boss-0.webp" alt="Defeated boss">
   <h1 id="stageTitle">STAGE CLEAR</h1><p id="stageSummary"></p>
-  <p>Remaining drops were collected. Carry your build straight into the next stage, or save it and return to the menu.</p>
-  <button class="button" id="continueStage">CONTINUE</button>
+  <p>Choose your road to the next stage, or save the run and return to the menu.</p>
+  <div id="routeChoices" class="choices routes"></div>
+  <button class="button hidden" id="continueStage">CONTINUE</button>
   <button class="button secondary" id="nextStage">SAVE &amp; RETURN TO MENU</button>
 </div></div>
 
@@ -183,23 +204,30 @@
 
 <!-- Classic scripts share one global scope, so the game runs from file:// with no build step. Order matters.
      ?v= is stamped by tools/stamp-version.sh so updates never mix cached old files with new ones. -->
-<script src="js/util.js?v=20261014152745"></script>
-<script src="js/config.js?v=20261014152745"></script>
-<script src="js/audio.js?v=20261014152745"></script>
-<script src="js/assets.js?v=20261014152745"></script>
-<script src="js/grid.js?v=20261014152745"></script>
-<script src="js/effects.js?v=20261014152745"></script>
-<script src="js/entities.js?v=20261014152745"></script>
-<script src="js/spells.js?v=20261014152745"></script>
-<script src="js/render.js?v=20261014152745"></script>
-<script src="js/hud.js?v=20261014152745"></script>
-<script src="js/storage.js?v=20261014152745"></script>
-<script src="js/ui.js?v=20261014152745"></script>
-<script src="js/game.js?v=20261014152745"></script>
-<script src="js/combat.js?v=20261014152745"></script>
-<script src="js/economy.js?v=20261014152745"></script>
-<script src="js/flow.js?v=20261014152745"></script>
-<script src="js/events.js?v=20261014152745"></script>
-<script src="js/main.js?v=20261014152745"></script>
+<script src="js/i18n.js?v=1"></script>
+<script src="js/lang-id.js?v=1"></script>
+<script src="js/util.js?v=20261014173005"></script>
+<script src="js/config.js?v=20261014173005"></script>
+<script src="js/audio.js?v=20261014173005"></script>
+<script src="js/assets.js?v=20261014173005"></script>
+<script src="js/grid.js?v=20261014173005"></script>
+<script src="js/effects.js?v=20261014173005"></script>
+<script src="js/entities.js?v=20261014173005"></script>
+<script src="js/fusions.js?v=20261014173005"></script>
+<script src="js/spells.js?v=20261014173005"></script>
+<script src="js/arena.js?v=20261014173005"></script>
+<script src="js/render.js?v=20261014173005"></script>
+<script src="js/hud.js?v=20261014173005"></script>
+<script src="js/storage.js?v=20261014173005"></script>
+<script src="js/ui.js?v=20261014173005"></script>
+<script src="js/game.js?v=20261014173005"></script>
+<script src="js/combat.js?v=20261014173005"></script>
+<script src="js/economy.js?v=20261014173005"></script>
+<script src="js/flow.js?v=20261014173005"></script>
+<script src="js/events.js?v=20261014173005"></script>
+<script src="js/hearth.js?v=20261014173005"></script>
+<script src="js/bosses.js?v=20261014173005"></script>
+<script src="js/daily.js?v=20261014173005"></script>
+<script src="js/main.js?v=20261014173005"></script>
 </body>
 </html>

@@ -106,6 +106,7 @@ function castSpells(g, dt) {
     }
   }
   castNewSpells(g, dt, target, near);
+  castFusions(g, dt);
   if (p.ultimate && cd.ult <= 0) castUltimate(g, p, target, near);
 }
 
@@ -160,10 +161,11 @@ function castNewSpells(g, dt, target, near) {
   }
 
   // Wolves are kept in sync with the spell rank every step; they are not saved.
-  const want = !s.wolves ? 0 : ev.wolves === 'alpha' ? 1 : Math.min(3, 1 + Math.floor(s.wolves / 2)) + (ev.wolves === 'pack' ? 2 : 0);
+  const warden = p.origin === 'warden';
+  const want = !s.wolves ? 0 : (ev.wolves === 'alpha' ? 1 : Math.min(3, 1 + Math.floor(s.wolves / 2)) + (ev.wolves === 'pack' ? 2 : 0)) + (warden ? 1 : 0);
   while (g.allies.length < want) g.allies.push(new Wolf(p.x, p.y, g.allies.length));
   g.allies.length = want;
-  const bite = (6 + s.wolves * 4) * (ev.wolves === 'alpha' ? 3 : ev.wolves === 'pack' ? .75 : 1);
+  const bite = (6 + s.wolves * 4) * (ev.wolves === 'alpha' ? 3 : ev.wolves === 'pack' ? .75 : 1) * (warden ? 1.5 : 1);
   for (const w of g.allies) { w.scale = ev.wolves === 'alpha' ? 1.8 : 1; w.update(dt, g, bite, ev.wolves === 'alpha'); }
 }
 

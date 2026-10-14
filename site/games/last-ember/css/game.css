@@ -64,8 +64,21 @@ canvas{display:block;width:100vw;height:100vh}
 .bossbar .hp{background:linear-gradient(90deg,#b52a55,#ff8d75)}
 .bossPortrait{display:inline-block;width:24px;height:24px;margin-right:4px;vertical-align:middle;object-fit:contain}
 
-.toast{position:fixed;top:132px;left:50%;z-index:3;transform:translateX(-50%);width:max-content;max-width:min(560px,90vw);text-align:center;padding:12px 18px;font-size:12px;color:#f1f8ff;background:#122941;border:1px solid #83b6d2;border-radius:10px;box-shadow:0 8px 28px #0008;pointer-events:none;opacity:0;transition:opacity .2s}
+.toast{position:fixed;top:146px;left:50%;z-index:3;transform:translateX(-50%);width:max-content;max-width:min(560px,90vw);text-align:center;padding:12px 18px;font-size:12px;color:#f1f8ff;background:#122941;border:1px solid #83b6d2;border-radius:10px;box-shadow:0 8px 28px #0008;pointer-events:none;opacity:0;transition:opacity .2s}
 .toast.on{opacity:1}
+.combo{position:fixed;top:132px;right:14px;z-index:3;display:grid;justify-items:end;pointer-events:none;font-family:ui-monospace,monospace;text-shadow:0 2px 8px #000}
+.combo b{font-size:30px;line-height:1;color:#ffd36b}
+.combo span{font-size:10px;letter-spacing:.3em;color:#ffb27a}
+.combo>i{display:block;width:70px;height:3px;margin-top:3px;background:#0008;border-radius:2px;overflow:hidden}
+.combo>i>i{display:block;height:100%;background:#ffb064;transform-origin:left}
+.combo.pop b{animation:comboPop .18s ease-out}
+@keyframes comboPop{from{transform:scale(1.35)}to{transform:scale(1)}}
+.bossCard{position:fixed;left:0;right:0;top:34%;z-index:4;display:grid;justify-items:center;gap:4px;pointer-events:none;text-align:center;animation:bossCard 2.6s ease-out forwards}
+.bossCard small{font:700 11px ui-monospace,monospace;letter-spacing:.4em;color:#ffb27a}
+.bossCard strong{font:900 clamp(30px,7vw,58px)/1 Georgia,serif;letter-spacing:.08em;color:#fff1df;text-shadow:0 0 30px #ff5a2a,0 4px 0 #000}
+.bossCard span{font-size:12px;letter-spacing:.2em;color:#d9b9a0}
+.bossCard::before{content:'';position:absolute;inset:-18px 0;z-index:-1;background:linear-gradient(90deg,transparent,#000b 20%,#000b 80%,transparent)}
+@keyframes bossCard{0%{opacity:0;transform:scale(1.25)}12%{opacity:1;transform:scale(1)}80%{opacity:1}100%{opacity:0}}
 
 .spellTray{position:fixed;left:50%;bottom:10px;transform:translateX(-50%);display:flex;flex-wrap:wrap-reverse;justify-content:center;gap:7px;width:max-content;max-width:min(560px,90vw);opacity:.7;pointer-events:none}
 .spellChip{display:grid;place-items:center;width:29px;height:29px;padding:3px;background:#0d1a2b;border:1px solid #425f78;border-radius:9px;box-shadow:0 5px 16px #0006}
@@ -73,6 +86,8 @@ canvas{display:block;width:100vw;height:100vh}
 .spellChip .sigil{width:18px;height:18px}
 .spellChip.bargain{border-color:#a45b70;background:#2a1724}
 .spellChip.evolved{border-color:#ffd77a;box-shadow:0 0 10px #ffc65c66}
+.spellChip.fusion{border-color:#ff8a3d;background:#2e1810;box-shadow:0 0 12px #ff7a2a88}
+.choice[data-tone="SPELL"] em{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 
 .joystick{position:fixed;bottom:18px;left:18px;width:140px;height:140px;display:none;touch-action:none;pointer-events:none;opacity:.55;transition:opacity .15s}
 .joystick.active{opacity:1;transition:none}
@@ -90,6 +105,9 @@ canvas{display:block;width:100vw;height:100vh}
 .touchBtn.small .icon{width:26px;height:26px}
 .touchBtn.dash{position:relative;width:78px;height:78px;overflow:hidden;font:900 13px ui-monospace,monospace;letter-spacing:1px;color:#fff3dc;background:#5a2a14e6;border-color:#ff9a4c;box-shadow:0 0 18px #ff7a2a55,0 4px 14px #0008}
 .touchBtn.dash span{position:relative;z-index:1}
+.touchBtn.hearthBtn{position:relative;overflow:hidden;width:58px;height:58px;align-self:flex-end;font:900 10px ui-monospace,monospace;color:#ffe2c4;background:#3a1c10e6;border-color:#c96a30}
+.touchBtn.hearthBtn.lit{background:#7a3410e6;border-color:#ffd36b;box-shadow:0 0 18px #ffb06488}
+.touchBtn.hearthBtn span{position:relative;z-index:1}
 .dashFill{position:absolute;inset:0;background:#0009;transform-origin:bottom;transform:scaleY(0)}
 .perf{position:fixed;right:10px;bottom:10px;z-index:4;padding:4px 7px;font:11px ui-monospace,monospace;color:#9fe8c6;background:#07121ecc;border:1px solid #2d4a5f;border-radius:6px;pointer-events:none;white-space:pre}
 
@@ -126,10 +144,13 @@ canvas{display:block;width:100vw;height:100vh}
 .choice[data-tone="EVOLVE"]{background:linear-gradient(150deg,#3a2f17,#1c1a14);border-color:#c9a14a}
 .choice[data-tone="EVOLVE"] em{color:#ffd77a;border-color:#c9a14a}
 .choice[data-tone="EVOLVE"] .choiceIcon{border-color:#ffd77a;box-shadow:0 0 18px #ffc65c66}
+.routes{margin:14px auto 6px;max-width:900px}
+.choice[data-tone="ROUTE"]{min-height:118px;background:linear-gradient(150deg,#2a2230,#16141c);border-color:#7a5a8a}
 .choices[data-tier="EVOLVE"]{grid-template-columns:repeat(2,minmax(0,1fr));max-width:720px;margin-left:auto;margin-right:auto}
 
 .originModal{max-height:92dvh;overflow-y:auto}
 .originModal .choices{grid-template-columns:repeat(4,minmax(0,1fr))}
+.originModal .choice:disabled{opacity:.42;filter:grayscale(.7);cursor:default;transform:none}
 .originModal .choice{min-height:175px}
 .originModal .choice{grid-template-columns:minmax(0,1fr);grid-template-rows:none}
 .originModal .choiceIcon{grid-row:auto;width:70px;height:70px;margin:0 0 10px}
@@ -195,6 +216,21 @@ canvas{display:block;width:100vw;height:100vh}
 .menuEmbers i{position:absolute;bottom:-12px;width:4px;height:4px;border-radius:50%;background:#ffb05a;box-shadow:0 0 8px 2px #ff7a1a;opacity:0;animation:emberRise linear infinite}
 @keyframes emberRise{0%{transform:translate(0,0) scale(1);opacity:0}10%{opacity:.9}100%{transform:translate(var(--drift),-105vh) scale(.3);opacity:0}}
 @media (prefers-reduced-motion:reduce){.menuEmbers{display:none}}
+.reducedMotion .menuEmbers{display:none}
+.reducedMotion .bossCard{animation-name:bossCardCalm}
+@keyframes bossCardCalm{0%{opacity:0}10%{opacity:1}80%{opacity:1}100%{opacity:0}}
+.helpGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;max-height:min(52dvh,460px);margin:12px 0;overflow:auto;text-align:left}
+.helpGrid div{padding:11px 13px;background:#1a1822;border:1px solid #4a4452;border-radius:10px}
+.helpGrid b{font-size:12px;letter-spacing:.12em;color:#ffb27a}
+.helpGrid p{margin:5px 0 0!important;font-size:12px!important;color:#d9cfc6}
+@media (max-width:520px){.helpGrid{grid-template-columns:1fr}}
+.dailyCard{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px;margin:4px 0 10px;padding:12px 14px;text-align:left;background:linear-gradient(120deg,#3a1d12,#1b1420);border:1px solid #ff9a4c;border-radius:12px;box-shadow:0 0 22px #ff6a1a22}
+.dailyCard b{display:block;font-size:13px;letter-spacing:.12em;color:#ffd36b}
+.dailyCard small{display:block;margin-top:3px;font-size:11px;color:#e8d4c2}
+.dailyCard small.dim{color:#b8a497}
+.dailyCard small.best{color:#ffb27a}
+.dailyCard .button{margin:0;white-space:nowrap}
+@media (max-width:520px){.dailyCard{grid-template-columns:1fr}.dailyCard .button{width:100%}}
 .startHeat{display:flex;align-items:center;justify-content:center;gap:10px;margin:4px 0 2px;font-size:11px;color:#d9b9a0}
 .heatBtn{padding:6px 12px;font:800 12px ui-monospace,monospace;letter-spacing:.08em;color:#ffe2c4;background:#4a1f12;border:1px solid #ff8a4c;border-radius:6px;cursor:pointer;box-shadow:0 0 12px #ff6a1a33}
 .menuTitle{margin:8px 0 5px!important;font:900 clamp(38px,9vw,70px)/1 Georgia,serif!important;letter-spacing:.09em!important}

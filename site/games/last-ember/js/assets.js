@@ -221,6 +221,20 @@ const Sprites = {
     return this.get(key, () => makeSprite(64, 64, c => drawEnemyBody(c, type, flash ? '#fff' : ENEMY_TYPES[type].color)));
   },
 
+  // The Hearth's brazier: an iron bowl with a tall flame.
+  hearth() {
+    return this.get('hearth', () => makeSprite(48, 60, c => {
+      c.fillStyle = '#0008'; c.beginPath(); c.ellipse(0, 16, 16, 5, 0, 0, TAU); c.fill();
+      c.fillStyle = '#2b2226'; c.fillRect(-3, 2, 6, 14); c.fillRect(-10, 14, 20, 3);
+      const bowl = c.createLinearGradient(-14, 0, 14, 0); bowl.addColorStop(0, '#6a5a50'); bowl.addColorStop(1, '#2a2024');
+      c.fillStyle = bowl; c.beginPath(); c.moveTo(-14, -4); c.quadraticCurveTo(0, 12, 14, -4); c.closePath(); c.fill();
+      c.shadowColor = '#ff8a2a'; c.shadowBlur = 14;
+      const fl = c.createLinearGradient(0, -26, 0, -2); fl.addColorStop(0, '#fff1a8'); fl.addColorStop(.5, '#ffb064'); fl.addColorStop(1, '#ff5a1a');
+      c.fillStyle = fl; c.beginPath(); c.moveTo(-10, -4); c.quadraticCurveTo(-12, -16, -2, -28); c.quadraticCurveTo(0, -18, 4, -22); c.quadraticCurveTo(12, -12, 10, -4); c.closePath(); c.fill();
+      c.shadowBlur = 0; c.fillStyle = '#fff6d0'; c.beginPath(); c.ellipse(0, -9, 3.5, 6, 0, 0, TAU); c.fill();
+    }));
+  },
+
   // Painted regular enemy art and its white hit-flash copy. Null until loaded.
   enemyArt(type, flash = false) {
     const im = enemyImages[type];
