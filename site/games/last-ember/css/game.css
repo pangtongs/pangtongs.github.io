@@ -224,13 +224,26 @@ canvas{display:block;width:100vw;height:100vh}
 .helpGrid b{font-size:12px;letter-spacing:.12em;color:#ffb27a}
 .helpGrid p{margin:5px 0 0!important;font-size:12px!important;color:#d9cfc6}
 @media (max-width:520px){.helpGrid{grid-template-columns:1fr}}
-.dailyCard{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px;margin:4px 0 10px;padding:12px 14px;text-align:left;background:linear-gradient(120deg,#3a1d12,#1b1420);border:1px solid #ff9a4c;border-radius:12px;box-shadow:0 0 22px #ff6a1a22}
-.dailyCard b{display:block;font-size:13px;letter-spacing:.12em;color:#ffd36b}
-.dailyCard small{display:block;margin-top:3px;font-size:11px;color:#e8d4c2}
-.dailyCard small.dim{color:#b8a497}
-.dailyCard small.best{color:#ffb27a}
-.dailyCard .button{margin:0;white-space:nowrap}
-@media (max-width:520px){.dailyCard{grid-template-columns:1fr}.dailyCard .button{width:100%}}
+.dailyCard{flex:none;margin:4px 0 8px;text-align:left;background:linear-gradient(120deg,#3a1d12,#1b1420);border:1px solid #ff9a4c;border-radius:10px;overflow:auto;max-height:25dvh}
+.dailyCard summary{padding:10px 12px;cursor:pointer;font-size:12px;font-weight:bold;color:#ffd36b;min-height:40px}
+.dailyCard summary span{float:right;font-size:9px;color:#dcc5b4}
+.dailyContent{display:flex;gap:10px;align-items:center;padding:0 12px 10px}
+.dailyCard b,.dailyCard small{display:block;font-size:11px;color:#e8d4c2}
+.dailyCard small{margin-top:4px}
+.dailyCard .button{margin:0;white-space:nowrap;font-size:11px;padding:10px}
+.selectingStage .menuTitle{font-size:clamp(28px,9vw,40px)!important}
+.menuModal.selectingStage{height:min(880px,calc(100dvh - 48px));display:flex;flex-direction:column;overflow:hidden}
+#menuStart{display:flex;flex-direction:column;min-height:0;flex:1}
+#menuStart h2{margin:4px 0;font-size:22px}
+#menuStart>p{margin:4px 0;font-size:11px}
+#menuStart .stageSelect{flex:1;min-height:85px;max-height:none;overflow:auto;margin:8px 0}
+#menuStart .menuActions{flex:none;display:grid;grid-template-columns:1fr auto;gap:6px;margin:8px 0 0;padding-bottom:env(safe-area-inset-bottom)}
+#menuStart .menuActions .button{margin:0;padding:11px 8px;font-size:11px;min-height:42px}
+#menuStart #startBtn{grid-column:1/-1}
+.hearthStatus{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:3;max-width:60vw;padding:7px 10px;border:1px solid #c97740;border-radius:8px;background:#24170eee;color:#ffe0b0;font-size:11px;text-align:center;pointer-events:none}
+.saveTools{padding:12px;border:1px solid #62504c;border-radius:10px;margin:12px 0}
+.saveTools p{font-size:11px!important}
+.saveTools .button{font-size:11px;padding:10px;margin:4px}
 .startHeat{display:flex;align-items:center;justify-content:center;gap:10px;margin:4px 0 2px;font-size:11px;color:#d9b9a0}
 .heatBtn{padding:6px 12px;font:800 12px ui-monospace,monospace;letter-spacing:.08em;color:#ffe2c4;background:#4a1f12;border:1px solid #ff8a4c;border-radius:6px;cursor:pointer;box-shadow:0 0 12px #ff6a1a33}
 .menuTitle{margin:8px 0 5px!important;font:900 clamp(38px,9vw,70px)/1 Georgia,serif!important;letter-spacing:.09em!important}
@@ -371,6 +384,8 @@ canvas{display:block;width:100vw;height:100vh}
 
   #startOverlay{padding:10px}
   .menuModal{max-height:calc(100dvh - 20px);padding:15px 12px 22px}
+  .menuModal.selectingStage{height:calc(100dvh - 20px)}
+  .hearthStatus{bottom:172px;max-width:70vw;font-size:10px}
   .menuHero{grid-template-columns:minmax(0,1fr) minmax(150px,210px) minmax(0,1fr);gap:2px;min-height:264px}
   .menuFigure{height:150px}
   .menuStack{gap:7px}
@@ -401,3 +416,5 @@ canvas{display:block;width:100vw;height:100vh}
   .originModal .choice{grid-template-columns:57px minmax(0,1fr);column-gap:10px}
   .originModal .choiceIcon{grid-row:1/4;width:57px;height:57px;margin:0}
 }
+
+@media (max-height:520px){.menuModal.selectingStage{height:calc(100dvh - 20px);max-height:calc(100dvh - 20px);padding:10px}.selectingStage #menuStart>p{display:none}.selectingStage .dailyCard summary{padding:6px 10px;min-height:30px}.selectingStage #menuStart .stageSelect{min-height:50px}.selectingStage .menuTitle{font-size:30px!important;margin:0!important}.selectingStage .menuSubtitle{display:none}.selectingStage .dailyCard{max-height:20dvh}.selectingStage #menuSaveInfo{display:none}#menuStart .menuActions{grid-template-columns:2fr 2fr 1fr}#menuStart #startBtn{grid-column:auto}}

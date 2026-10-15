@@ -61,10 +61,11 @@ const UI = {
     else requestAnimationFrame(() => { box.scrollTop += sel.getBoundingClientRect().top - box.getBoundingClientRect().top - 30; });
 
     const d = dailySetup(), best = g.meta.daily && g.meta.daily.date === d.date ? g.meta.daily : null;
-    $('dailyCard').innerHTML = `<div><b>DAILY EMBER · ${d.date}</b><small>${ORIGINS[d.origin].name} · Heat ${DAILY_HEAT} · ${d.mutators.map(m => `<span title="${DAILY_MUTATORS[m].desc}">${DAILY_MUTATORS[m].name}</span>`).join(' · ')}</small>
+    $('dailyCard').innerHTML = `<summary>DAILY EMBER · ${d.date}<span>SHOW DETAILS</span></summary><div class="dailyContent"><div><b>DAILY EMBER · ${d.date}</b><small>${ORIGINS[d.origin].name} · Heat ${DAILY_HEAT} · ${d.mutators.map(m => `<span title="${DAILY_MUTATORS[m].desc}">${DAILY_MUTATORS[m].name}</span>`).join(' · ')}</small>
       <small class="dim">${d.mutators.map(m => DAILY_MUTATORS[m].desc).join(' ')}</small>
-      <small class="best">${best ? `Today's best: stage ${best.stage} in ${formatTime(best.time)} · ${best.kills} kills` : 'Not played today. Same seed for everyone, all day.'}</small></div><button id="dailyBtn" class="button">PLAY DAILY</button>`;
+      <small class="best">${best ? `Today's best: stage ${best.stage} in ${formatTime(best.time)} · ${best.kills} kills` : 'Not played today. Same seed for everyone, all day.'}</small></div><button id="dailyBtn" class="button">PLAY DAILY</button></div>`;
     $('dailyBtn').onclick = () => g.startDaily();
+    $('startBtn').textContent = `PLAY STAGE ${g.selectedStage} · ${stageInfo(g.selectedStage).name.toUpperCase()}`;
     requestAnimationFrame(() => I18N.localize($('startOverlay')));
     const hasSave = !!Store.loadRun();
     $('loadBtn').disabled = !hasSave;
@@ -81,7 +82,7 @@ const UI = {
       ['Best endless depth', st.endlessBest || '—'], ['Highest Heat cleared', st.highestHeat || '—'],
       ['Time played', formatDuration(st.playTime)],
       ['Favourite origin', fav ? `${ORIGINS[fav[0]].name} (${fav[1]})` : '—'],
-      ['Stages unlocked', `${unlocked} / ${STAGE_COUNT}`], ['Den perks', `${Object.keys(META_PERKS).reduce((n, k) => n + g.perk(k), 0)} / ${Object.values(META_PERKS).reduce((n, d) => n + d.costs.length, 0)} ranks`],
+      ['Stages unlocked', `${unlocked} / ${STAGE_COUNT}`], ['Den perks', `${Object.keys(META_PERKS).reduce((n, k) => n + g.perk(k), 0)} ranks · ∞`],
     ].map(([label, value]) => `<div>${label}<strong>${value}</strong></div>`).join('') +
       (fastest.length ? `<div class="statsWide">Fastest clears<strong class="fastest">${fastest.map(([s, t]) => `<span>${s}. ${STAGES[s - 1].name} <b>${formatTime(t)}</b></span>`).join('')}</strong></div>` : '') +
       (() => {
@@ -114,8 +115,8 @@ const UI = {
   renderMetaShop(g) {
     const affordable = Object.keys(META_PERKS).filter(k => !g.perkLocked(k) && g.perkCost(k) !== null && g.perkCost(k) <= g.wallet);
     $('perkList').innerHTML = Object.entries(META_PERKS).map(([key, d]) => {
-      const rank = g.perk(key), cost = g.perkCost(key), locked = g.perkLocked(key), max = d.costs.length;
-      const pips = d.costs.map((_, i) => `<i class="${i < rank ? 'on' : ''}"></i>`).join('');
+      const rank = g.perk(key), cost = g.perkCost(key), locked = g.perkLocked(key);
+      const pips = d.costs ? d.costs.map((_, i) => `<i class="${i < rank ? 'on' : ''}"></i>`).join('') : `RANK ${rank} · ∞`;
       const now = rank ? d.desc(rank) : 'Not owned';
       const next = cost === null ? 'Fully mastered' : locked ? `Clear stage ${d.stage} to unlock` : `Next: ${d.desc(rank + 1)}`;
       const btn = cost === null ? '<button class="button secondary" disabled>MAXED</button>'
@@ -123,7 +124,7 @@ const UI = {
         : `<button class="button" data-meta-buy="${key}" ${g.wallet < cost ? 'disabled' : ''}>BUY · ${cost} SOULS</button>`;
       return `<div class="perkCard${locked ? ' locked' : ''}${cost === null ? ' maxed' : ''}">
         <span class="choiceIcon icon icon-${d.icon}">${iconMarkup(d.icon)}</span>
-        <div><b>${d.name}</b><span class="pips" title="${rank}/${max}">${pips}</span><small>${now}</small><small class="next">${next}</small></div>${btn}</div>`;
+        <div><b>${d.name}</b><span class="pips">${pips}</span><small>${now}</small><small class="next">${next}</small></div>${btn}</div>`;
     }).join('');
     $('perkList').querySelectorAll('[data-meta-buy]').forEach(b => { b.onclick = () => g.buyMeta(b.dataset.metaBuy); });
     $('endSouls').textContent = g.wallet;
@@ -326,17 +327,18 @@ const UI = {
       const auto = document.querySelector(`[data-auto="${kind}"]`), on = g.autoBuy[item.currency] === kind;
       auto.textContent = on ? 'AUTO ✓' : 'AUTO';
       auto.setAttribute('aria-pressed', String(on));
-      auto.disabled = !!item.max && rank >= item.max;
-      if (item.yieldOf) {
-        const name = item.yieldOf === 'gems' ? 'Gem' : 'Gold', mult = g.yields[item.yieldOf];
-        const maxed = rank >= item.max;
-        b.disabled = maxed || !affordable;
-        b.innerHTML = maxed ? `MAXED · ${name} yield ×${mult.toFixed(2)}<small>Maximum investment reached</small>`
-          : `${cost} ${cur} · ${name} yield ×${(mult * YIELD_STEP).toFixed(2)}<small>Future ${name.toLowerCase()} drops ×${YIELD_STEP} · ${rank + 1}/${item.max} · next cost ×${item.growth}</small>`;
-      } else {
-        b.disabled = !affordable;
-        b.innerHTML = `${cost} ${cur} · ${item.label}<small>${item.note} · bought ${rank} · next cost ×${item.growth}</small>`;
-      }
+      auto.disabled = false;
+      b.disabled = !affordable;
+      const ratio = marketFactor(kind, rank + 1) / marketFactor(kind, rank);
+      const gain = marketPower(rank + 1) - marketPower(rank);
+      const labels = {
+        attack: `Attack +${percent(ratio - 1)}%`, haste: `Cast rate +${percent(ratio - 1)}%`,
+        hp: `Max HP +${percent(ratio - 1)}%`, speed: `Speed +${percent(ratio - 1)}%`,
+        shield: `Shield +${percent(.25 * gain)}% max HP`,
+        coinYield: `Gold drops ×${(g.yields.coins * ratio).toFixed(2)}`,
+        gemYield: `Gem drops ×${(g.yields.gems * ratio).toFixed(2)}`,
+      };
+      b.innerHTML = `${cost} ${cur} · ${tr(labels[kind])}<small>${tr(`RANK ${rank} · NO LIMIT`)} · ${tr('Smaller gains each purchase')}</small>`;
     }
     I18N.localize($('marketOverlay'));
   },

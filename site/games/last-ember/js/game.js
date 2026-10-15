@@ -40,19 +40,19 @@ class Game {
   get viewH() { return this.renderer.H; }
   get xpMultiplier() { return (this.player.bargains.hunted ? 1.5 : 1) * (this.route === 'swarm' ? 1.4 : 1) * (this.mut('swarm') ? 1.4 : 1) * (this.mut('giants') ? 1.3 : 1); }
   get heatDef() { return heatDef(this.heat || 0); }
-  get soulMult() { return this.heatDef.souls * (1 + .1 * this.perk('souls')) * (this.route === 'elite' ? 1.5 : 1); }
-  get dashCooldown() { return DASH.cooldown / (1 + .08 * this.player.passiveRanks.fleet) / (1 + .15 * this.perk('dash')) * (this.player.origin === 'hexblade' ? .7 : 1) / (1 + (this.player.dashBonus || 0)); }
+  get soulMult() { return this.heatDef.souls * (1 + metaBonus('souls', this.perk('souls'))) * (this.route === 'elite' ? 1.5 : 1); }
+  get dashCooldown() { return DASH.cooldown / (1 + .08 * this.player.passiveRanks.fleet) / (1 + metaBonus('dash', this.perk('dash'))) * (this.player.origin === 'hexblade' ? .7 : 1) / (1 + (this.player.dashBonus || 0)); }
 
   reset() {
     const p = this.player = new Player();
-    p.atk *= 1 + (this.meta.atk || 0) * META_UPGRADES.atk.per;
-    p.maxHp *= 1 + (this.meta.hp || 0) * META_UPGRADES.hp.per;
+    p.atk *= 1 + metaBonus('atk', this.perk('atk'));
+    p.maxHp *= 1 + metaBonus('hp', this.perk('hp'));
     p.hp = p.maxHp;
     p.rerolls = this.perk('reroll'); p.secondWind = this.perk('revive') > 0;
     this.time = 0; this.stage = 1; this.stageTime = 0; this.growthClock = 0;
     this.heat = clamp(this.settings.heat || 0, 0, this.meta.heatUnlocked || 0);
     this.stageClearPending = false; this.stageComplete = false; this.stageLootCollected = 0; this.lastArtifact = '';
-    this.souls = 0; this.gemsCount = this.coins = 25 * this.perk('purse');
+    this.souls = 0; this.gemsCount = this.coins = startingPurse(this.perk('purse'));
     this.yields = {gems: 1, coins: 1};
     this.dropRemainders = {gems: 0, coins: 0};
     this.marketRanks = Object.fromEntries(Object.keys(MARKET).map(k => [k, 0]));
@@ -61,6 +61,7 @@ class Game {
     this.surgeT = 0; this.eventIndex = 0; this.lastEvent = null; this.combo = 0; this.comboT = 0;
     this.nearby = [];
     this.obstacles = []; this.obstaclesFor = 0;
+    this.siegeAnchor = {x: 0, y: 0}; this.siegeClock = 0; this.siegeStrikes = 0;
     this.hearth = null; this.hearthCD = 0; this.route = 'road'; this.daily = null; this.runKills = 0; this.hearthKills = 0; this.achieveClock = 0;
     this.fx.clear();
     this.spawnCD = 0; this.bossCD = stageInfo(1).seconds;
@@ -116,6 +117,24 @@ class Game {
         this.saveSettings();
       };
     });
+    on('exportSave', () => {
+      this.persist(); this.saveSettings();
+      const blob = new Blob([JSON.stringify(Store.backup(), null, 2)], {type: 'application/json'});
+      const url = URL.createObjectURL(blob), link = document.createElement('a');
+      link.href = url; link.download = `last-ember-${todayKey()}.json`; link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+      $('backupStatus').textContent = tr('Backup exported. Keep this file to restore your progress.');
+    });
+    on('importSave', () => { $('saveFile').value = ''; $('saveFile').click(); });
+    $('saveFile').onchange = async e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      try {
+        if (file.size > 2_000_000) throw new Error('Invalid backup');
+        this.restoreBackup(await file.text());
+        location.reload();
+      } catch { $('backupStatus').textContent = tr('Could not restore this backup. Your current progress is unchanged.'); }
+    };
     on('langSetting', () => {
       this.settings.lang = this.settings.lang === 'id' ? 'en' : 'id';
       I18N.set(this.settings.lang);
@@ -212,6 +231,7 @@ class Game {
 
   setPaused(v) {
     this.paused = v;
+    if (!v && this.running) Sound.start();
     this.accumulator = 0;
     this.dirty = true;
     this.hud.update(this, performance.now(), true);
@@ -237,11 +257,12 @@ class Game {
     else if (p.shield < p.shieldCap) p.shield = Math.min(p.shieldCap, p.shield + regen * dt);
 
     this.stepEvents(dt);
+    this.stepSiege(dt);
     this.stepHearth(dt);
     if (this.stageTime > .5) this.tip('move', matchMedia('(pointer:coarse)').matches
       ? 'TIP · DRAG ON THE LEFT TO MOVE · YOUR SPELLS CAST THEMSELVES' : 'TIP · MOVE WITH WASD · YOUR SPELLS CAST THEMSELVES');
-    if (this.stageTime > 20) this.tip('hearth', matchMedia('(pointer:coarse)').matches
-      ? 'TIP · TAP HEARTH TO PLANT YOUR EMBER: MORE DAMAGE AND HEALING INSIDE ITS LIGHT' : 'TIP · PRESS E TO PLANT YOUR HEARTH: MORE DAMAGE AND HEALING INSIDE ITS LIGHT');
+    if (this.stageTime > 20) this.tip('hearthGuide', matchMedia('(pointer:coarse)').matches
+      ? 'TIP · TAP PLANT: STAND INSIDE THE FIRE FOR DAMAGE AND HEALING' : 'TIP · PRESS E TO PLANT YOUR HEARTH: MORE DAMAGE AND HEALING INSIDE ITS LIGHT');
     if (this.stageTime > 6) this.tip('dash', matchMedia('(pointer:coarse)').matches
       ? 'TIP · TAP DASH TO DART THROUGH FOES AND ATTACKS UNHARMED' : 'TIP · SPACE OR SHIFT DASHES THROUGH FOES AND ATTACKS UNHARMED');
     if (this.spawnCD <= 0 && !this.stageClearPending) {
@@ -295,8 +316,8 @@ class Game {
   // Base HP and attack a fresh run would have on this stage. Growth passives add a share
   // of these each minute rather than a share of current stats, so long runs grow steadily
   // instead of compounding without limit.
-  get baseHp() { return 100 * (1 + (this.meta.hp || 0) * META_UPGRADES.hp.per) * (1 + (this.stage - 1) * .22); }
-  get baseAtk() { return (1 + (this.meta.atk || 0) * META_UPGRADES.atk.per) * (1 + (this.stage - 1) * .14); }
+  get baseHp() { return 100 * (1 + metaBonus('hp', this.perk('hp'))) * (1 + (this.stage - 1) * .22); }
+  get baseAtk() { return (1 + metaBonus('atk', this.perk('atk'))) * (1 + (this.stage - 1) * .14); }
 
   passiveGrowth() {
     const p = this.player, r = p.passiveRanks;

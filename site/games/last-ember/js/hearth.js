@@ -27,7 +27,7 @@ mixin(Game, {
     this.hearth = {x: p.x, y: p.y + 6, hp, maxHp: hp, t: 0};
     pushOutOfObstacles(this.obstacles, this.hearth, 24);
     Sound.play('ward'); this.fx.shockwave(p.x, p.y, HEARTH.r, .4, '#ffb064');
-    this.tip('hearth2', 'TIP · PRESS AGAIN TO RECALL THE HEARTH WITH A FIRE NOVA');
+    this.tip('hearth2', 'STAND IN THE FIRE TO HEAL · TAP NOVA (E) TO EXPLODE IT');
   },
 
   recallHearth() {

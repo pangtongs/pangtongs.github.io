@@ -48,7 +48,7 @@ class Enemy {
     // Act I curves are unchanged. Act II multiplies on top so enemies keep pace with a
     // build that has been growing for eight stages (tuned with tools/sim.js).
     const beyond = Math.max(0, g.stage - 8);
-    const actHp = Math.pow(1.22, beyond), actDamage = (g.stage >= 3 ? ENEMY_DAMAGE_SCALE : 1) * (beyond ? 1.8 * Math.pow(1.18, beyond) : 1) * (g.stage > 16 && g.stage <= STAGE_COUNT ? 1.4 : 1); // tuned with tools/sim.js
+    const actHp = Math.pow(1.22, beyond), actDamage = (g.stage >= 3 ? ENEMY_DAMAGE_SCALE : 1) * (beyond ? 1.25 * Math.pow(1.16, beyond) : 1) * (g.stage > 16 && g.stage <= STAGE_COUNT ? 1.2 : 1); // tuned with tools/sim.js
     const stagePressure = 1 + (g.stage - 1) * .28;
     const scale = (1 + (this.level - 1) * .15) * stagePressure * diff.hp;
     const bossAct = (beyond ? 3.5 * Math.pow(1.36, beyond - 1) : 1) * diff.bossHp;
@@ -528,6 +528,8 @@ class Meteor {
   constructor(x, y, damage, delay, kind = 'starfall') {
     this.x = x; this.y = y; this.damage = damage; this.delay = delay; this.kind = kind;
     this.t = 0; this.struck = false; this.r = kind === 'armageddon' ? 106 : kind === 'comet' ? 125 : 68;
+    this.x = clamp(x, -ARENA_X + this.r, ARENA_X - this.r);
+    this.y = clamp(y, -ARENA_Y + this.r, ARENA_Y - this.r);
   }
   update(dt, g) {
     this.t += dt;

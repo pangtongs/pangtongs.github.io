@@ -5,6 +5,7 @@
 mixin(Game, {
   openMenuPanel(panel = 'home') {
     for (const id of ['Home', 'Start', 'Upgrades', 'Stats', 'Settings', 'Help']) $('menu' + id).classList.toggle('hidden', id.toLowerCase() !== panel);
+    document.querySelector('.menuModal').classList.toggle('selectingStage', panel === 'start');
     UI.renderMenu(this);
   },
 
@@ -15,13 +16,14 @@ mixin(Game, {
     this.persist();
     hideAllOverlays();
     show('startOverlay');
+    hide('hearthStatus');
     this.openMenuPanel('home');
   },
 
   openSpellbook() {
     UI.renderSpellbook(this);
     this.bookWasPaused = this.paused;
-    this.paused = true;
+    this.setPaused(true);
     $('closeSpellbook').textContent = this.running ? 'BACK TO GAME' : 'BACK TO MENU';
     show('spellBookOverlay');
   },
@@ -43,17 +45,21 @@ mixin(Game, {
 
   // ---------- Run flow ----------
   startStage(stage) {
+    Store.keepLocalData();
     this.reset();
     this.meta.stats.runs++;
     this.stage = stage;
     this.bossCD = stageInfo(stage).seconds;
     this.miniGoal = Math.max(3, Math.floor((this.bossCD - 20) / 55));
     if (stage > 1) {
-      // A fresh run on a later stage starts near the build a continued run would have:
-      // stats at about 80% of the measured curve (tools/sim.js) plus level ups to spend.
+      // Catch up the spell choices as well as stats. Continued runs arrive with
+      // evolutions, a Path, an Ultimate and artifacts, not just higher attack/HP.
       const boost = stage - 1, p = this.player;
-      p.atk *= .8 * Math.pow(1.28, boost); p.maxHp *= .8 * Math.pow(1.38, boost); p.hp = p.maxHp; p.shield += boost * 12;
-      const levels = Math.min(14, boost * 2);
+      p.atk *= .9 * Math.pow(1.12, Math.min(8, boost)) * Math.pow(1.47, Math.max(0, boost - 8));
+      p.maxHp *= .9 * Math.pow(1.27, Math.min(8, boost)) * Math.pow(1.42, Math.max(0, boost - 8)); p.hp = p.maxHp;
+      p.shieldBonusCap = p.maxHp * .15; p.shield = p.shieldCap;
+      p.castCooldown /= 1 + .025 * boost;
+      const levels = Math.round(11 + 4 * Math.log2(boost));
       for (let i = 0; i < levels; i++) { p.level++; p.nextXp = Math.floor(p.nextXp * 1.35 + 5); }
       this.levelQueue = levels;
     }
@@ -220,6 +226,7 @@ mixin(Game, {
     this.meta.stats[won ? 'wins' : 'deaths']++;
     this.saveMeta();
     show('gameOver');
+    hide('hearthStatus');
     const depth = this.stage - STAGE_COUNT;
     $('gameOverTitle').textContent = won ? 'THE RIFT IS YOURS' : 'THE EMBERS FADE';
     const reached = depth > 0 ? `${won ? 'cleared' : 'reached'} endless depth ${won ? depth : depth} (best ${this.meta.stats.endlessBest})`
@@ -227,6 +234,15 @@ mixin(Game, {
     $('runSummary').textContent = `You ${reached} at level ${this.player.level} after ${formatTime(this.time)}. Earned ${this.souls} souls this run · ${this.wallet} in your permanent wallet.`;
     if (daily) $('runSummary').textContent += ` Daily Ember ${daily.run.date}: stage ${daily.run.stage} in ${formatTime(daily.run.time)}${daily.improved ? ' · NEW DAILY BEST' : ` · today's best: stage ${daily.best.stage} in ${formatTime(daily.best.time)}`}.`;
     UI.renderMetaShop(this);
+  },
+
+  restoreBackup(source) {
+    Store.importBackup(source);
+    // pagehide persists the in-memory meta too; replace it before reloading so it
+    // cannot overwrite the imported wallet with the old one.
+    this.running = false;
+    this.meta = Store.loadMeta(); this.settings = Store.loadSettings();
+    this.setPaused(true);
   },
 
   // ---------- Saves ----------
@@ -279,6 +295,7 @@ mixin(Game, {
     this.chests = (chests || []).map(c => Object.assign(new Chest(c.x, c.y, c.tier), c));
     this.enemyShots = (enemyShots || []).map(q => Object.assign(new EnemyShot(q.x, q.y, 0, q.kind, q.damage), q));
     this.keys = {};
+    this.siegeAnchor = {x: this.player.x, y: this.player.y}; this.siegeClock = 0; this.siegeStrikes = 0;
     // A resumed daily run picks its seeded sequence back up (not identical, but seeded).
     if (this.daily) Math.random = seededRandom(this.daily.seed + this.stage * 7919 + Math.round(this.time));
     this.running = true;

@@ -17,17 +17,24 @@ const Sound = {
     this.musicOn = settings.music !== false;
     const unlock = () => {
       this.start();
-      removeEventListener('pointerdown', unlock); removeEventListener('keydown', unlock);
     };
     addEventListener('pointerdown', unlock);
     addEventListener('keydown', unlock);
   },
 
   start() {
-    if (this.ctx) { if (this.ctx.state === 'suspended') this.ctx.resume(); return; }
+    if (this.ctx) {
+      if (this.ctx.state !== 'running' && this.ctx.state !== 'closed') {
+        // Retry on every gesture: an earlier resume requested without activation
+        // can remain pending until another gesture on mobile browsers.
+        this.ctx.resume().then(() => { this.music.next = 0; }).catch(() => {});
+      }
+      return;
+    }
     const Ctx = window.AudioContext || window.webkitAudioContext;
     if (!Ctx) return;
     this.ctx = new Ctx();
+    this.ctx.onstatechange = () => { this.music.next = 0; };
     const comp = this.ctx.createDynamicsCompressor();
     comp.threshold.value = -16; comp.ratio.value = 6;
     this.master = this.ctx.createGain(); this.master.gain.value = .8;

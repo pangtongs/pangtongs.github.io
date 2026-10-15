@@ -28,7 +28,7 @@ const ACHIEVEMENTS = {
   goblin:     {name: 'Pickpocket', desc: 'Catch a treasure goblin.', souls: 10},
   shrine:     {name: 'Surge Survivor', desc: 'Survive a cursed shrine’s surge.', souls: 10},
   allChars:   {name: 'Many Faces', desc: 'Start a run with all seven characters.', souls: 50, test: g => Object.keys(g.meta.stats.origins).length >= Object.keys(ORIGINS).length},
-  denMaster:  {name: 'Master of the Den', desc: 'Buy every rank of every Den perk.', souls: 120, test: g => Object.keys(META_PERKS).every(k => g.perkCost(k) === null)},
+  denMaster:  {name: 'Master of the Den', desc: 'Own every Den perk and reach rank 10 in each repeatable perk.', souls: 120, test: g => Object.entries(META_PERKS).every(([k, d]) => d.costs ? g.perkCost(k) === null : g.perk(k) >= 10)},
 };
 
 mixin(Game, {

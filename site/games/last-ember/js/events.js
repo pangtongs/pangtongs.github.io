@@ -28,6 +28,22 @@ class Shrine {
 }
 
 mixin(Game, {
+  // Stage-authored pressure, independent of the player's damage or purchases.
+  // A marked strike prevents an otherwise complete build from winning unattended.
+  stepSiege(dt) {
+    const p = this.player;
+    if (this.stage < SIEGE.stage || this.stageClearPending || this.stageComplete) { this.siegeClock = 0; this.siegeStrikes = 0; return; }
+    if (dist2(p.x, p.y, this.siegeAnchor.x, this.siegeAnchor.y) > SIEGE.move * SIEGE.move) {
+      this.siegeAnchor = {x: p.x, y: p.y}; this.siegeClock = 0; this.siegeStrikes = 0;
+    }
+    if ((this.siegeClock += dt) < SIEGE.wait) return;
+    this.siegeClock = 0;
+    this.hazards.push(new Hazard(p.x, p.y, SIEGE, (16 + this.stage * 5) * Math.pow(1.18, Math.max(0, this.stage - 8)) * this.heatDef.damage * Math.pow(1.6, this.siegeStrikes++)));
+    Sound.play('warn');
+    if (this.siegeStrikes > 1) this.tip('siege2', 'MOVE TO A NEW AREA · MARKED STRIKES ARE GROWING STRONGER');
+    this.tip('siege', 'MARKED STRIKE · MOVE OR DASH OUT OF THE CIRCLE');
+  },
+
   stepEvents(dt) {
     if (this.surgeT > 0 && (this.surgeT -= dt) <= 0) this.endSurge();
     compact(this.shrines, s => s.update(dt, this));

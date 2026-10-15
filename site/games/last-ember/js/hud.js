@@ -6,7 +6,7 @@ class Hud {
   constructor() {
     this.el = {};
     for (const id of ['hpText', 'hpBar', 'shieldText', 'shieldBar', 'xpText', 'xpBar', 'souls', 'gems', 'coins', 'finishBtn',
-      'stageGoal', 'wave', 'timer', 'spellTray', 'autoBuyInfo', 'bossUI', 'bossBar', 'bossName', 'bossPortrait', 'perf', 'pauseBtn', 'callBossBtn', 'dashFill', 'combo', 'comboCount', 'comboBar', 'hearthFill', 'touchHearth']) this.el[id] = $(id);
+      'stageGoal', 'wave', 'timer', 'spellTray', 'autoBuyInfo', 'bossUI', 'bossBar', 'bossName', 'bossPortrait', 'perf', 'pauseBtn', 'callBossBtn', 'dashFill', 'combo', 'comboCount', 'comboBar', 'hearthFill', 'touchHearth', 'hearthStatus']) this.el[id] = $(id);
     this.cache = new Map();
     this.nextAt = 0;
     this.fps = {frames: 0, since: performance.now(), text: ''};
@@ -59,8 +59,13 @@ class Hud {
     const dash = p.dashCD / g.dashCooldown;
     const hearthK = g.hearth ? 0 : clamp(g.hearthCD / HEARTH.snuffedCD, 0, 1).toFixed(2);
     if (this.cache.get('hearthK') !== hearthK) { this.cache.set('hearthK', hearthK); this.el.hearthFill.style.transform = `scaleY(${hearthK})`; }
-    const hs = g.hearth ? 'RECALL' : 'HEARTH';
-    if (this.cache.get('hearthLabel') !== hs) { this.cache.set('hearthLabel', hs); this.el.touchHearth.querySelector('span').textContent = hs; this.el.touchHearth.classList.toggle('lit', !!g.hearth); }
+    const hs = g.hearth ? 'NOVA' : g.hearthCD > 0 ? `${Math.ceil(g.hearthCD)}s` : 'PLANT';
+    const hearthText = g.hearth
+      ? `${g.hearthBonus ? 'INSIDE FIRE · +30% DAMAGE + HEALING' : 'RETURN TO THE FIRE FOR BONUSES'} · NOVA ${Math.floor(Math.min(1, g.hearth.t / HEARTH.maxCharge) * 100)}%`
+      : g.hearthCD > 0 ? `FIRE RECHARGES IN ${Math.ceil(g.hearthCD)}s` : 'PLANT (E) · STAND IN THE FIRE TO HEAL';
+    this.toggle('hearthStatus', 'hidden', !g.running);
+    this.text('hearthStatus', hearthText);
+    if (this.cache.get('hearthLabel') !== hs) { this.cache.set('hearthLabel', hs); this.el.touchHearth.querySelector('span').textContent = tr(hs); this.el.touchHearth.setAttribute('aria-label', tr(hs)); this.el.touchHearth.classList.toggle('lit', !!g.hearth); }
     const dashKey = dash.toFixed(2);
     if (this.cache.get('dash') !== dashKey) { this.cache.set('dash', dashKey); this.el.dashFill.style.transform = `scaleY(${dashKey})`; }
     this.text('timer', formatTime(g.time));

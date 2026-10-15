@@ -28,11 +28,12 @@ mixin(Game, {
     if (p.hp <= 0) this.endRun(false);
   },
 
-  hit(e, n, color) {
+  hit(e, n, color, blast = false) {
     if (e.dead) return;
     const p = this.player;
-    const crit = Math.random() < this.critChance;
-    const dealt = (n * p.atk + p.maxHp * p.hpDamage) * this.damageMultiplier(e) * (crit ? this.critMult : 1);
+    const crit = !blast && Math.random() < this.critChance;
+    // Death blasts are fixed damage: no critical, HP-on-hit or spell multiplier loop.
+    const dealt = blast ? n : (n * p.atk + p.maxHp * p.hpDamage) * this.damageMultiplier(e) * (crit ? this.critMult : 1);
     const actual = Math.min(Math.max(0, e.hp), dealt);
     e.hp -= dealt;
     const rank = p.passiveRanks.leech;
@@ -57,11 +58,11 @@ mixin(Game, {
     Sound.play(crit ? 'crit' : 'hit');
     if (p.path === 'frost') e.slow = Math.max(e.slow, 1.5);
     this.burst(e.x, e.y, color, 2);
-    if (e.hp <= 0) this.kill(e);
+    if (e.hp <= 0) this.kill(e, false, blast);
   },
 
   // noLoot: the enemy removed itself (a bomber blowing up), so it drops nothing.
-  kill(e, noLoot = false) {
+  kill(e, noLoot = false, blast = false) {
     if (e.dead) return;
     e.dead = true;
     if (noLoot) return;
@@ -109,7 +110,7 @@ mixin(Game, {
     this.combo = (this.comboT > 0 ? this.combo || 0 : 0) + 1; this.comboT = COMBO_WINDOW;
     if (this.combo % 50 === 0) { Sound.play('chest'); this.fx.shockwave(this.player.x, this.player.y, 90, .4, '#ffd36b'); }
     this.meta.stats.bestCombo = Math.max(this.meta.stats.bestCombo || 0, this.combo);
-    if (this.player.bargains.volatile && !e.boss) this.explode(e);
+    if (this.player.bargains.volatile && !e.boss && !e.mini && !blast) this.explode(e);
     // Contagion: a poisoned foe passes its poison to everything around it.
     if (e.poisonTime > 0 && this.player.evolved.venom === 'contagion') {
       this.fx.shockwave(e.x, e.y, 90, .35, '#81dc9a');
@@ -123,7 +124,7 @@ mixin(Game, {
   // Critical hits: 5% base, Keen Eye adds 4% chance and 10% damage per rank.
   get critChance() { return this.player.critChance + .04 * this.player.passiveRanks.keen; },
   get critMult() { return this.player.critMult + .1 * this.player.passiveRanks.keen; },
-  get pickupRange() { return this.player.pickupRange * (1 + .25 * this.player.passiveRanks.lodestone) * (1 + .2 * this.perk('magnet')); },
+  get pickupRange() { return this.player.pickupRange * (1 + .25 * this.player.passiveRanks.lodestone) * (1 + metaBonus('magnet', this.perk('magnet'))); },
 
   // Situational damage bonuses: Path of Frost, Static Field shock, Berserker's Oath, Close Quarters.
   damageMultiplier(e) {
@@ -140,12 +141,12 @@ mixin(Game, {
   },
 
   // Volatile Core: a slain foe bursts, hurting nearby foes and the player if too close.
-  // Chains are intended; each enemy can only die (and burst) once.
+  // Blast kills cannot burst again, and elite HP cannot turn one kill into a nuke.
   explode(e) {
-    const p = this.player, radius = 70;
+    const p = this.player, radius = 60, damage = Math.min(e.maxHp * .15, 30 * p.atk);
     this.fx.shockwave(e.x, e.y, radius, .3, '#ff8a4c');
-    this.forEachEnemyNear(e.x, e.y, radius, o => this.hit(o, e.maxHp * .5 / p.atk, '#ffae6b'));
-    if (this.running && dist(e, p) < radius + p.r) this.damage(e.damage * .6);
+    this.forEachEnemyNear(e.x, e.y, radius, o => this.hit(o, damage, '#ffae6b', true));
+    if (this.running && dist(e, p) < radius + p.r) this.damage(e.damage * .3);
   },
 
   // Past MAX_GEMS, new XP folds into the nearest XP drop so the floor never floods.

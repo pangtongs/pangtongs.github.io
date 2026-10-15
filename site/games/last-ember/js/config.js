@@ -344,7 +344,7 @@ const BARGAINS = {
     apply: p => { p.atk *= 1.4; }},
   glassWick:     {name: 'Glass Wick', icon: 'wick', gain: 'Spells cast 35% faster', cost: 'You can never hold a shield again',
     apply: p => { p.castCooldown *= .74; p.shield = 0; }},
-  volatile:      {name: 'Volatile Core', icon: 'volatile', gain: 'Slain foes explode for half their max HP', cost: 'The blasts hurt you too',
+  volatile:      {name: 'Volatile Core', icon: 'volatile', gain: 'Slain regular foes burst for 15% of their HP, up to 30× your attack', cost: 'Blasts hurt you too; blast kills cannot chain',
     apply: () => {}},
   cursedHoard:   {name: 'Cursed Hoard', icon: 'hoard', gain: 'Gem and gold drops ×2', cost: 'Enemies that appear from now on have +30% HP',
     apply: (p, g) => { g.yields.gems *= 2; g.yields.coins *= 2; }},
@@ -433,40 +433,46 @@ const ARTIFACTS = {
       ['Throne Ward', 'shield', 'Max HP +100%; shield and capacity +100% max HP.', fx => { fx.healHp(1); fx.ward(1); }]],
 };
 
-// In-run market. Costs grow by `growth` per purchase; `max` caps investments.
+// In-run market. Costs grow by `growth` per purchase, with no rank cap.
 // short: label for the HUD's auto-buy progress.
+// Total market bonuses grow as rank^0.65. Each purchase adds less than the last;
+// multiplying by the ratio preserves artifacts, bargains and other sources of power.
 const MARKET = {
-  attack:    {currency: 'gems',  base: 6,  growth: 1.8, short: 'ATK', label: 'ATK +12%', note: 'Stackable for this run'},
-  haste:     {currency: 'gems',  base: 12, growth: 1.8, short: 'HASTE', label: 'Spells 8% faster', note: 'Reduces all cast cooldowns'},
-  coinYield: {currency: 'gems',  base: 5,  growth: 1.9, max: 4, yieldOf: 'coins', short: 'GOLD×'},
-  hp:        {currency: 'coins', base: 12, growth: 1.8, short: 'HP', label: 'Max HP +12%', note: 'Heal the added HP'},
-  shield:    {currency: 'coins', base: 14, growth: 1.8, short: 'SHIELD', label: 'Shield +25% max HP', note: 'Plus 0.1% max HP/sec regen'},
-  speed:     {currency: 'coins', base: 10, growth: 1.8, short: 'SPEED', label: 'Speed +10%', note: 'Move faster, stackable'},
-  gemYield:  {currency: 'coins', base: 12, growth: 1.9, max: 4, yieldOf: 'gems', short: 'GEM×'},
+  attack:    {currency: 'gems', base: 6, growth: 1.55, per: .12, short: 'ATK'},
+  haste:     {currency: 'gems', base: 12, growth: 1.55, per: .08, short: 'HASTE'},
+  coinYield: {currency: 'gems', base: 5, growth: 1.6, per: .25, yieldOf: 'coins', short: 'GOLD×'},
+  hp:        {currency: 'coins', base: 12, growth: 1.55, per: .12, short: 'HP'},
+  shield:    {currency: 'coins', base: 14, growth: 1.55, per: .25, short: 'SHIELD'},
+  speed:     {currency: 'coins', base: 10, growth: 1.55, per: .06, short: 'SPEED'},
+  gemYield:  {currency: 'coins', base: 12, growth: 1.6, per: .25, yieldOf: 'gems', short: 'GEM×'},
 };
-const YIELD_STEP = 1.35;
+const marketPower = rank => Math.pow(Math.max(0, rank), .65);
+const marketFactor = (kind, rank) => 1 + MARKET[kind].per * marketPower(rank);
+const percent = value => (value * 100).toFixed(1).replace(/\.0$/, '');
 
-// Permanent soul upgrades (the Den of Magic). Each perk has a few ranks with set costs;
-// deeper perks open once you have cleared a given stage, so every run works toward one.
-// atk and hp keep their old save keys (meta.atk, meta.hp); the rest live in meta.perks.
-const META_UPGRADES = {atk: {per: .10}, hp: {per: .20}};
+// Soul costs rise exponentially. Repeatable bonuses grow logarithmically: small gains,
+// no final rank. Characters and discrete abilities remain one-time unlocks.
+const metaPower = rank => Math.log2(1 + Math.max(0, rank));
+// Currency is whole units; after the first rank, add two so a purchase never grants zero.
+const startingPurse = rank => rank > 0 ? 3 + 2 * rank : 0;
+const metaBonus = (key, rank) => (META_PERKS[key].per || 0) * metaPower(rank);
 const META_PERKS = {
-  atk:      {name: 'Ember Focus', icon: 'emberGrowth', costs: [30, 50, 80, 120, 170], desc: n => `Attack +${n * 10}%`},
-  hp:       {name: 'Living Vigor', icon: 'heartGrowth', costs: [30, 50, 80, 120, 170], desc: n => `Max HP +${n * 20}%`},
-  magnet:   {name: 'Lodestar', icon: 'lodestone', costs: [35, 80], desc: n => `Pickup range +${n * 20}%`},
-  reroll:   {name: 'Second Thoughts', icon: 'keen', costs: [40, 90, 160], stage: 1, desc: n => `Reroll level-up cards ${n} time${n > 1 ? 's' : ''} per run (R)`},
-  dash:     {name: 'Quickstep', icon: 'fleet', costs: [50, 110], stage: 1, desc: n => `Dash recharges ${n * 15}% faster`},
-  purse:    {name: 'Golden Start', icon: 'coin', costs: [60, 140], stage: 2, desc: n => `Start each run with ${n * 25} gems and ${n * 25} gold`},
+  atk:      {name: 'Ember Focus', icon: 'emberGrowth', base: 30, per: .02, desc: n => `Attack +${percent(metaBonus('atk', n))}%`},
+  hp:       {name: 'Living Vigor', icon: 'heartGrowth', base: 30, per: .03, desc: n => `Max HP +${percent(metaBonus('hp', n))}%`},
+  magnet:   {name: 'Lodestar', icon: 'lodestone', base: 35, per: .02, desc: n => `Pickup range +${percent(metaBonus('magnet', n))}%`},
+  reroll:   {name: 'Second Thoughts', icon: 'keen', base: 40, stage: 1, desc: n => `Reroll level-up cards ${n} time${n > 1 ? 's' : ''} per run (R)`},
+  dash:     {name: 'Quickstep', icon: 'fleet', base: 50, per: .015, stage: 1, desc: n => `Dash recharge rate +${percent(metaBonus('dash', n))}%`},
+  purse:    {name: 'Golden Start', icon: 'coin', base: 60, stage: 2, desc: n => `Start each run with ${startingPurse(n)} gems and ${startingPurse(n)} gold`},
   origin:   {name: 'Deep Roots', icon: 'fire', costs: [120], stage: 3, desc: () => 'Your first spell starts at rank 3'},
   revive:   {name: 'Second Wind', icon: 'aegisGrowth', costs: [200], stage: 4, desc: () => 'Once per run, a lethal hit leaves you at 40% HP'},
-  souls:    {name: 'Soul Harvest', icon: 'soul', costs: [80, 160, 260], stage: 6, desc: n => `Souls +${n * 10}%`},
+  souls:    {name: 'Soul Harvest', icon: 'soul', base: 80, per: .02, stage: 6, desc: n => `Souls +${percent(metaBonus('souls', n))}%`},
   hexblade:   {name: 'Hexblade', icon: 'whip', costs: [150], stage: 2, character: true, desc: () => 'Unlocks the Hexblade: the dash slices foes'},
   warden:     {name: 'Warden', icon: 'wolves', costs: [150], stage: 3, character: true, desc: () => 'Unlocks the Warden: a stronger wolf pack'},
   starcaller: {name: 'Starcaller', icon: 'starfall', costs: [220], stage: 5, character: true, desc: () => 'Unlocks the Starcaller: frequent, brutal crits'},
   treasure: {name: 'Treasure Sense', icon: 'gems', costs: [260], stage: 8, desc: () => 'Every boss chest grants one extra artifact'},
 };
-// Pre-Den saves could buy attack and HP without limit; ranks above the cap are refunded.
-const legacyMetaCost = rank => Math.ceil(30 * Math.pow(1.55, rank));
+const META_COST_GROWTH = 1.65;
+const SIEGE = {stage: 3, wait: 8, move: 85, radius: 72, delay: 1.6};
 
 const DROP_COLORS = {xp: '#71efff', soul: '#c478ff', gems: '#63e4c9', coins: '#ffd374'};
 
