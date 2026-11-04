@@ -44,29 +44,28 @@ mixin(Game, {
   persist() { this.saveMeta(); if (this.running) this.saveRun(true); },
 
   // ---------- Run flow ----------
-  startStage(stage) {
+  startStage(stage, {heat, daily = null, journey = null} = {}) {
     Store.keepLocalData();
+    if (this.daily) this.leaveDaily();
     this.reset();
     this.meta.stats.runs++;
     this.stage = stage;
-    this.bossCD = stageInfo(stage).seconds;
-    this.miniGoal = Math.max(3, Math.floor((this.bossCD - 20) / 55));
-    if (stage > 1) {
-      // Catch up the spell choices as well as stats. Continued runs arrive with
-      // evolutions, a Path, an Ultimate and artifacts, not just higher attack/HP.
-      const boost = stage - 1, p = this.player;
-      p.atk *= .9 * Math.pow(1.12, Math.min(8, boost)) * Math.pow(1.47, Math.max(0, boost - 8));
-      p.maxHp *= .9 * Math.pow(1.27, Math.min(8, boost)) * Math.pow(1.42, Math.max(0, boost - 8)); p.hp = p.maxHp;
-      p.shieldBonusCap = p.maxHp * .15; p.shield = p.shieldCap;
-      p.castCooldown /= 1 + .025 * boost;
-      const levels = Math.round(11 + 4 * Math.log2(boost));
-      for (let i = 0; i < levels; i++) { p.level++; p.nextXp = Math.floor(p.nextXp * 1.35 + 5); }
-      this.levelQueue = levels;
+    if (heat !== undefined) this.heat = clamp(heat, 0, MAX_HEAT);
+    this.daily = daily;
+    this.journey = journey || {time: 0, souls: 0, kills: 0};
+    if (daily) {
+      Math.random = seededRandom(daily.seed + stage * 7919);
+      this.applyDailyMutators();
     }
+    this.bossCD = stageInfo(stage).seconds;
+    this.miniCD = 55 * this.heatDef.miniCD;
+    this.miniGoal = Math.max(3, Math.floor((this.bossCD - 20) / 55));
     this.running = true;
+    hideAllOverlays();
     this.setPaused(true);
-    hide('startOverlay');
     UI.showOrigins(this);
+    this.saveRun(true);
+    if (daily) this.pickOrigin(daily.origin);
   },
 
   pickOrigin(key) {
@@ -82,7 +81,6 @@ mixin(Game, {
     this.setPaused(false);
     this.saveRun(true);
     this.toast(`${o.name.toUpperCase()} SPELL AWAKENED`);
-    if (this.levelQueue) this.levelUp(); // head-start level ups on later stages
   },
 
   collectStageLoot() {
@@ -104,7 +102,6 @@ mixin(Game, {
   clearStage() {
     this.stageComplete = true;
     this.stageClearPending = true;
-    this.pendingChest = null;
     this.setPaused(true);
     this.stageLootCollected = this.collectStageLoot();
     if (this.stage < STAGE_COUNT) this.meta.unlocked = Math.max(this.meta.unlocked || 1, this.stage + 1);
@@ -116,8 +113,12 @@ mixin(Game, {
     this.unlockHeat();
     this.stageAchievements();
     this.saveMeta();
+    // Winning ends the stage: bank remaining loot without asking for powers that
+    // would be discarded at the next level-1 start.
+    this.levelQueue = 0;
+    hide('levelOverlay');
     this.saveRun(true);
-    if (this.levelQueue) this.levelUp(); else this.showStageClear();
+    this.showStageClear();
   },
 
   showStageClear() {
@@ -133,20 +134,8 @@ mixin(Game, {
     $('continueStage').textContent = last ? 'ENTER ENDLESS · DEPTH 1' : endless ? `DESCEND · DEPTH ${st.endless + 1}`
       : `CONTINUE TO STAGE ${this.stage + 1} · ${stageInfo(this.stage + 1).name.toUpperCase()}`;
     $('nextStage').textContent = final ? 'FINISH THE RUN' : 'SAVE & RETURN TO MENU';
-    // Route cards: The Road plus two others, the same pair for a given stage.
-    const others = Object.keys(ROUTES).filter(k => k !== 'road'), i = (this.stage * 7) % others.length;
-    const offer = ['road', others[i], others[(i + 1 + this.stage % 2) % others.length]];
-    const box = $('routeChoices');
-    box.innerHTML = '';
-    const next = last ? 'ENDLESS · DEPTH 1' : endless ? `DEPTH ${st.endless + 1}` : `STAGE ${this.stage + 1} · ${stageInfo(this.stage + 1).name.toUpperCase()}`;
-    for (const key of offer) {
-      const r = ROUTES[key];
-      box.appendChild(choiceButton({icon: r.icon, tone: 'ROUTE', label: `TO ${next}`, name: r.name, desc: r.desc}, () => this.continueStage(key)));
-    }
     requestAnimationFrame(() => I18N.localize($('stageOverlay')));
-    $('stageSummary').textContent = `${stageInfo(this.stage).boss} defeated. ${this.stageLootCollected || 0} remaining drops collected · Level ${this.player.level} · ${this.souls} souls earned · ${this.gemsCount} gems · ${this.coins} gold. Artifact: ${this.lastArtifact.replace(/\.$/, '')}.`;
-    // The artifact text is stored in English; translate each description piece on its own.
-    if (I18N.lang !== 'en') $('stageSummary').textContent = tr($('stageSummary').textContent.replace(/ · Artifact: .*$/s, '')) + ' · ' + this.lastArtifact.split(' · ').map(t => { const [n, d] = t.split(' — '); return d ? `${n} — ${tr(d)}` : n; }).join(' · ');
+    $('stageSummary').textContent = `${stageInfo(this.stage).boss} defeated. Level ${this.player.level} · ${this.souls} souls earned.`;
   },
 
   // Clearing a stage at your highest unlocked Heat unlocks the next level, as long as the
@@ -159,22 +148,15 @@ mixin(Game, {
     }
   },
 
-  // Continue: carry the build straight into the next stage (or the next endless depth).
-  continueStage(route = 'road') {
-    hide('stageOverlay');
-    const next = this.nextStageSnapshot();
-    next.route = route;
-    const p = next.player;
-    if (route === 'shrine') p.hp = p.maxHp;
-    if (route === 'merchant') { next.gemsCount += 30; next.coins += 30; }
-    this.saveRun(true, next);
-    this.restore(next);
-    this.toast(stageInfo(this.stage).name.toUpperCase() + (route !== 'road' ? ' · ' + ROUTES[route].name.toUpperCase() : ''));
+  // Only non-combat records cross a stage boundary. The saved checkpoint goes
+  // through startStage just like selecting that stage from the menu.
+  continueStage() {
+    if (!this.running || !this.stageComplete) return;
+    this.restore(this.nextStageSnapshot());
   },
 
-  // Save & menu: store the build on the next stage; Continue Saved Run resumes it.
-  // From the last stage on, this button finishes the run instead.
   nextStage() {
+    if (!this.running || !this.stageComplete) return;
     hide('stageOverlay');
     if (this.stage >= STAGE_COUNT) { this.endRun(true); return; }
     this.saveRun(true, this.nextStageSnapshot());
@@ -182,16 +164,12 @@ mixin(Game, {
   },
 
   nextStageSnapshot() {
-    const next = this.snapshot(), p = next.player;
-    if (this.surgeT > 0) { this.surgeT = 0; this.endSurge(); } // a surge cut short by the stage end still pays out
-    Object.assign(next, {stage: this.stage + 1, stageTime: 0, bossCD: stageInfo(this.stage + 1).seconds, miniCD: 55 * this.heatDef.miniCD, miniCount: 0, minisDefeated: 0,
-      eventIndex: 0, surgeT: 0, hearth: null, hearthCD: 0,
-      miniGoal: Math.max(3, Math.floor((stageInfo(this.stage + 1).seconds - 20) / 55)), stageClearPending: false, stageComplete: false,
-      enemyShots: [], enemies: [], drops: [], chests: []});
-    next.earlySummon = false;
-    p.hp = Math.min(p.maxHp, p.hp + p.maxHp * .3 * this.heatDef.heal);
-    p.shield += 20;
-    return next;
+    return {
+      version: SAVE_VERSION, savedAt: Date.now(), freshStage: true,
+      stage: this.stage + 1, heat: this.heat, daily: this.daily,
+      journey: {time: this.journey.time + this.time, souls: this.journey.souls + this.souls, kills: this.journey.kills + this.runKills},
+      player: new Player(),
+    };
   },
 
   // The boss arrival card: act, name and a line of flavour, held for a moment on screen.
@@ -206,13 +184,13 @@ mixin(Game, {
     this.bossCardTimer = setTimeout(() => card.classList.add('hidden'), 2700);
   },
 
-  // Call the boss before the timer. With 60s or more to spare, its chest grants two artifacts.
+  // Calling with at least 60s left earns 25% more boss souls.
   get canCallBoss() { return this.running && !this.boss && !this.stageClearPending && this.bossCD > 0 && this.stageTime >= 45; },
   callBoss() {
     if (!this.canCallBoss) return;
     this.earlySummon = this.bossCD >= 60;
     this.bossCD = 0;
-    this.toast(this.earlySummon ? 'BOSS CALLED EARLY · ITS CHEST GRANTS TWO ARTIFACTS' : 'BOSS CALLED');
+    this.toast(this.earlySummon ? 'BOSS CALLED EARLY · +25% BOSS SOULS' : 'BOSS CALLED');
   },
 
   endRun(won) {
@@ -230,8 +208,8 @@ mixin(Game, {
     const depth = this.stage - STAGE_COUNT;
     $('gameOverTitle').textContent = won ? 'THE RIFT IS YOURS' : 'THE EMBERS FADE';
     const reached = depth > 0 ? `${won ? 'cleared' : 'reached'} endless depth ${won ? depth : depth} (best ${this.meta.stats.endlessBest})`
-      : won ? `cleared all ${STAGE_COUNT} stages` : `reached stage ${this.stage}`;
-    $('runSummary').textContent = `You ${reached} at level ${this.player.level} after ${formatTime(this.time)}. Earned ${this.souls} souls this run · ${this.wallet} in your permanent wallet.`;
+      : won ? `cleared stage ${this.stage}` : `reached stage ${this.stage}`;
+    $('runSummary').textContent = `You ${reached} at level ${this.player.level} after ${formatTime(this.journey.time + this.time)}. Earned ${this.journey.souls + this.souls} souls this run · ${this.wallet} in your permanent wallet.`;
     if (daily) $('runSummary').textContent += ` Daily Ember ${daily.run.date}: stage ${daily.run.stage} in ${formatTime(daily.run.time)}${daily.improved ? ' · NEW DAILY BEST' : ` · today's best: stage ${daily.best.stage} in ${formatTime(daily.best.time)}`}.`;
     UI.renderMetaShop(this);
   },
@@ -251,7 +229,7 @@ mixin(Game, {
     return {
       version: SAVE_VERSION, savedAt: Date.now(),
       ...pick(this, ['stage', 'heat', 'time', 'stageTime', 'growthClock', 'bossCD', 'miniCD', 'miniCount', 'minisDefeated', 'miniGoal',
-        'spawnCD', 'stageClearPending', 'stageComplete', 'levelQueue', 'stageLootCollected', 'lastArtifact', 'souls', 'gemsCount', 'coins', 'earlySummon', 'pendingChest', 'eventIndex', 'lastEvent', 'surgeT', 'hearth', 'hearthCD', 'route', 'daily', 'runKills']),
+        'spawnCD', 'stageClearPending', 'stageComplete', 'levelQueue', 'stageLootCollected', 'journey', 'souls', 'gemsCount', 'coins', 'earlySummon', 'eventIndex', 'lastEvent', 'surgeT', 'hearth', 'hearthCD', 'daily', 'runKills']),
       yields: {...this.yields}, dropRemainders: {...this.dropRemainders}, marketRanks: {...this.marketRanks}, autoBuy: {...this.autoBuy},
       player: JSON.parse(JSON.stringify(this.player)),
       enemies: this.enemies.filter(e => !e.dead).map(e => ({...e})),
@@ -276,6 +254,13 @@ mixin(Game, {
 
   restore(data) {
     if (data.stage < 1 || !data.player) return false;
+    // Old runs relied on inherited builds and a different enemy curve. Keep the
+    // stage, Heat and daily challenge, and restart it under the new rules.
+    if (data.freshStage || data.version !== SAVE_VERSION) {
+      this.startStage(data.stage, {heat: data.heat, daily: data.daily, journey: data.journey});
+      if (data.version !== SAVE_VERSION) this.toast('UPDATED STAGE RULES · STARTING THIS STAGE WITH A FRESH BUILD');
+      return true;
+    }
     this.reset();
     const {player, enemies, drops, chests, enemyShots, yields, dropRemainders, marketRanks, autoBuy, version, savedAt, ...state} = data;
     Object.assign(this, state);
@@ -302,8 +287,7 @@ mixin(Game, {
     hideAllOverlays();
     this.setPaused(false);
     // Reopen whatever choice was on screen when the run was saved.
-    if (this.stageComplete) { this.setPaused(true); if (this.levelQueue) this.levelUp(); else this.showStageClear(); }
-    else if (this.pendingChest) this.openChestAgain();
+    if (this.stageComplete) { this.levelQueue = 0; this.showStageClear(); }
     else if (this.stageClearPending && !this.boss && !this.chests.length) this.chests.push(new Chest(this.player.x, this.player.y - 40, this.stage)); // older saves
     else if (!this.player.origin) { this.setPaused(true); UI.showOrigins(this); }
     else if (this.levelQueue) this.levelUp();

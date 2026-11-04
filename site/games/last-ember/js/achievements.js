@@ -17,13 +17,13 @@ const ACHIEVEMENTS = {
   evolve:     {name: 'Final Form', desc: 'Evolve a spell.', souls: 15, test: g => Object.keys(g.player.evolved).length >= 1},
   evolve3:    {name: 'Archmage', desc: 'Have three evolved spells in one run.', souls: 40, test: g => Object.keys(g.player.evolved).length >= 3},
   bargains3:  {name: 'Devil’s Accountant', desc: 'Strike three bargains in one run.', souls: 30, test: g => Object.keys(g.player.bargains).length >= 3},
-  level30:    {name: 'Ascendant', desc: 'Reach level 30 in one run.', souls: 40, test: g => g.player.level >= 30},
+  level30:    {name: 'Ascendant', desc: 'Reach level 15 in one stage.', souls: 40, test: g => g.player.level >= 15},
   hearthNova: {name: 'Banked Fire', desc: 'Release a fully charged Hearth nova.', souls: 15},
   hearthKeep: {name: 'Keeper of the Flame', desc: 'Slay 150 foes while standing in your Hearth in one run.', souls: 30, test: g => (g.hearthKills || 0) >= 150},
   untouched:  {name: 'Untouchable', desc: 'Defeat a boss without taking damage during the fight.', souls: 60},
   heat5:      {name: 'Trial by Fire', desc: 'Clear a stage at Heat 5 or higher.', souls: 50},
   heat10:     {name: 'Last Light', desc: 'Clear a stage at Heat 10.', souls: 150},
-  elite:      {name: 'The Hard Road', desc: 'Clear a stage reached by the Elite Road.', souls: 30},
+  elite:      {name: 'The Hard Road', desc: 'Clear a stage at Heat 3 or higher.', souls: 30},
   daily:      {name: 'Daily Flame', desc: 'Finish a Daily Ember run.', souls: 15},
   goblin:     {name: 'Pickpocket', desc: 'Catch a treasure goblin.', souls: 10},
   shrine:     {name: 'Surge Survivor', desc: 'Survive a cursed shrine’s surge.', souls: 10},
@@ -58,7 +58,7 @@ mixin(Game, {
     if (s - STAGE_COUNT >= 5) this.achieve('endless5');
     if ((this.heat || 0) >= 5) this.achieve('heat5');
     if ((this.heat || 0) >= 10) this.achieve('heat10');
-    if (this.route === 'elite') this.achieve('elite');
+    if ((this.heat || 0) >= 3) this.achieve('elite');
     this.checkAchievements();
   },
 });

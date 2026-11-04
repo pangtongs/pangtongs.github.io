@@ -46,10 +46,11 @@ mixin(Game, {
 
   startDaily() {
     const d = dailySetup();
-    Math.random = seededRandom(d.seed);
-    this.startStage(1);
-    this.daily = d;
-    this.heat = DAILY_HEAT;
+    this.startStage(1, {heat: DAILY_HEAT, daily: d});
+    this.toast(`DAILY EMBER · ${d.mutators.map(m => DAILY_MUTATORS[m].name.toUpperCase()).join(' · ')}`);
+  },
+
+  applyDailyMutators() {
     const p = this.player;
     if (this.mut('glass')) { p.maxHp *= .6; p.hp = p.maxHp; p.atk *= 1.4; }
     if (this.mut('haste')) p.speed *= 1.2;
@@ -58,8 +59,6 @@ mixin(Game, {
       const keys = Object.keys(BARGAINS).filter(k => k !== 'overcharge'), k = keys[Math.floor(Math.random() * keys.length)];
       p.bargains[k] = true; BARGAINS[k].apply(p, this);
     }
-    this.pickOrigin(d.origin);
-    this.toast(`DAILY EMBER · ${d.mutators.map(m => DAILY_MUTATORS[m].name.toUpperCase()).join(' · ')}`);
   },
 
   // Restores the browser's own randomness once a daily run is over.
@@ -70,7 +69,7 @@ mixin(Game, {
     const d = this.daily;
     if (!d) return null;
     const best = this.meta.daily && this.meta.daily.date === d.date ? this.meta.daily : null;
-    const run = {date: d.date, stage: this.stage, time: Math.round(this.time), kills: this.runKills || 0};
+    const run = {date: d.date, stage: this.stage, time: Math.round(this.journey.time + this.time), kills: this.journey.kills + this.runKills};
     const better = !best || run.stage > best.stage || (run.stage === best.stage && run.time < best.time);
     if (better) this.meta.daily = run;
     return {run, best: better ? run : best, improved: better};

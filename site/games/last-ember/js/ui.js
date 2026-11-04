@@ -2,7 +2,7 @@
 // Overlay screens: menus, level ups, chests, market, spellbook. Builders here read game
 // state and wire buttons back to Game methods; they hold no state of their own.
 
-const OVERLAYS = ['startOverlay', 'originOverlay', 'levelOverlay', 'chestOverlay', 'pauseOverlay', 'marketOverlay', 'stageOverlay', 'gameOver', 'spellBookOverlay'];
+const OVERLAYS = ['startOverlay', 'originOverlay', 'levelOverlay', 'pauseOverlay', 'marketOverlay', 'stageOverlay', 'gameOver', 'spellBookOverlay'];
 const show = id => { $(id).classList.remove('hidden'); I18N.localize($(id)); };
 const hide = id => $(id).classList.add('hidden');
 const isOpen = id => !$(id).classList.contains('hidden');
@@ -70,7 +70,7 @@ const UI = {
     const hasSave = !!Store.loadRun();
     $('loadBtn').disabled = !hasSave;
     $('menuSaveInfo').textContent = hasSave
-      ? 'Continue resumes your saved build. Selecting any stage starts fresh.'
+      ? 'Resume keeps your current stage progress. Every new stage starts at level 1.'
       : 'No saved run yet. Pause during a run to save. Progress stays in this browser.';
 
     this.renderMetaShop(g);
@@ -260,43 +260,6 @@ const UI = {
     while (options.length < slots) options.push({name: 'Arcane Echo', icon: 'bolt', tone: 'SPELL', desc: 'Increase your homing bolt damage by 4 per rank.', take: () => { p.skills.echo++; }});
     if (bargains.length) options.push(bargains[0]);
     return options;
-  },
-
-  showChest(g) {
-    const {tier, x, y} = g.pendingChest;
-    const p = g.player;
-    const fx = {
-      p,
-      healHp(f) { const gain = p.maxHp * f; p.maxHp += gain; p.hp = Math.min(p.maxHp, p.hp + gain); },
-      ward(f, regen = 0) { const gain = p.maxHp * f; p.shieldBonusCap += gain; p.shield += gain; p.shieldRegenPct += regen; },
-      passive(key, n) { p.passiveRanks[key] = Math.min(5, p.passiveRanks[key] + n); },
-      spell(key, n) { p.skills[key] = Math.min(SPELL_MAX_RANK, p.skills[key] + n); },
-      yields(f) { g.yields.gems *= f; g.yields.coins *= f; },
-    };
-    // A boss called early with a minute to spare lets you take two artifacts.
-    // pending.taken survives saves, so a reopened two-pick chest cannot give the same artifact twice.
-    const pending = g.pendingChest;
-    pending.taken = pending.taken || [];
-    $('chestTitle').textContent = `TIER ${tier} ${chestName(tier)} CHEST`;
-    $('chestDesc').textContent = pending.picks > 1 && !pending.taken.length ? `Choose ${pending.picks} artifacts. Their bonuses last for this run.`
-      : pending.taken.length ? 'Choose one more artifact.' : 'Choose one stat artifact. Its bonus lasts for this run.';
-    const box = $('chestChoices');
-    box.innerHTML = '';
-    for (const [name, icon, desc, take] of ARTIFACTS[stageInfo(tier).artifactTier]) {
-      const b = choiceButton({icon, tone: 'ARTIFACT', name, desc}, () => {
-        take(fx);
-        b.disabled = true;
-        pending.taken.push(`${name} — ${desc}`);
-        g.fx.texts.add(x, y - 36, name, '#ffd878');
-        if (--pending.picks > 0) { $('chestDesc').textContent = 'Choose one more artifact.'; return; }
-        g.lastArtifact = pending.taken.join(' · ');
-        hide('chestOverlay');
-        g.clearStage();
-      });
-      b.disabled = pending.taken.some(t => t.startsWith(name + ' — '));
-      box.appendChild(b);
-    }
-    show('chestOverlay');
   },
 
   // Market buttons are created once, then relabeled whenever balances change.

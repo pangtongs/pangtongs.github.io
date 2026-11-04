@@ -44,7 +44,7 @@ const Store = {
         else if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) throw new Error('Invalid backup');
       }
     }
-    if (data.run !== null && (!object(data.run) || data.run.version !== SAVE_VERSION || !amount(data.run.stage) || data.run.stage < 1 || !object(data.run.player) || typeof data.run.player.maxHp !== 'number' || !(data.run.player.maxHp > 0) || typeof data.run.player.atk !== 'number' || !(data.run.player.atk > 0))) throw new Error('Invalid backup');
+    if (data.run !== null && (!object(data.run) || ![2, SAVE_VERSION].includes(data.run.version) || !amount(data.run.stage) || data.run.stage < 1 || !object(data.run.player) || typeof data.run.player.maxHp !== 'number' || !(data.run.player.maxHp > 0) || typeof data.run.player.atk !== 'number' || !(data.run.player.atk > 0))) throw new Error('Invalid backup');
     const before = Object.fromEntries(Object.keys(this.keys).map(k => [k, localStorage.getItem(this.keys[k])]));
     try {
       for (const k of Object.keys(this.keys)) {
@@ -64,6 +64,11 @@ const Store = {
     const saved = this.read('meta', {});
     const stats = {runs: 0, wins: 0, deaths: 0, kills: 0, bosses: 0, bestStage: 0, endlessBest: 0, highestHeat: 0, playTime: 0, fastest: {}, origins: {}, ...saved.stats};
     const meta = {atk: 0, hp: 0, souls: 0, unlocked: 1, heatUnlocked: 0, tips: {}, perks: {}, ...saved, stats};
+    if (meta.perks.treasure) {
+      meta.souls += 260;
+      delete meta.perks.treasure;
+      this.write('meta', meta);
+    }
     return meta;
   },
   loadSettings() {
@@ -72,6 +77,6 @@ const Store = {
   },
   loadRun() {
     const run = this.read('run', null);
-    return run && run.version === SAVE_VERSION ? run : null;
+    return run && [2, SAVE_VERSION].includes(run.version) ? run : null;
   },
 };

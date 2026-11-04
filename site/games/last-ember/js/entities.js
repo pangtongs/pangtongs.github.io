@@ -40,35 +40,26 @@ class Enemy {
     const stage = stageInfo(g.stage);
     this.miniKind = this.mini ? stage.minis[g.miniCount % stage.minis.length] : 0;
     this.tier = this.boss ? g.stage : 0;
-    this.level = (g.stage - 1) * 3 + 1 + Math.floor(g.stageTime / 20);
-    const diff = g.heatDef;
+    this.level = 1 + Math.floor(g.stageTime / 25);
+    const diff = g.heatDef, depth = Math.min(g.stage - 1, STAGE_COUNT - 1), endless = Math.max(0, g.stage - STAGE_COUNT);
     const def = ENEMY_TYPES[type], mini = MINI_BOSSES[this.miniKind];
     this.name = this.boss ? stage.boss : this.mini ? mini.name : type;
-
-    // Act I curves are unchanged. Act II multiplies on top so enemies keep pace with a
-    // build that has been growing for eight stages (tuned with tools/sim.js).
-    const beyond = Math.max(0, g.stage - 8);
-    const actHp = Math.pow(1.22, beyond), actDamage = (g.stage >= 3 ? ENEMY_DAMAGE_SCALE : 1) * (beyond ? 1.25 * Math.pow(1.16, beyond) : 1) * (g.stage > 16 && g.stage <= STAGE_COUNT ? 1.2 : 1); // tuned with tools/sim.js
-    const stagePressure = 1 + (g.stage - 1) * .28;
-    const scale = (1 + (this.level - 1) * .15) * stagePressure * diff.hp;
-    const bossAct = (beyond ? 3.5 * Math.pow(1.36, beyond - 1) : 1) * diff.bossHp;
-    this.maxHp = this.boss ? 650 * Math.pow(1.48, Math.min(this.tier, 8) - 1) * bossAct * diff.hp * (1 + Math.floor(g.stageTime / 20) * .055)
-      : this.mini ? 210 * (1 + g.stage * .4) * actHp * diff.hp * diff.miniHp * (1 + g.stageTime / 300)
-      : def.hp * scale * actHp;
+    const hpScale = (1 + depth * .08) * Math.pow(1.12, endless);
+    const damageScale = (1 + depth * .015) * Math.pow(1.06, endless);
+    this.maxHp = this.boss ? 650 * (1 + depth * .12) * Math.pow(1.15, endless) * diff.bossHp * diff.hp * (1 + Math.floor(g.stageTime / 20) * .055)
+      : this.mini ? 210 * (1.3 + depth * .025) * Math.pow(1.12, endless) * diff.hp * diff.miniHp * (1 + g.stageTime / 500)
+      : def.hp * (1 + (this.level - 1) * .15) * hpScale * diff.hp;
     if (g.player.bargains.cursedHoard) this.maxHp *= 1.3;
-    if (g.route === 'elite') this.maxHp *= 1.3;
     if (g.mut('giants') && !this.boss) this.maxHp *= 1.4;
     this.hp = this.maxHp;
-    this.speed = (this.boss ? 28 + Math.min(this.tier, 10) * 2 : this.mini ? mini.speed : def.speed)
-      * (1 + (this.level - 1) * .055) * (1 + (Math.min(g.stage, 10) - 1) * .045) * diff.speed;
-    // Regular foes never outrun the mage, so kiting and Fleetfoot keep working deep in a run.
-    if (!this.boss && !this.mini && type !== 'goblin') this.speed = Math.min(this.speed, (ENEMY_SPEED_CAP + (beyond ? 12 : 0)) * diff.speed);
+    this.speed = (this.boss ? 30 + depth * .5 : this.mini ? mini.speed : def.speed)
+      * (1 + g.stageTime / 2000) * (1 + depth * .006) * diff.speed;
+    if (!this.boss && !this.mini && type !== 'goblin') this.speed = Math.min(this.speed, ENEMY_SPEED_CAP * diff.speed);
     if (g.mut('haste')) this.speed *= 1.2;
     this.r = (this.boss ? 27 + Math.min(this.tier, 8) * 3 : this.mini ? 23 : def.r) * (g.mut('giants') && !this.boss && !this.mini ? 1.2 : 1);
-    this.damage = (this.boss ? 14 + this.tier * 4 : this.mini ? 13 + g.stage * 2 : def.damage)
-      * (1 + (this.level - 1) * (this.boss ? .035 : .085)) * (1 + (g.stage - 1) * .1) * diff.damage * actDamage * (g.route === 'elite' ? 1.3 : 1);
-    // Damage multiplier for Act II boss moves (Act I moves use their original fixed numbers).
-    this.moveScale = this.boss && beyond ? 1.15 * Math.pow(1.14, beyond) * diff.damage : diff.damage;
+    this.damage = (this.boss ? 18 + depth * .4 : this.mini ? 14 + depth * .2 : def.damage)
+      * (1 + g.stageTime / 600) * damageScale * diff.damage;
+    this.moveScale = (stage.act >= 2 ? .6 : Math.max(.7, 1 - depth * .04)) * Math.pow(1.06, endless) * diff.damage;
     this.color = this.boss ? stage.accent : this.mini ? mini.color : def.color;
     this.attackCD = 0; this.chargeTime = 0; this.skillCD = 4; this.enraged = false;
     this.windup = 0; this.windupMax = 0; this.move = null; this.tele = null;

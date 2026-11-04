@@ -7,11 +7,10 @@ const MAX_ENEMIES = 180;
 const KNOCKBACK = 120, KNOCK_COOLDOWN = .45; // px/s shove for 0.09s on an 11px foe; at most once per cooldown,
                                              // so a hail of hits jolts foes without pinning them in place
 const COMBO_WINDOW = 2.5, COMBO_MIN = 15; // seconds between kills; smallest combo that pays
-const ENEMY_DAMAGE_SCALE = 1.4; // from stage 3 on; stages 1-2 stay gentle for new players
 const ENEMY_SPEED_CAP = 150;   // px/s for regular foes before Heat; the mage runs at 178
 const MAX_GEMS = 260;          // extra XP merges into existing gems beyond this
 const SIM_STEP = 1 / 60;       // fixed simulation timestep (seconds)
-const SAVE_VERSION = 2;
+const SAVE_VERSION = 3;
 const DASH = {time: .17, speed: 720, cooldown: 2.6}; // seconds, px/s, seconds
 
 // Heat: optional difficulty, 0-10. Each level adds its rule on top of all lower levels,
@@ -175,15 +174,6 @@ const STAGES = [
 ];
 const STAGE_COUNT = STAGES.length;
 
-// Routes: after a stage, choose how to reach the next one. The Road is always offered,
-// plus two others picked per stage.
-const ROUTES = {
-  road:     {name: 'The Road', icon: 'bolt', desc: 'The next stage as it is.'},
-  elite:    {name: 'Elite Road', icon: 'heat', desc: 'Foes have +30% HP and damage. Souls +50%, and the boss chest grants one extra artifact.'},
-  merchant: {name: "Merchant's Road", icon: 'coin', desc: 'Market prices −35% for the stage, and you set out with 30 gems and 30 gold.'},
-  shrine:   {name: 'Shrine Road', icon: 'aegisGrowth', desc: 'Heal to full now. Both stage events are cursed shrines, and their boons are doubled.'},
-  swarm:    {name: 'Swarm Road', icon: 'hunted', desc: 'Foes arrive 40% faster. XP +40%.'},
-};
 // Boss arrival lines, by boss art index.
 const BOSS_LINES = ['WAKES BENEATH THE GRAVES', 'MARCHES WITH THE BONE LEGION', 'TEARS THROUGH THE RIFT', 'RISES FROM THE ASHES',
   'HEAVES OUT OF THE MIRE', 'WINDS ITS DREADFUL CLOCK', 'SURGES FROM THE DEEP', 'DARKENS THE SKY',
@@ -191,8 +181,8 @@ const BOSS_LINES = ['WAKES BENEATH THE GRAVES', 'MARCHES WITH THE BONE LEGION', 
   'COMMANDS THE DEAD', 'SHATTERS INTO LIGHT', 'EMPTIES THE STARS', 'BURNS ALL THAT REMAINS',
   'RIDES OUT OF THE ASH', 'STEPS FROM EVERY MIRROR', 'RISES FROM THE STARLESS SEA', 'WAITS UPON THE EMBER THRONE'];
 const ACT_NAMES = {1: 'Act I · The Rift', 2: 'Act II · Beyond the Rift', 3: 'Act III · The Ember Throne', 4: 'Endless · The Pyre Beyond'};
-// art: boss portrait index. artifactTier: which ARTIFACTS pool its chest uses.
-STAGES.forEach((s, i) => { s.art = i; s.artifactTier = i + 1; });
+// art: boss portrait index.
+STAGES.forEach((s, i) => { s.art = i; });
 
 // Endless: after the last stage, depth d replays the Act II arenas and bosses in turn,
 // with enemy scaling still rising (it is driven by the stage number).
@@ -206,10 +196,6 @@ function stageInfo(n) {
   }
   return endlessCache.get(n);
 }
-const chestName = tier => tier > STAGE_COUNT ? `ENDLESS ${tier - STAGE_COUNT}` : CHEST_TIER_NAMES[tier];
-const CHEST_TIER_NAMES = ['', 'COMMON', 'RARE', 'LEGENDARY', 'MYTHIC', 'RELIC', 'ANCIENT', 'CELESTIAL', 'ASCENDANT',
-  'GLACIAL', 'GILDED', 'BRAMBLE', 'FORGED', 'SPECTRAL', 'PRISMATIC', 'VOIDBORN', 'PRIMORDIAL', 'CINDER', 'MIRRORED', 'ABYSSAL', 'THRONE'];
-
 // ---------- Enemies ----------
 // shot: ranged attack fired when the player is within 520px.
 // charge: stops, telegraphs a line, then dashes. fuse: stops beside the player and explodes.
@@ -369,74 +355,10 @@ const PASSIVES = {
   aegisGrowth: {name: 'Growing Aegis', desc: 'Each minute, gain shield and capacity equal to 8% of the stage’s base HP per rank; +0.1% max HP/sec regeneration per rank.', book: 'Shield and capacity +8% of base HP per rank each minute; regen +0.1% max HP/sec.'},
 };
 
-// Boss chest artifacts per stage tier. fx: {p, healHp(f), ward(f, regen), passive(key, n), spell(key, n), yields(f)}
-const ARTIFACTS = {
-  1: [['Warden Heart', 'heart', 'Max HP +20%; heal the added HP.', fx => fx.healHp(.2)],
-      ['Ember Fang', 'attack', 'Attack +25%.', fx => { fx.p.atk *= 1.25; }],
-      ['Guardstone', 'shield', 'Shield and capacity +30% max HP; regeneration +0.2% max HP/sec.', fx => fx.ward(.3, .002)]],
-  2: [['Bone Furnace', 'heart', 'Max HP +25%; each hit gains 2% max HP damage.', fx => { fx.healHp(.25); fx.p.hpDamage += .02; }],
-      ['Storm Core', 'lightning', 'Attack +30%; cast 10% faster.', fx => { fx.p.atk *= 1.3; fx.p.castCooldown *= .9; }],
-      ['Knight Plate', 'shield', 'Max HP +20%; shield and capacity +35% max HP.', fx => { fx.healHp(.2); fx.ward(.35); }]],
-  3: [['Rift Heart', 'heart', 'Max HP +40%; each hit gains 4% max HP damage.', fx => { fx.healHp(.4); fx.p.hpDamage += .04; }],
-      ['Cataclysm Crown', 'starfall', 'Ultimate damage +75%; attack +20%.', fx => { fx.p.ultimatePower *= 1.75; fx.p.atk *= 1.2; }],
-      ['Sovereign Relic', 'shield', 'Attack +35%; shield and capacity +45% max HP.', fx => { fx.p.atk *= 1.35; fx.ward(.45); }]],
-  4: [['Phoenix Blood', 'leech', 'Lifesteal +2 ranks; heal 25% max HP.', fx => { fx.passive('leech', 2); fx.p.hp = Math.min(fx.p.maxHp, fx.p.hp + fx.p.maxHp * .25); }],
-      ['Cinder Pinion', 'emberGrowth', 'Attack +35%; Ember Ascension +1 rank.', fx => { fx.p.atk *= 1.35; fx.passive('emberGrowth', 1); }],
-      ['Ashen Mantle', 'shield', 'Shield and capacity +50% max HP; regeneration +0.25% max HP/sec.', fx => fx.ward(.5, .0025)]],
-  5: [['Mireheart Seed', 'heartGrowth', 'Max HP +30%; Living Heart +1 rank.', fx => { fx.healHp(.3); fx.passive('heartGrowth', 1); }],
-      ['Bog Venom', 'venom', 'Poison Bloom +2 ranks; attack +25%.', fx => { fx.p.skills.venom = Math.min(SPELL_MAX_RANK, fx.p.skills.venom + 2); fx.p.atk *= 1.25; }],
-      ['Colossus Bark', 'aegisGrowth', 'Shield and capacity +55% max HP; Growing Aegis +1 rank.', fx => { fx.ward(.55); fx.passive('aegisGrowth', 1); }]],
-  6: [['Reaper Gear', 'solar', 'Cast 20% faster; attack +25%.', fx => { fx.p.castCooldown *= .8; fx.p.atk *= 1.25; }],
-      ['Pendulum Fang', 'leech', 'Lifesteal +2 ranks; max HP +20%.', fx => { fx.passive('leech', 2); fx.healHp(.2); }],
-      ['Bronze Bulwark', 'shield', 'Shield and capacity +60% max HP; regeneration +0.3% max HP/sec.', fx => fx.ward(.6, .003)]],
-  7: [['Storm Eye', 'lightning', 'Chain Lightning +2 ranks; attack +35%.', fx => { fx.p.skills.lightning = Math.min(SPELL_MAX_RANK, fx.p.skills.lightning + 2); fx.p.atk *= 1.35; }],
-      ['Leviathan Scale', 'aegisGrowth', 'Shield and capacity +70% max HP; Growing Aegis +2 ranks.', fx => { fx.ward(.7); fx.passive('aegisGrowth', 2); }],
-      ['Tidal Current', 'ice', 'Move 25% faster; cast 15% faster.', fx => { fx.p.speed *= 1.25; fx.p.castCooldown *= .85; }]],
-  8: [['Eclipse Crown', 'starfall', 'Ultimate damage +65%; attack +25%.', fx => { fx.p.ultimatePower *= 1.65; fx.p.atk *= 1.25; }],
-      ['Dawnheart', 'heartGrowth', 'Max HP +50%; Living Heart +2 ranks.', fx => { fx.healHp(.5); fx.passive('heartGrowth', 2); }],
-      ['Seraph Ward', 'aegisGrowth', 'Shield and capacity +85% max HP; regeneration +0.4% max HP/sec.', fx => fx.ward(.85, .004)]],
-  9: [['Rimeheart', 'heart', 'Max HP +45%; heal to full.', fx => { fx.healHp(.45); fx.p.hp = fx.p.maxHp; }],
-      ['Glacier Lens', 'ice', 'Frost Shards +2 ranks; cast 15% faster.', fx => { fx.spell('ice', 2); fx.p.castCooldown *= .85; }],
-      ['Frozen Aegis', 'shield', 'Shield and capacity +90% max HP; regeneration +0.4% max HP/sec.', fx => fx.ward(.9, .004)]],
-  10: [['Mimic Tooth', 'attack', 'Attack +45%; gem and gold drops ×1.5.', fx => { fx.p.atk *= 1.45; fx.yields(1.5); }],
-      ['Golden Idol', 'coin', 'Gem and gold drops ×2; max HP +20%.', fx => { fx.yields(2); fx.healHp(.2); }],
-      ['Gilded Plate', 'shield', 'Max HP +25%; shield and capacity +100% max HP.', fx => { fx.healHp(.25); fx.ward(1); }]],
-  11: [['Briar Crown', 'heartGrowth', 'Max HP +40%; Living Heart +2 ranks.', fx => { fx.healHp(.4); fx.passive('heartGrowth', 2); }],
-      ['Thorn Whip', 'venom', 'Venom Bloom +2 ranks; attack +40%.', fx => { fx.spell('venom', 2); fx.p.atk *= 1.4; }],
-      ['Bramble Ward', 'aegisGrowth', 'Shield and capacity +100% max HP; Growing Aegis +2 ranks.', fx => { fx.ward(1); fx.passive('aegisGrowth', 2); }]],
-  12: [['Forge Core', 'emberGrowth', 'Attack +50%; Ember Ascension +2 ranks.', fx => { fx.p.atk *= 1.5; fx.passive('emberGrowth', 2); }],
-      ['Great Bellows', 'solar', 'Cast 20% faster; ultimate damage +40%.', fx => { fx.p.castCooldown *= .8; fx.p.ultimatePower *= 1.4; }],
-      ['Anvil Plate', 'shield', 'Shield and capacity +120% max HP; regeneration +0.5% max HP/sec.', fx => fx.ward(1.2, .005)]],
-  13: [['Phylactery', 'leech', 'Lifesteal +2 ranks; max HP +40%.', fx => { fx.passive('leech', 2); fx.healHp(.4); }],
-      ['Regent Scepter', 'starfall', 'Ultimate damage +90%; attack +30%.', fx => { fx.p.ultimatePower *= 1.9; fx.p.atk *= 1.3; }],
-      ['Bone Throne', 'heart', 'Max HP +60%; each hit gains 4% max HP damage.', fx => { fx.healHp(.6); fx.p.hpDamage += .04; }]],
-  14: [['Prism Shard', 'lightning', 'Chain Lightning +2 ranks; attack +45%.', fx => { fx.spell('lightning', 2); fx.p.atk *= 1.45; }],
-      ['Refractor', 'orb', 'Orbiting Orb +2 ranks; cast 15% faster.', fx => { fx.spell('orb', 2); fx.p.castCooldown *= .85; }],
-      ['Crystal Shell', 'shield', 'Shield and capacity +140% max HP; regeneration +0.5% max HP/sec.', fx => fx.ward(1.4, .005)]],
-  15: [['Hollow Crown', 'attack', 'Attack +60%.', fx => { fx.p.atk *= 1.6; }],
-      ['Void Mantle', 'aegisGrowth', 'Shield and capacity +150% max HP; Growing Aegis +2 ranks.', fx => { fx.ward(1.5); fx.passive('aegisGrowth', 2); }],
-      ['Starless Heart', 'heartGrowth', 'Max HP +70%; Living Heart +2 ranks.', fx => { fx.healHp(.7); fx.passive('heartGrowth', 2); }]],
-  16: [['Tyrant Ember', 'fire', 'Fireball +2 ranks; attack +70%.', fx => { fx.spell('fire', 2); fx.p.atk *= 1.7; }],
-      ['Pyre Crown', 'starfall', 'Ultimate damage +100%; cast 20% faster.', fx => { fx.p.ultimatePower *= 2; fx.p.castCooldown *= .8; }],
-      ['Last Light', 'heart', 'Max HP +80%; heal to full.', fx => { fx.healHp(.8); fx.p.hp = fx.p.maxHp; }]],
-  17: [['Cinder Lance', 'attack', 'Attack +70%; dash recharges 20% faster.', fx => { fx.p.atk *= 1.7; fx.p.dashBonus = (fx.p.dashBonus || 0) + .2; }],
-      ['Knight’s Oath', 'shield', 'Shield and capacity +160% max HP.', fx => fx.ward(1.6)],
-      ['Ashen Heart', 'heart', 'Max HP +80%; Crimson Siphon +2 ranks.', fx => { fx.healHp(.8); fx.passive('leech', 2); }]],
-  18: [['Shard Crown', 'keen', 'Critical chance +12%; critical damage +50%.', fx => { fx.p.critChance += .12; fx.p.critMult += .5; }],
-      ['Glass Mantle', 'ward', 'Mirror Ward +2 ranks; attack +50%.', fx => { fx.spell('ward', 2); fx.p.atk *= 1.5; }],
-      ['Silver Vein', 'heart', 'Max HP +90%.', fx => fx.healHp(.9)]],
-  19: [['Tide Heart', 'heartGrowth', 'Max HP +90%; Living Heart +2 ranks.', fx => { fx.healHp(.9); fx.passive('heartGrowth', 2); }],
-      ['Abyssal Pearl', 'attack', 'Attack +80%.', fx => { fx.p.atk *= 1.8; }],
-      ['Lantern of the Deep', 'lodestone', 'Cast 25% faster; Lodestone +2 ranks.', fx => { fx.p.castCooldown *= .75; fx.passive('lodestone', 2); }]],
-  20: [['Hollow Crown', 'starfall', 'Ultimate damage +120%; attack +60%.', fx => { fx.p.ultimatePower *= 2.2; fx.p.atk *= 1.6; }],
-      ['Last Ember', 'fire', 'Attack +100%.', fx => { fx.p.atk *= 2; }],
-      ['Throne Ward', 'shield', 'Max HP +100%; shield and capacity +100% max HP.', fx => { fx.healHp(1); fx.ward(1); }]],
-};
-
 // In-run market. Costs grow by `growth` per purchase, with no rank cap.
 // short: label for the HUD's auto-buy progress.
 // Total market bonuses grow as rank^0.65. Each purchase adds less than the last;
-// multiplying by the ratio preserves artifacts, bargains and other sources of power.
+// multiplying by the ratio preserves bargains and other sources of power.
 const MARKET = {
   attack:    {currency: 'gems', base: 6, growth: 1.55, per: .12, short: 'ATK'},
   haste:     {currency: 'gems', base: 12, growth: 1.55, per: .08, short: 'HASTE'},
@@ -469,7 +391,6 @@ const META_PERKS = {
   hexblade:   {name: 'Hexblade', icon: 'whip', costs: [150], stage: 2, character: true, desc: () => 'Unlocks the Hexblade: the dash slices foes'},
   warden:     {name: 'Warden', icon: 'wolves', costs: [150], stage: 3, character: true, desc: () => 'Unlocks the Warden: a stronger wolf pack'},
   starcaller: {name: 'Starcaller', icon: 'starfall', costs: [220], stage: 5, character: true, desc: () => 'Unlocks the Starcaller: frequent, brutal crits'},
-  treasure: {name: 'Treasure Sense', icon: 'gems', costs: [260], stage: 8, desc: () => 'Every boss chest grants one extra artifact'},
 };
 const META_COST_GROWTH = 1.65;
 const SIEGE = {stage: 3, wait: 8, move: 85, radius: 72, delay: 1.6};

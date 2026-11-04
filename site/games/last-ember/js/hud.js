@@ -49,7 +49,7 @@ class Hud {
     if (auto.length) this.text('autoBuyInfo', 'AUTO ' + auto.join(' · '));
     this.toggle('finishBtn', 'ready', !!g.stageComplete);
     this.toggle('callBossBtn', 'hidden', !g.canCallBoss);
-    if (g.canCallBoss) this.text('callBossBtn', g.bossCD >= 60 ? `CALL BOSS · 2 ARTIFACTS` : 'CALL BOSS NOW');
+    if (g.canCallBoss) this.text('callBossBtn', g.bossCD >= 60 ? `CALL BOSS · +25% SOULS` : 'CALL BOSS NOW');
     this.text('pauseBtn', g.paused && g.running ? '▶ RESUME' : 'Ⅱ PAUSE');
     this.text('stageGoal', g.stageComplete ? 'STAGE CLEARED · FINISH WHEN READY'
       : g.boss ? 'DEFEAT THE BOSS'

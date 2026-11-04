@@ -38,7 +38,7 @@ mixin(Game, {
     }
     if ((this.siegeClock += dt) < SIEGE.wait) return;
     this.siegeClock = 0;
-    this.hazards.push(new Hazard(p.x, p.y, SIEGE, (16 + this.stage * 5) * Math.pow(1.18, Math.max(0, this.stage - 8)) * this.heatDef.damage * Math.pow(1.6, this.siegeStrikes++)));
+    this.hazards.push(new Hazard(p.x, p.y, SIEGE, (18 + Math.min(this.stage - 1, 19) * .7) * Math.pow(1.06, Math.max(0, this.stage - STAGE_COUNT)) * this.heatDef.damage * Math.pow(1.6, this.siegeStrikes++)));
     Sound.play('warn');
     if (this.siegeStrikes > 1) this.tip('siege2', 'MOVE TO A NEW AREA · MARKED STRIKES ARE GROWING STRONGER');
     this.tip('siege', 'MARKED STRIKE · MOVE OR DASH OUT OF THE CIRCLE');
@@ -51,7 +51,7 @@ mixin(Game, {
     if (at === undefined || this.stageTime < at) return;
     this.eventIndex++;
     if (this.boss || this.stageClearPending || this.bossCD < 30) return;
-    const kinds = this.route === 'shrine' ? ['shrine'] : EVENT_KINDS.filter(k => k !== this.lastEvent);
+    const kinds = EVENT_KINDS.filter(k => k !== this.lastEvent);
     this.startEvent(kinds[Math.floor(Math.random() * kinds.length)]);
   },
 
@@ -87,7 +87,6 @@ mixin(Game, {
   endSurge() {
     const boon = SHRINE_BOONS[Math.floor(Math.random() * SHRINE_BOONS.length)];
     boon.take(this);
-    if (this.route === 'shrine') boon.take(this);
     this.achieve('shrine');
     Sound.play('chest');
     this.toast(`SURGE SURVIVED · ${boon.text}`);

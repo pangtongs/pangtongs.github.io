@@ -74,7 +74,7 @@ mixin(Game, {
       if (!this.bossHurt) this.achieve('untouched');
       this.boss = null;
       drop(0, 0, 'xp', 55 + e.tier * 35);
-      drop(-22, 0, 'soul', 12 + e.tier * 10);
+      drop(-22, 0, 'soul', Math.round((12 + e.tier * 10) * (this.earlySummon ? 1.25 : 1)));
       drop(22, 0, 'gems', this.dropValue('gems', 5 + e.tier * 3));
       drop(0, 22, 'coins', this.dropValue('coins', 9 + e.tier * 5));
       this.chests.push(new Chest(e.x, e.y, e.tier));
@@ -182,6 +182,9 @@ mixin(Game, {
   },
 
   gainXP(n) {
+    // Once the boss falls, collect loot and finish instead of interrupting victory
+    // with skills that cannot carry into the next stage.
+    if (this.stageClearPending || this.stageComplete) return;
     const p = this.player;
     p.xp += n;
     while (p.xp >= p.nextXp) { p.xp -= p.nextXp; p.level++; p.nextXp = Math.floor(p.nextXp * 1.35 + 5); this.levelQueue++; }
@@ -218,16 +221,11 @@ mixin(Game, {
     else if (this.stageComplete) { this.saveRun(true); this.showStageClear(); }
   },
 
-  // The open chest is part of the run state, so a save taken while choosing (tab hidden,
-  // page closed) reopens it on load instead of losing it.
-  openChest(x, y, tier) {
+  openChest() {
+    if (!this.running || this.stageComplete) return;
     Sound.play('chest');
-    this.pendingChest = {tier, x, y, picks: (this.earlySummon ? 2 : 1) + (this.perk('treasure') ? 1 : 0) + (this.route === 'elite' ? 1 : 0)};
-    this.setPaused(true);
-    UI.showChest(this);
+    this.clearStage();
   },
-
-  openChestAgain() { this.setPaused(true); UI.showChest(this); },
 
   // Toasts queue instead of overwriting each other; a backlog plays faster.
   toast(s) {
